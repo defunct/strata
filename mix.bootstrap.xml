@@ -5,13 +5,17 @@
        =                      Bootstrap 
        ================================================================== -->
 
+  <property name="mix.boot.revision" value="15"/>
+
   <target name="boot">
 
     <mkdir dir="lib"/>
 
     <exec executable="svn" dir="lib">
       <arg value="checkout"/>
-      <arg value="https://agtrz.com/svn/lib/agtrz/mix/src/boot"/>
+      <arg value="--revision"/>
+      <arg value="${mix.boot.revision}"/>
+      <arg value="https://engrm.com/svn/mix/src/boot"/>
       <arg value="_boot"/>
     </exec>
 
