@@ -3,7 +3,7 @@
 
   <description>A B-Tree.</description>    
 
-  <repository-version>83</repository-version>
+  <repository-version>190</repository-version>
 
   <long-name>Strata</long-name>
   <file-name>strata</file-name>
@@ -67,7 +67,6 @@
       <name>junit</name>
       <version>3.8.1</version>
       <category>distribution</category>
-      <repository>.</repository>
     </lib>
   </libs>
 
