@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+
+  <description>A B-Tree.</description>    
+
+  <repository-version>83</repository-version>
+
+  <long-name>Strata</long-name>
+  <file-name>strata</file-name>
+  <publisher>agtrz</publisher>
+  <repository-path>agtrz/strata</repository-path>
+
+  <version>0.1</version>
+
+  <sources>
+    <source>
+      <name>main</name>
+      <display>Core</display>
+      <dir>src/main</dir>
+      <dependencies>
+        <category>distribution</category>
+      </dependencies>
+      <javadoc-link>
+        <category>distribution</category>
+        <category>documentation</category>
+      </javadoc-link>
+    </source>
+  </sources>
+
+  <jars>
+    <jar>
+      <name>strata</name>
+      <source>
+        <name>main</name>
+      </source>
+    </jar>
+  </jars>
+
+  <zips>
+    <zip>
+      <name>strata</name>
+      <jar>
+        <name>strata</name>
+      </jar>
+      <source>
+        <name>main</name>
+      </source>
+      <category>distribution</category>
+      <category>documentation</category>
+    </zip>
+  </zips>
+
+  <libs>
+    <lib>
+      <name>jdk</name>
+      <version>1.4</version>
+      <category>documentation</category>
+      <repository>sun</repository>
+    </lib>
+    <lib>
+      <name>log4j</name>
+      <version>1.2.9</version>
+      <category>distribution</category>
+      <repository>apache/jakarta</repository>
+    </lib>
+    <lib>
+      <name>junit</name>
+      <version>3.8.1</version>
+      <category>distribution</category>
+      <repository>.</repository>
+    </lib>
+  </libs>
+
+</project>
+<!-- vim: set et ts=2 sw=2 ai nowrap: -->

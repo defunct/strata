@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="mix.boot" default="boot">
+
+  <!-- ==================================================================
+       =                      Bootstrap 
+       ================================================================== -->
+
+  <target name="boot">
+
+    <mkdir dir="lib"/>
+
+    <exec executable="svn" dir="lib">
+      <arg value="checkout"/>
+      <arg value="https://agtrz.com/svn/lib/agtrz/mix/src/boot"/>
+      <arg value="_boot"/>
+    </exec>
+
+    <ant antfile="lib/_boot/ant/build.xml"/>
+
+  </target>
+
+</project>
+<!-- vim: set et ts=2 sw=2 tw=0 ai nowrap: -->
