@@ -5,10 +5,10 @@
 	<classpathentry output="var/classes/junit/classes" kind="src" path="src/junit/java"/>
 	<classpathentry output="var/classes/main/resource" kind="src" path="src/main/resource"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry
-    sourcepath="lib/svn/apache/jakarta/log4j/1.2.9/source/log4j-1.2.9-source.zip"
-    kind="lib" path="lib/svn/apache/jakarta/log4j/1.2.9/vendor/log4j-1.2.9.jar"/>
+	<classpathentry sourcepath="lib/svn/apache/jakarta/log4j/1.2.9/source/log4j-1.2.9-source.zip" kind="lib" path="lib/svn/apache/jakarta/log4j/1.2.9/vendor/log4j-1.2.9.jar"/>
 	<classpathentry kind="src" path="/i18n"/>
 	<classpathentry kind="src" path="/sheaf"/>
+	<classpathentry kind="src" path="/swag"/>
+	<classpathentry kind="src" path="/todo"/>
 	<classpathentry kind="output" path="var/classes/main/classes"/>
 </classpath>
