@@ -3,19 +3,15 @@
  */
 package com.agtrz.strata;
 
-import java.io.File;
-
-import com.agtrz.strata.core.CoreIndexFactory;
 
 /**
  * @author Alan Gutierrez
  */
-public class IndexFactory
+public interface IndexFactory
 {
-    public static Index newIndex(File file)
-    {
-        return CoreIndexFactory.newIndex(file);
-    }
+    public IndexCreator newIndexCreator();
+    
+    public IndexOpener newIndexOpener();
 }
 
 

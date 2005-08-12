@@ -18,10 +18,10 @@
       <display>Core</display>
       <dir>src/main</dir>
       <dependencies>
-        <category>distribution</category>
+        <category>production</category>
       </dependencies>
       <javadoc-link>
-        <category>distribution</category>
+        <category>production</category>
         <category>documentation</category>
       </javadoc-link>
     </source>
@@ -53,7 +53,7 @@
   <repository>
     <name>dependencies</name>
     <base>https://engrm.com/svn/lib/dependencies</base>
-    <revision>1</revision>
+    <revision>15</revision>
     <lib>
       <name>jdk</name>
       <version>1.4</version>
@@ -73,4 +73,55 @@
     </lib>
   </repository>
 
-</project><!-- vim: set et ts=2 sw=2 ai nowrap: -->
+  <repository>
+    <name>open</name>
+    <base>https://engrm.com/svn/lib/open</base>
+    <revision>4</revision>
+    <lib>
+      <name>i18n</name>
+      <version>0.1</version>
+      <category>production</category>
+      <parallel>
+        <include>main</include>
+      </parallel>
+      <path>agtrz</path>
+    </lib>
+    <lib>
+      <name>swag</name>
+      <version>0.1</version>
+      <category>production</category>
+      <parallel>
+        <include>main</include>
+      </parallel>
+      <path>agtrz</path>
+    </lib>
+    <lib>
+      <name>todo</name>
+      <version>0.1</version>
+      <category>production</category>
+      <parallel>
+        <include>main</include>
+      </parallel>
+      <path>agtrz</path>
+    </lib>
+    <lib>
+      <name>reservoir</name>
+      <version>0.1</version>
+      <category>production</category>
+      <parallel>
+        <include>main</include>
+      </parallel>
+      <path>agtrz</path>
+    </lib>
+    <lib>
+      <name>sheaf</name>
+      <version>0.1</version>
+      <category>production</category>
+      <parallel>
+        <include>main</include>
+      </parallel>
+      <path>agtrz</path>
+    </lib>
+  </repository>
+</project>
+<!-- vim: set et ts=2 sw=2 ai nowrap: -->

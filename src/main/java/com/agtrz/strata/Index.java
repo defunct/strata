@@ -6,9 +6,15 @@ package com.agtrz.strata;
 /**
  * @author Alan Gutierrez
  */
-public class Index
+public interface Index
 {
+    public int getCount();
+    
+    public Class getComparatorClass();
+    
+    public void add(long address, Object object);
 
+    public long get(Comparable comparable);
 }
 
 

@@ -10,5 +10,6 @@
 	<classpathentry kind="src" path="/sheaf"/>
 	<classpathentry kind="src" path="/swag"/>
 	<classpathentry kind="src" path="/todo"/>
+	<classpathentry kind="lib" path="lib/svn/junit/3.8.1/vendor/junit.jar"/>
 	<classpathentry kind="output" path="var/classes/main/classes"/>
 </classpath>
