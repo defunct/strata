@@ -127,16 +127,46 @@ extends TestCase
 
     private final static void insert(Split[] splits, String string)
     {
-        if (splits[1] == null)
+        insert(splits, string, 0);
+    }
+    
+    private final static void insertX(Split[] splits,
+                                      int at,
+                                      String string,
+                                      int index)
+    {
+        char ch = string.charAt(index);
+        Split split = splits[at];
+        String[] strings = (String[]) split.children;
+        int i = 1;
+        for (;;)
         {
-            splits[1] = splits[0];
-            splits[0] = new Split(string.charAt(0), 0, new String[STRINGS_LENGTH]);
-            splits[0].children[0] = string;
+            if (i == strings.length)
+            {
+                throw new UnsupportedOperationException();
+            }
+            if (ch < strings[i].charAt(index))
+            {
+                break;
+            }
+            i++;
         }
-        else
-        {
-            insert(splits, string, 0);
-        }
+        
+        Split right = new Split(splits[at].character,
+                                index,
+                                newStrings(strings, i));
+        
+        Split left = new Split(ch, index, split.children);
+        insert(splits, at + 1, right);
+        splits[at] = left;
+        
+        hasSlot((String[]) left.children, string);
+    }
+    
+    private final static void insert(Split[] splits, int at, Split split)
+    {
+        System.arraycopy(splits, at, splits, at + 1, splits.length - (at + 1));
+        splits[at] = split;
     }
     
     private final static void insert(Split[] splits, String string, int index)
@@ -186,11 +216,18 @@ extends TestCase
                 
                 if (j == 0)
                 {
-                    if (ch < strings[j].charAt(index))
+                    if (splits[splits.length - 1] == null)
                     {
-                        String[] left = newStrings(string);
-                        System.arraycopy(splits, i, splits, i + 1, SPLITS_LENGTH - (i + 1));
-                        splits[i] = new Split(ch, index, left);
+                        if (ch < strings[j].charAt(index))
+                        {
+                            String[] left = newStrings(string);
+                            System.arraycopy(splits, i, splits, i + 1, SPLITS_LENGTH - (i + 1));
+                            splits[i] = new Split(ch, index, left);
+                        }
+                        else
+                        {
+                            insertX(splits, i, string, index);
+                        }
                     }
                     else
                     {
@@ -199,45 +236,25 @@ extends TestCase
                 }
                 else if (j == strings.length)
                 {
-                    char test = strings[strings.length - 1].charAt(index);
-                    Split left = new Split(test, index, split.children);
-                    Split right = new Split(ch, index, newStrings(string));
-                    System.arraycopy(splits, i, splits, i + 1, SPLITS_LENGTH - (i + 1));
-                    splits[i] = left;
-                    splits[i + 1] = right;
-//
-//                    int ix = index + 1;
-//                    int k = 0;
-//                    for (;;)
-//                    {
-//                        if (k == strings.length)
-//                        {
-//                            throw new UnsupportedOperationException();
-//                        }
-//                        
-//                        if (strings[k].length() == ix)
-//                        {
-//                            throw new UnsupportedOperationException();
-//                        }
-//                            
-//                        if (string.charAt(ix) <= strings[k].charAt(ix))
-//                        {
-//                            break;
-//                        }
-//                        k++;
-//                    }
-//                    if (k == 0)
-//                    {
-//                        throw new UnsupportedOperationException();
-//                    }
-//                    else if (k == strings.length)
-//                    {
-//                        throw new UnsupportedOperationException();
-//                    }
-//                    else if (strings[k].charAt(index) >= string.charAt(ix))
-//                    {
-//                        throw new UnsupportedOperationException();
-//                    }
+                    if (splits[splits.length - 1] == null)
+                    {
+                        char test = strings[strings.length - 1].charAt(index);
+                        if (splits[i + 1] == null)
+                        {
+                            Split left = new Split(test, index, split.children);
+                            Split right =  new Split(Character.MAX_VALUE, 0, newStrings(string));
+                            splits[i] = left;
+                            splits[i + 1] = right;
+                        }
+                        else
+                        {
+                            throw new UnsupportedOperationException();
+                        }
+                    }
+                    else
+                    {
+                        throw new UnsupportedOperationException();
+                    }
                 }
                 else if (strings[j].charAt(index) >= ch)
                 {
@@ -272,6 +289,15 @@ extends TestCase
         String[] strings = newStrings();
         strings[0] = string;
         return strings;
+    }
+    
+    private static String[] newStrings(String[] strings, int i)
+    {
+        String[] newStrings = newStrings();
+        System.arraycopy(strings, i, newStrings, 0, strings.length - i);
+        System.arraycopy(strings, 0, strings, i, i);
+        Arrays.fill(strings, i, strings.length, null);
+        return newStrings;
     }
 
     private static String[] newStrings()
@@ -549,6 +575,52 @@ extends TestCase
         insertTest(splits, inserts);
 
         insertTest(splits, "cam");
+        
+        containsTest(splits, inserts);
+    }
+
+    public void alphaTest(Split[] splits, int start, int stop, int direction)
+    {
+        for (int i = start; i != stop; i += direction)
+        {
+            insertTest(splits, ALPHABET[i]);
+        }
+
+        for (int i = start; i != stop; i += direction)
+        {
+            assertTrue(contains(splits, ALPHABET[i]));
+        }
+    }
+
+    public void testInsertAlphaOneLevel()
+    {
+        Split[] splits = newSplits();
+        
+        alphaTest(splits, 0, 9 , 1);
+    }
+
+    public void testSplitMidPageLastPage()
+    {
+        Split[] splits = newSplits();
+        
+        String[] inserts = new String[] { "cat", "act", "can" };
+        insertTest(splits, inserts);
+        
+        insertTest(splits, "add");
+        
+        containsTest(splits, inserts);
+    }
+    
+    public void testSplitMidPageBeforeLastPage()
+    {
+        Split[] splits = newSplits();
+        
+        String[] inserts = new String[] { "man", "mad", "mid", "cat", "act", "bid" };
+        insertTest(splits, inserts);
+        
+        containsTest(splits, inserts);
+        
+        insertTest(splits, "add");
         
         containsTest(splits, inserts);
     }
