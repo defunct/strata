@@ -231,7 +231,37 @@ extends TestCase
                     }
                     else
                     {
-                        throw new UnsupportedOperationException();
+                        int k = 0;
+                        for (;;)
+                        {
+                            if (k == strings.length)
+                            {
+                                throw new UnsupportedOperationException();
+                            }
+                            if (ch <= strings[k].charAt(index))
+                            {
+                                break;
+                            }
+                            k++;
+                        }
+                        
+                        if (k == 0)
+                        {
+                            if (ch < strings[k].charAt(index))
+                            {
+                                Split[] subSplits = newSubSplits(strings);
+                                subSplits[0] = new Split(ch, index, newStrings(string));
+                                splits[i] = new Split(split.character, split.index, subSplits);
+                            }
+                            else
+                            {
+                                throw new UnsupportedOperationException();
+                            }
+                        }
+                        else
+                        {
+                            throw new UnsupportedOperationException();
+                        }
                     }
                 }
                 else if (j == strings.length)
@@ -248,7 +278,7 @@ extends TestCase
                         }
                         else
                         {
-                            throw new UnsupportedOperationException();
+                            throw new IllegalStateException();
                         }
                     }
                     else
@@ -258,15 +288,22 @@ extends TestCase
                 }
                 else if (strings[j].charAt(index) >= ch)
                 {
-                    char test = strings[j - 1].charAt(index);
-                    int at = j;
-                    String[] left = newStrings(string);
-                    System.arraycopy(strings, 0, left, 0, at);
-                    System.arraycopy(strings, at, strings, 0, strings.length - at);
-                    Arrays.fill(strings, at + 1, strings.length, null);
-                    System.arraycopy(splits, i, splits, i + 1, SPLITS_LENGTH - (i + 1));
-                    splits[i] = new Split(test, index, left);
-                    hasSlot(strings, string);
+                    if (splits[splits.length - 1] == null)
+                    {
+                        char test = strings[j - 1].charAt(index);
+                        int at = j;
+                        String[] left = newStrings(string);
+                        System.arraycopy(strings, 0, left, 0, at);
+                        System.arraycopy(strings, at, strings, 0, strings.length - at);
+                        Arrays.fill(strings, at + 1, strings.length, null);
+                        System.arraycopy(splits, i, splits, i + 1, SPLITS_LENGTH - (i + 1));
+                        splits[i] = new Split(test, index, left);
+                        hasSlot(strings, string);
+                    }
+                    else
+                    {
+                        throw new UnsupportedOperationException();
+                    }
                 }
                 else
                 {
@@ -338,7 +375,7 @@ extends TestCase
         return i < SPLITS_LENGTH - 1 && splits[i] != null;
     }
     
-    public final static boolean hasString(String[] strings, int i)
+    private final static boolean hasString(String[] strings, int i)
     {
         return i < strings.length && strings[i] != null;
     }
@@ -360,6 +397,24 @@ extends TestCase
         return false;
     }
 
+    private final static boolean contains(Split[] splits, int i, String string)
+    {
+        int index = 0;
+        for (;;)
+        {
+            char ch = string.charAt(index);
+            Split split = splits[i];
+            if (ch <= split.character)
+            {
+                if (split.children instanceof String[])
+                {
+                    return scan((String[]) split.children, string);
+                }
+            }
+            i++;
+        }
+    }
+
     private final static boolean contains(Split[] splits, String string)
     {
         int i = 0;
@@ -374,12 +429,20 @@ extends TestCase
                 {
                     return scan((String[]) split.children, string);
                 }
+                else
+                {
+                    return contains((Split[]) split.children, i, string);
+                }
             }
             else if (ch < splits[i].character)
             {
                 if (split.children instanceof String[])
                 {
                     return scan((String[]) split.children, string);
+                }
+                else
+                {
+                    return contains((Split[]) split.children, i, string);
                 }
             }
             else if (i == SPLITS_LENGTH - 1 || splits[i + 1] == null)
@@ -412,6 +475,13 @@ extends TestCase
     {
         Split[] splits = new Split[SPLITS_LENGTH];
         splits[0] = new Split(Character.MAX_VALUE, 0, newStrings());
+        return splits;
+    }
+    
+    private final static Split[] newSubSplits(String[] strings)
+    {
+        Split[] splits = new Split[SPLITS_LENGTH];
+        splits[1] = new Split(Character.MAX_VALUE, 0, strings);
         return splits;
     }
     
@@ -621,6 +691,21 @@ extends TestCase
         containsTest(splits, inserts);
         
         insertTest(splits, "add");
+        
+        containsTest(splits, inserts);
+    }
+    
+    public void testSplitTier()
+    {
+        Split[] splits = newSplits();
+        
+        String[] inserts = new String[] { "man", "mad", "mid", "bed", "bad", "bid", "cat", "can", "cam" };
+
+        insertTest(splits, inserts);
+        
+        containsTest(splits, inserts);
+        
+        insertTest(splits, "act");
         
         containsTest(splits, inserts);
     }
