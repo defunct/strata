@@ -127,47 +127,8 @@ extends TestCase
             }
             else
             {
-                int j = strings.length / 2;
-                char middle = strings[j].charAt(index);
-                for (;;)
-                {
-                    if (j == 0)
-                    {
-                        break;
-                    }
-                    if (middle != strings[j - 1].charAt(index))
-                    {
-                        break;
-                    }
-                    j--;
-                }
-                if (j == 0)
-                {
-                    for (;;)
-                    {
-                        j++;
-                        if (j == strings.length)
-                        {
-                            throw new UnsupportedOperationException();
-                        }
-                        if (middle != strings[j].charAt(index))
-                        {
-                            break;
-                        }
-                    }
-                }
-                
-                if (j == strings.length)
-                {
-                    throw new UnsupportedOperationException();
-                }
-                else
-                {
-                    String[][] split = split(strings, j);
-                    insert(tiers, i + 1, new Tier(middle, index, split[RIGHT]));
-                    tiers[i] = new Tier(tier.ch, tier.index, split[LEFT]);
-                    insert(tiers, string);
-                }
+                split(tiers, i, index);
+                insert(tiers, string);
             }
         }
         else
@@ -176,6 +137,80 @@ extends TestCase
         }
     }
     
+    private static void split(Tier[] tiers, int i, int index)
+    {
+        assert i < tiers.length;
+        assert tiers[i] != null;
+
+        Tier tier = tiers[i];
+        
+        assert tier.children instanceof String[];
+        
+        String[] strings = (String[]) tier.children;
+        
+        int j = strings.length / 2;
+        char middle = strings[j].charAt(index);
+        for (;;)
+        {
+            if (j == 0)
+            {
+                break;
+            }
+            String s = strings[j - 1];
+            if (index >= s.length())
+            {
+                throw new UnsupportedOperationException();
+            }
+            if (middle != s.charAt(index))
+            {
+                break;
+            }
+            j--;
+        }
+
+        if (j == 0)
+        {
+            for (;;)
+            {
+                j++;
+                if (j == strings.length)
+                {
+                    break;
+                }
+                if (middle != strings[j].charAt(index))
+                {
+                    break;
+                }
+            }
+        }
+        
+        if (j == strings.length)
+        {
+            char ch = strings[0].charAt(index);
+            if (tier.ch == Character.MIN_VALUE)
+            {
+                assert i == 0;
+                assert index == 0;
+                tiers[0] = new Tier(Character.MIN_VALUE, 0, newStrings());
+                insert(tiers, 1, new Tier(ch, 0, tier.children));
+            }
+            else if (tier.ch != ch)
+            {
+                throw new IllegalStateException();
+            }
+            else
+            {
+                split(tiers, i, index + 1);
+            }
+        }
+        else
+        {
+            String[][] split = split(strings, j);
+            insert(tiers, i + 1, new Tier(middle, index, split[RIGHT]));
+            tiers[i] = new Tier(tier.ch, tier.index, split[LEFT]);
+        }
+    }
+
     private static boolean contains(String[] strings, String string)
     {
         for (int i = 0; i < strings.length && strings[i] != null; i++)
@@ -303,6 +338,14 @@ extends TestCase
 
         insertTest(tiers, new String[] { "act", "bad", "cat" });
         insertTest(tiers, "add");
+    }
+    
+    public void testInsertSplitOnSecondCharacter()
+    {
+        Tier[] tiers = newFirstTier();
+
+        insertTest(tiers, new String[] { "mid", "mud", "med" });
+        insertTest(tiers, "mad");
     }
 }
 
