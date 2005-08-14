@@ -198,7 +198,7 @@ extends TestCase
                             {
                                 if (j == strings.length)
                                 {
-                                    throw new UnsupportedOperationException();
+                                    break;
                                 }
                                 if (ch < strings[j].charAt(index))
                                 {
@@ -206,16 +206,72 @@ extends TestCase
                                 }
                                 j++;
                             }
-                            
-                            Split right = new Split(splits[i].character,
-                                                    index,
-                                                    newStrings(strings, j));
-                            
-                            Split left = new Split(ch, index, split.children);
-                            insert(splits, i + 1, right);
-                            splits[i] = left;
-                            
-                            hasSlot((String[]) left.children, string);
+
+                            if (j == strings.length)
+                            {
+                                index++;
+                                int k = strings.length / 2;
+                                if (index >= strings[k].length())
+                                {
+                                    throw new UnsupportedOperationException();
+                                }
+                                char middle = strings[k].charAt(index);
+                                for (;;)
+                                {
+                                    if (k < 0)
+                                    {
+                                        throw new UnsupportedOperationException();
+                                    }
+                                    if (middle != strings[k - 1].charAt(index))
+                                    {
+                                        break;
+                                    }
+                                    k--;
+                                }
+                                if (k == -1)
+                                {
+                                    for (;;)
+                                    {
+                                        k++;
+                                        if (k == strings.length)
+                                        {
+                                            throw new UnsupportedOperationException();
+                                        }
+                                        if (middle != strings[k].charAt(index))
+                                        {
+                                            throw new UnsupportedOperationException();
+                                        }
+                                    }
+                                }
+                                if (k < strings.length)
+                                {
+                                    char test = strings[k].charAt(index);
+                                    String[] right = newStrings(strings, k);
+                                    String[] left = strings;
+                                    splits[i] = new Split(split.character, split.index, left);;
+                                    insert(splits, i + 1, new Split(test, index, right));
+                                    if (test < string.charAt(index))
+                                    {
+                                        hasSlot(left, string);
+                                    }
+                                    else
+                                    {
+                                        throw new UnsupportedOperationException();
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                Split right = new Split(splits[i].character,
+                                                        index,
+                                                        newStrings(strings, j));
+                                
+                                Split left = new Split(ch, index, split.children);
+                                insert(splits, i + 1, right);
+                                splits[i] = left;
+                                
+                                hasSlot((String[]) left.children, string);
+                            }
                         }
                     }
                     else
@@ -356,7 +412,7 @@ extends TestCase
     {
         String[] newStrings = newStrings();
         System.arraycopy(strings, i, newStrings, 0, strings.length - i);
-        System.arraycopy(strings, 0, strings, i, i);
+        System.arraycopy(strings, 0, strings, i, strings.length - i);
         Arrays.fill(strings, i, strings.length, null);
         return newStrings;
     }
@@ -742,7 +798,7 @@ extends TestCase
         alphaTest(splits, 0, 25, 1);
     }
 
-    public void _testSplitFirstTierInLeafX()
+    public void testIssueNewStringsSplitWrongLength()
     {
         Split[] splits = newSplits();
         
@@ -757,7 +813,7 @@ extends TestCase
         containsTest(splits, inserts);
     }
 
-    public void _testSplitFirstTierAfterX()
+    public void testSplitFirstTierAfterX()
     {
         Split[] splits = newSplits();
         
@@ -771,6 +827,21 @@ extends TestCase
         
         containsTest(splits, inserts);
     }
+    
+//    public void testBed()
+//    {
+//        Split[] splits = newSplits();
+//        
+//        String[] inserts = new String[] { "ram", "run", "ran", "mid", "mad", "mud" };
+//
+//        insertTest(splits, inserts);
+//        
+//        containsTest(splits, inserts);
+//        
+//        insertTest(splits, "med");
+//        
+//        containsTest(splits, inserts);
+//    }
 }
 
 
