@@ -248,7 +248,7 @@ extends TestCase
                                     char test = strings[k].charAt(index);
                                     String[] right = newStrings(strings, k);
                                     String[] left = strings;
-                                    splits[i] = new Split(split.character, split.index, left);;
+                                    splits[i] = new Split(split.character, split.index, left);
                                     insert(splits, i + 1, new Split(test, index, right));
                                     if (test < string.charAt(index))
                                     {

@@ -39,6 +39,16 @@ extends TestCase
         {
             insertTest(tiers, strings[i]);
         }
+        
+        containsTest(tiers, strings);
+    }
+    
+    private static void containsTest(Tier[] tiers, String[] strings)
+    {
+        for (int i = 0; i < strings.length; i++)
+        {
+            assertTrue(contains(tiers, strings[i]));
+        }
     }
     
     private static boolean hasSlot(Object[] slots) 
@@ -63,6 +73,25 @@ extends TestCase
         strings[i] = string;
     }
     
+    private final static int LEFT = 0;
+    private final static int RIGHT = 1;
+    
+    private static String[][] split(String[] strings, int at)
+    {
+        String[] left = strings;
+        String[] right = newStrings();
+        System.arraycopy(strings, at, right, 0, strings.length - at);
+        System.arraycopy(strings, 0, left, at, strings.length - at);
+        Arrays.fill(left, at, strings.length, null);
+        return new String[][] { left, right };
+    }
+    
+    private static void insert(Tier[] tiers, int at, Tier tier)
+    {
+        System.arraycopy(tiers, at, tiers, at + 1, tiers.length - (at + 1));
+        tiers[at] = tier;
+    }
+
     private static void insert(Tier[] tiers, String string)
     {
         int i = 0;
@@ -77,7 +106,11 @@ extends TestCase
             {
                 break;
             }
-            throw new UnsupportedOperationException();
+            if (tiers[i + 1].ch > string.charAt(tiers[i + 1].index))
+            {
+                break;
+            }
+            i++;
         }
         if (i == tiers.length)
         {
@@ -94,7 +127,47 @@ extends TestCase
             }
             else
             {
-                throw new UnsupportedOperationException();
+                int j = strings.length / 2;
+                char middle = strings[j].charAt(index);
+                for (;;)
+                {
+                    if (j == 0)
+                    {
+                        break;
+                    }
+                    if (middle != strings[j - 1].charAt(index))
+                    {
+                        break;
+                    }
+                    j--;
+                }
+                if (j == 0)
+                {
+                    for (;;)
+                    {
+                        j++;
+                        if (j == strings.length)
+                        {
+                            throw new UnsupportedOperationException();
+                        }
+                        if (middle != strings[j].charAt(index))
+                        {
+                            break;
+                        }
+                    }
+                }
+                
+                if (j == strings.length)
+                {
+                    throw new UnsupportedOperationException();
+                }
+                else
+                {
+                    String[][] split = split(strings, j);
+                    insert(tiers, i + 1, new Tier(middle, index, split[RIGHT]));
+                    tiers[i] = new Tier(tier.ch, tier.index, split[LEFT]);
+                    insert(tiers, string);
+                }
             }
         }
         else
@@ -105,7 +178,7 @@ extends TestCase
     
     private static boolean contains(String[] strings, String string)
     {
-        for (int i = 0; i < strings.length; i++)
+        for (int i = 0; i < strings.length && strings[i] != null; i++)
         {
             if (strings[i].equals(string))
             {
@@ -120,20 +193,27 @@ extends TestCase
         int i = 0;
         for (;;)
         {
-            if (i + 1 != tiers.length && tiers[i + 1] != null)
+            if (i + 1 == tiers.length)
             {
                 throw new UnsupportedOperationException();
-//                int index = tiers[i].index;
-//                char ch = string.charAt(index);
-//                if (ch < tiers[i].ch)
-//                {
-//                    i++;
-//                }
             }
-            else if (tiers[i].children instanceof String[])
+            if (tiers[i + 1] == null)
             {
-                return contains((String[]) tiers[i].children, string);
+                break;
             }
+            if (tiers[i + 1].ch > string.charAt(tiers[i + 1].index))
+            {
+                break;
+            }
+            i++;
+        }
+        if (tiers[i].children instanceof String[])
+        {
+            return contains((String[]) tiers[i].children, string);
+        }
+        else
+        {
+            throw new UnsupportedOperationException();
         }
     }
     
@@ -141,12 +221,12 @@ extends TestCase
     
     private final static int STRINGS_LENGTH = 3;
     
-    private String[] newStrings()
+    private static String[] newStrings()
     {
         return new String[STRINGS_LENGTH];
     }
 
-    private Tier[] newFirstTier()
+    private static Tier[] newFirstTier()
     {
         Tier[] tiers = new Tier[TIERS_LENGTH];
         tiers[0] = new Tier(Character.MIN_VALUE, 0, newStrings());
@@ -158,6 +238,71 @@ extends TestCase
        Tier[] tiers = newFirstTier();
        insert(tiers, "bad");
        assertTrue(contains(tiers, "bad"));
+    }
+
+
+    public void testInsertTwoStringsInOrder()
+    {
+        Tier[] tiers = newFirstTier();
+        insertTest(tiers, "bad");
+        insertTest(tiers, "bid");
+        assertTrue(contains(tiers, "bid"));
+        assertTrue(contains(tiers, "bad"));
+    }
+
+    public void testInsertTwoStringsOutOfOrder()
+    {
+        Tier[] tiers = newFirstTier();
+        insertTest(tiers, "bid");
+        insertTest(tiers, "bad");
+        assertTrue(contains(tiers, "bid"));
+        assertTrue(contains(tiers, "bad"));
+    }
+
+    public void testInsertThreeStringsInOrder()
+    {
+        Tier[] tiers = newFirstTier();
+        insertTest(tiers, "bad");
+        insertTest(tiers, "bed");
+        insertTest(tiers, "bid");
+        assertTrue(contains(tiers, "bid"));
+        assertTrue(contains(tiers, "bed"));
+        assertTrue(contains(tiers, "bad"));
+    }
+
+    public void testInsertThreeStringsOutOfOrder()
+    {
+        Tier[] tiers = newFirstTier();
+        insertTest(tiers, "bid");
+        insertTest(tiers, "bad");
+        insertTest(tiers, "bed");
+        assertTrue(contains(tiers, "bed"));
+        assertTrue(contains(tiers, "bid"));
+        assertTrue(contains(tiers, "bad"));
+    }
+
+    public void testInsertSplitPage()
+    {
+        Tier[] tiers = newFirstTier();
+
+        insertTest(tiers, new String[] { "act", "bad", "cat" });
+        insertTest(tiers, "car");
+    }
+
+    public void testInsertSplitPageBeginningWithSought()
+    {
+        Tier[] tiers = newFirstTier();
+
+        insertTest(tiers, new String[] { "bid", "bad", "cat" });
+        insertTest(tiers, "bed");
+    }
+
+    public void testInsertOntoFirstPageAfterSplit()
+    {
+        Tier[] tiers = newFirstTier();
+
+        insertTest(tiers, new String[] { "act", "bad", "cat" });
+        insertTest(tiers, "add");
     }
 }
 
