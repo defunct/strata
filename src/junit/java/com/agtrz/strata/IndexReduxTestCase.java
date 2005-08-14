@@ -8,11 +8,43 @@ import java.util.Arrays;
 import junit.framework.TestCase;
 
 /**
+ * Things to remember, well, the search path you've followed is implicit
+ * in the string and index.
+ * 
  * @author Alan Gutierez
  */
 public class IndexReduxTestCase
 extends TestCase
 {
+    private final static String[] ALPHABET = new String[]
+    {                                        
+        "alpha",
+        "beta",
+        "charlie",
+        "delta",
+        "echo",
+        "foxtrot",
+        "golf",
+        "hotel",
+        "india",
+        "juliet",
+        "kilo",
+        "lima",
+        "mike",
+        "november",
+        "oscar",
+        "papa",
+        "quebec",
+        "romeo",
+        "sierra",
+        "tango",
+        "uniform",
+        "victor",
+        "whisky",
+        "x-ray",
+        "zebra"
+    };
+
     private final static class Tier
     {
         public final char ch;
@@ -24,6 +56,11 @@ extends TestCase
             this.ch = character;
             this.index = index;
             this.children = children;
+        }
+        
+        public String toString()
+        {
+            return "(" + ch + ":" + index + ") " + Arrays.asList(children).toString();
         }
     }
     
@@ -41,6 +78,20 @@ extends TestCase
         }
         
         containsTest(tiers, strings);
+    }
+
+    private void alphaTest(Tier[] tiers, int start, int stop, int direction)
+    {
+        for (int i = start; i != stop; i += direction)
+        {
+            String letter = ALPHABET[i].substring(0, 1);
+            insertTest(tiers, letter);
+        }
+    
+        for (int i = start; i != stop; i += direction)
+        {
+            assertTrue(contains(tiers, ALPHABET[i].substring(0, 1)));
+        }
     }
     
     private static void containsTest(Tier[] tiers, String[] strings)
@@ -74,6 +125,7 @@ extends TestCase
     }
     
     private final static int LEFT = 0;
+
     private final static int RIGHT = 1;
     
     private static String[][] split(String[] strings, int at)
@@ -98,11 +150,7 @@ extends TestCase
         int index = 0;
         for (;;)
         {
-            if (i + 1 == tiers.length)
-            {
-                throw new UnsupportedOperationException();
-            }
-            if (tiers[i + 1] == null)
+            if (i + 1 == tiers.length || tiers[i + 1] == null)
             {
                 break;
             }
@@ -133,7 +181,7 @@ extends TestCase
         }
         else
         {
-            throw new UnsupportedOperationException();
+            insert((Tier[]) tier.children, string);
         }
     }
     
@@ -203,11 +251,19 @@ extends TestCase
                 split(tiers, i, index + 1);
             }
         }
-        else
+        else if (tiers[tiers.length - 1] == null)
         {
             String[][] split = split(strings, j);
             insert(tiers, i + 1, new Tier(middle, index, split[RIGHT]));
             tiers[i] = new Tier(tier.ch, tier.index, split[LEFT]);
+        }
+        else
+        {
+            String[][] split = split(strings, j);
+            Tier[] subTiers = new Tier[TIERS_LENGTH];
+            subTiers[0] = new Tier(tier.ch, tier.index, split[LEFT]);
+            subTiers[1] = new Tier(middle, index, split[RIGHT]);
+            tiers[i] = new Tier(tier.ch, tier.index, subTiers);
         }
     }
 
@@ -228,11 +284,7 @@ extends TestCase
         int i = 0;
         for (;;)
         {
-            if (i + 1 == tiers.length)
-            {
-                throw new UnsupportedOperationException();
-            }
-            if (tiers[i + 1] == null)
+            if (i + 1 == tiers.length || tiers[i + 1] == null)
             {
                 break;
             }
@@ -248,7 +300,7 @@ extends TestCase
         }
         else
         {
-            throw new UnsupportedOperationException();
+            return contains((Tier[]) tiers[i].children, string);
         }
     }
     
@@ -340,14 +392,36 @@ extends TestCase
         insertTest(tiers, "add");
     }
     
-    public void testInsertSplitOnSecondCharacter()
+    public void testInsertLeftSplitOnSecondCharacter()
     {
         Tier[] tiers = newFirstTier();
 
         insertTest(tiers, new String[] { "mid", "mud", "med" });
         insertTest(tiers, "mad");
     }
-}
 
+    public void testInsertRightSplitOnSecondCharacter()
+    {
+        Tier[] tiers = newFirstTier();
+
+        insertTest(tiers, new String[] { "mid", "mad", "med" });
+        insertTest(tiers, "mud");
+    }
+
+    // XXX Probably can constantly unallocate the first page, maybe it doesn't exist?
+    public void testSplitTier()
+    {
+        Tier[] tiers = newFirstTier();
+
+        alphaTest(tiers, 0, 9, 1);
+    }
+
+    public void testAlphabet()
+    {
+        Tier[] tiers = newFirstTier();
+
+        alphaTest(tiers, 0, 25, 1);
+    }
+}
 
 /* vim: set et sw=4 ts=4 ai tw=72: */
