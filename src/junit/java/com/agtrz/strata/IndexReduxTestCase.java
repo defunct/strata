@@ -3,7 +3,16 @@
  */
 package com.agtrz.strata;
 
+import java.awt.Dimension;
 import java.util.Arrays;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTree;
+import javax.swing.SwingUtilities;
+import javax.swing.tree.DefaultMutableTreeNode;
 
 import junit.framework.TestCase;
 
@@ -421,6 +430,48 @@ extends TestCase
         Tier[] tiers = newFirstTier();
 
         alphaTest(tiers, 0, 25, 1);
+    }
+    
+    private static void runViewer()
+    {
+        JFrame.setDefaultLookAndFeelDecorated(true);
+        
+        JFrame frame = new JFrame("Strata-Vision");
+        
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        
+        DefaultMutableTreeNode top = new DefaultMutableTreeNode("Strata");
+        top.setAllowsChildren(true);
+        
+        JTree tree = new JTree(top);
+        JScrollPane treeScroll = new JScrollPane(tree);
+
+        Dimension minimumSize = new Dimension(100, 200);
+        treeScroll.setMinimumSize(minimumSize);
+        
+        JPanel right = new JPanel();
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
+                                              treeScroll,
+                                              right);
+
+        splitPane.setOneTouchExpandable(true);
+        splitPane.setLastDividerLocation(100);
+        
+        frame.getContentPane().add(splitPane);
+        
+        frame.pack();
+        frame.setVisible(true);
+    }
+
+    public static void main(String[] args)
+    {
+        SwingUtilities.invokeLater(new Runnable()
+        {
+            public void run()
+            {
+                runViewer();
+            }
+        });
     }
 }
 
