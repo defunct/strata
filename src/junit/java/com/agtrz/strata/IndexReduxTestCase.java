@@ -738,6 +738,31 @@ extends TestCase
             System.out.println(event.getSource());
         }
     }
+    
+    /** Because string internment is defeating equality. */
+    private final static class StrataTreeModelLeaf
+    {
+        private final String string;
+        
+        private final int index;
+
+        public StrataTreeModelLeaf(String string, int index)
+        {
+            this.string = string;
+            this.index = index;
+        }
+        
+        public int getIndex()
+        {
+            return index;
+        }
+        
+        public String toString()
+        {
+            return string;
+        }
+    }
+    
 
     private final static class StrataTreeModel
     implements TreeModel
@@ -787,7 +812,8 @@ extends TestCase
             Tier tier = (Tier) parent;
             if (tier.children instanceof String[])
             {
-                return ((String[]) tier.children)[index];
+                String string = ((String[]) tier.children)[index];
+                return new StrataTreeModelLeaf(string, index);
             }
             return ((Tier[]) tier.children)[index];
         }
@@ -810,6 +836,10 @@ extends TestCase
                 return -1;
             }
             Tier tier = (Tier) parent;
+            if (tier.children instanceof String[])
+            {
+                return ((StrataTreeModelLeaf) child).getIndex();
+            }
             for (int i = 0; i < tier.children.length; i++)
             {
                 if (tier.children[i] == child)
@@ -827,10 +857,8 @@ extends TestCase
         
         public boolean isLeaf(Object node)
         {
-            return node instanceof String;
+            return node instanceof StrataTreeModelLeaf;
         }
-        
-        
     }
 
     public static void main(String[] args)
