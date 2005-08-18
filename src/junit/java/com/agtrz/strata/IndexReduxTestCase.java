@@ -16,8 +16,6 @@ import javax.swing.JSplitPane;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 import javax.swing.event.EventListenerList;
-import javax.swing.event.TreeExpansionEvent;
-import javax.swing.event.TreeExpansionListener;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -726,18 +724,18 @@ extends TestCase
         frame.setVisible(true);
     }
     
-    private final static class StrataTreeExpandListeners
-    implements TreeExpansionListener
-    {
-        public void treeCollapsed(TreeExpansionEvent event)
-        {
-        }
-        
-        public void treeExpanded(TreeExpansionEvent event)
-        {
-            System.out.println(event.getSource());
-        }
-    }
+//    private final static class StrataTreeExpandListeners
+//    implements TreeExpansionListener
+//    {
+//        public void treeCollapsed(TreeExpansionEvent event)
+//        {
+//        }
+//        
+//        public void treeExpanded(TreeExpansionEvent event)
+//        {
+//            System.out.println(event.getSource());
+//        }
+//    }
     
     /** Because string internment is defeating equality. */
     private final static class StrataTreeModelLeaf
