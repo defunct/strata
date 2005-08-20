@@ -5,7 +5,7 @@
        =                      Bootstrap 
        ================================================================== -->
 
-  <property name="mix.boot.revision" value="15"/>
+  <property name="mix.boot.revision" value="47"/>
 
   <target name="boot">
 
@@ -23,5 +23,18 @@
 
   </target>
 
+  <target name="boot.latest">
+
+    <mkdir dir="lib"/>
+
+    <exec executable="svn" dir="lib">
+      <arg value="checkout"/>
+      <arg value="https://engrm.com/svn/mix/src/boot"/>
+      <arg value="_boot"/>
+    </exec>
+
+    <ant antfile="lib/_boot/ant/build.xml" target="boot.latest"/>
+
+  </target>
 </project>
 <!-- vim: set et ts=2 sw=2 tw=0 ai nowrap: -->
