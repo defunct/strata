@@ -6,6 +6,7 @@
   <mix-revision>15</mix-revision>
 
   <target>repository</target>
+  <target>clean</target>
   <target>library</target>
   <target>classpath</target>
   <target>javac</target>
