@@ -84,7 +84,7 @@
         =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= +-->
   <target name="configure">
     <property name="ivy.resolver.default.check.modified" value="false"/>
-    <ivy:configure file="ivyconf.xml" />
+    <ivy:configure file="${basedir}/mix/ivyconf.xml" />
   </target>
 
   <!--| resolve |-->
