@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="strata" default="help" xmlns:ivy="antlib:fr.jayasoft.ivy.ant">
+  <import file="mix/mix.ant.xml" optional="no"/>
+
+  <property file="build.properties"/>
+
+  <target name="siblings.configure">
+    <macrodef name="sibling-ant">
+      <attribute name="target"/>
+      <sequential>
+        <sibling-call sibling="todo" target="@{target}"/>
+        <sibling-call sibling="i18n" target="@{target}"/>
+        <sibling-call sibling="swag" target="@{target}"/>
+        <antcall target="@{target}"/>
+      </sequential>
+    </macrodef>
+  </target>
+
+  <target name="revision">
+    <mix-revision/>
+    <echo message="Todo Version ${mix.revision} - Alan Gutierrez - 2005."/>
+  </target>
+
+  <target name="jar" depends="compile,revision">
+    <mkdir dir="target/jar"/>
+    <jar destfile="target/jar/strata.jar">
+      <fileset dir="target/classes/main/classes"/>
+      <fileset dir="target/classes/main/resource"/>
+    </jar>
+  </target>
+
+  <target name="classpath">
+    <path id="classpath">
+      <fileset dir="lib">
+        <include name="*.jar"/>
+      </fileset>
+    </path>
+  </target>
+
+  <target name="classpath.dump" depends="classpath">
+    <property name="classpath" refid="classpath"/>
+    <echo message="classpath = ${classpath}"/>
+  </target>
+  
+  <target name="compile">
+
+    <mix-javac-configure/>
+
+    <mix-javac
+        srcdir="src/main/java"
+        destdir="target/classes/main/classes">
+      <include name="**/*.java"/>
+      <classpath>
+        <path refid="classpath"/> 
+      </classpath>
+    </mix-javac>
+
+    <mix-resources
+      srcdir="src/main/resource"
+      destdir="target/classes/main/resource"/>
+
+  </target>
+
+  <target name="mix.macro.available">
+    <available file="mix.macro.xml" property="mix.macro.available"/>
+  </target>
+
+  <!--| publish |-->
+  <!--+ =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+        Send this project to a local Ivy repository.
+        =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= +-->
+  <target name="publish" depends="configure,resolve,jar">
+    <ivy:publish
+      artifactspattern="${basedir}/target/[type]/[artifact].[ext]"
+      resolver="local"
+      pubrevision="local-${mix.revision}"
+      validate="false"
+      />
+  </target>
+
+  <!--| configure |-->
+  <!--+ =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+        Configure Ivy with the appropriate ivyconf.xml file.
+        =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= +-->
+  <target name="configure">
+    <property name="ivy.resolver.default.check.modified" value="false"/>
+    <ivy:configure file="ivyconf.xml" />
+  </target>
+
+  <!--| resolve |-->
+  <!--+ =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+        Resolve and retrieve dependencies with Ivy.
+        =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= +-->
+  <target name="resolve" description="Retreive dependencies with Ivy.">
+    <delete>
+      <fileset dir="lib" includes="*-local-*.jar"/>
+    </delete>
+    <ivy:retrieve/>
+  </target>
+
+  <target name="help">
+    <echo>Parsing by any means necessary.</echo>
+  </target>
+</project>
+<!-- vim: set et ts=2 sw=2 ai nowrap: -->

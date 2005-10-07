@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<ivyconf>
+  <conf defaultResolver="dependencies"/>
+  <resolvers>
+
+    <!--| Chain means try different repositories in order. |-->
+    <chain name="dependencies" returnFirst="true">
+
+      <filesystem name="local">
+        <ivy pattern="../repository/[module]/ivys/ivy-[revision].xml"/>
+        <artifact pattern="../repository/[module]/[type]/[artifact]-[revision].[ext]"/>
+      </filesystem>
+
+      <!--| Dual means look for Ivys in one place, artifacts in another. |-->
+      <dual name="er-dual">
+
+        <!--| Look for an engrm Ivy. |-->
+        <ivyrep name="er-ivys" ivyroot="http://engrm.com/ivy/" checkmodified="yes"/>
+
+        <!--| If found, look for the artifact ... |-->
+        <chain name="er-chain">
+
+          <!--| ... in the engrm repository, then ... |-->
+          <url name="er-repository">
+            <artifact pattern="http://engrm.com/repository/[organization]/[module]/[ext]/[artifact]-[revision].[ext]"/>
+          </url>
+
+          <!--| ... in the ibiblio repository. |-->
+          <ibiblio name="ibiblio" />
+        </chain>
+      </dual>
+
+      <!--| Standard Ivys. |-->
+      <ivyrep name="ivys"/>
+
+      <!--| Ivys in the Jayasoft sandbox. |-->
+      <ivyrep name="sandbox-ivys" ivyroot="http://opensvn.csie.org/ivyrepsandbox/"/>
+
+      <!--| Lastly, try ibiblio with default artifact pattern. |-->
+      <ibiblio name="ibiblio" />
+
+    </chain>
+  </resolvers>
+</ivyconf>
+<!-- vim: set et ts=2 sw=2 ai nowrap: -->
