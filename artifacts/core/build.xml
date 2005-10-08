@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<project name="strata.core">
+  <import file="${basedir}/../../mix/import/artifact.ant.xml"/>     
+
+  <target name="configure" depends="mix.configure">
+    <artifact org="agtrz"
+              project="strata"
+              name="core"
+              ivy-conf="core"
+              ivy-conf-test="test"
+              />
+  </target>
+
+</project>
+<!-- vim: set et ts=2 sw=2 ai nowrap: -->
