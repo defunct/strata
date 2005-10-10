@@ -491,10 +491,7 @@ extends TestCase
                 {
                     return scan((String[]) split.children, string);
                 }
-                else
-                {
-                    return contains((Split[]) split.children, string);
-                }
+                return contains((Split[]) split.children, string);
             }
             i++;
         }

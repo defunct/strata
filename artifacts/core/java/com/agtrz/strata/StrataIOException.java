@@ -11,6 +11,8 @@ import com.agtrz.swag.Danger;
 public class StrataIOException
 extends StrataException
 {
+    private final static long serialVersionUID = 20051009L;
+
     public StrataIOException(Danger danger, Throwable cause)
     {
         super(danger, cause);

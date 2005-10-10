@@ -13,6 +13,7 @@
     <configurations>
         <conf name="core" description="The core B+Tree."/>
         <conf name="test" description="Testing dependencies."/>
+        <conf name="mix" description="Build environment depdendencies."/>
         <conf name="default" description="The same as core." extends="core"/>
     </configurations>
     <publications>
@@ -48,6 +49,11 @@
                     name="sheaf"
                     rev="latest.integration"
                     conf="core->default"
+                    />
+        <dependency org="grobo"
+                    name="testing"
+                    rev="1.2.1"
+                    conf="test->default"
                     />
     </dependencies>
 </ivy-module>

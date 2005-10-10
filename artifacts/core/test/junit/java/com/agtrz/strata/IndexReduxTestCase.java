@@ -317,10 +317,7 @@ extends TestCase
         {
             return contains((String[]) tiers[i].children, string);
         }
-        else
-        {
-            return contains((Tier[]) tiers[i].children, string);
-        }
+        return contains((Tier[]) tiers[i].children, string);
     }
     
     private final static int TIERS_LENGTH = 3;

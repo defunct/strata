@@ -1,14 +1,19 @@
 <?xml version="1.0"?>
-<project name="strata.core">
-  <import file="${basedir}/../../mix/import/artifact.ant.xml"/>     
+<project>
 
-  <target name="configure" depends="mix.configure">
-    <artifact org="agtrz"
-              project="strata"
-              name="core"
-              ivy-conf="core"
-              ivy-conf-test="test"
-              />
+  <import file="../../mix/import/artifact.ant.xml" optional="yes"/>
+
+  <target name="configure.artifact">
+    <artifact ivy-conf="core"/>
+  </target>
+
+  <target name="configure.tests">
+    <macrodef name="test-target">
+      <attribute name="target"/>
+      <sequential>
+        <artifact-test-with test="junit" target="@{target}"/>
+      </sequential>
+    </macrodef>
   </target>
 
 </project>

@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project
-    name="strata"
-    default="help"
-    xmlns:ivy="antlib:fr.jayasoft.ivy.ant">
-  <import file="${basedir}/mix/import/project.ant.xml"/>
+<project default="help">
 
-  <target name="sibling.configure">
+  <import file="mix/import/project.ant.xml" optional="yes"/>
+
+  <target name="configure.project">
+    <mix-project org="agtrz" project="strata"/>
+  </target>
+
+  <target name="configure.siblings">
     <macrodef name="sibling-target">
       <attribute name="target"/>
       <sequential>
@@ -13,12 +15,11 @@
         <sibling-ant sibling="todo" target="@{target}"/>
         <sibling-ant sibling="swag" target="@{target}"/>
         <sibling-ant sibling="sheaf" target="@{target}"/>
-        <antcall target="@{target}"/>
       </sequential>
     </macrodef>
   </target>
 
-  <target name="artifact.configure">
+  <target name="configure.artifacts">
     <macrodef name="artifact-target">
       <attribute name="target"/>
       <sequential>
@@ -27,5 +28,16 @@
     </macrodef>
   </target>
 
+  <target name="configure.retrieve">
+  <!--( This is an optional override for performance. )-->
+    <macrodef name="retrieve-libraries">
+      <sequential>
+        <mix-library conf="core"
+                     libdir="artifacts/core/lib"/>
+        <mix-library conf="core,test,mix"
+                     libdir="artifacts/core/test/junit/lib"/>
+      </sequential>
+    </macrodef>
+  </target>
 </project>
 <!-- vim: set et ts=2 sw=2 ai nowrap: -->

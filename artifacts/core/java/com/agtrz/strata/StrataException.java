@@ -12,6 +12,8 @@ import com.agtrz.swag.UniversalException;
 public class StrataException
 extends UniversalException
 {
+    private final static long serialVersionUID = 20051009L;
+
     public StrataException(Danger danger)
     {
         super(danger);
