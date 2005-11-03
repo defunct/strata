@@ -1,27 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-    <classpathentry
-        excluding="**/.svn|**/.svn/**"
-        output="artifacts/core/target/classes"
-        kind="src"
-        path="artifacts/core/java"/>
-	<classpathentry
-        excluding="**/.svn|**/.svn/**"
-        output="artifacts/core/target/classes/"
-        kind="src"
-        path="artifacts/core/resource"/>
-	<classpathentry
-        excluding="**/.svn|**/.svn/**"
-        output="artifacts/core/test/junit/target/classes"
-        kind="src"
-        path="artifacts/core/test/junit/resource"/>
-	<classpathentry
-        excluding="**/.svn|**/.svn/**"
-        output="artifacts/core/test/junit/target/classes"
-        kind="src"
-        path="artifacts/core/test/junit/java"/>
+	<classpathentry excluding="**/.svn|**/.svn/**" output="artifacts/core/target/classes" kind="src" path="artifacts/core/java"/>
+	<classpathentry excluding="**/.svn|**/.svn/**" output="artifacts/core/target/classes/" kind="src" path="artifacts/core/resource"/>
+	<classpathentry excluding="**/.svn|**/.svn/**" output="artifacts/core/test/junit/target/classes" kind="src" path="artifacts/core/test/junit/resource"/>
+	<classpathentry excluding="**/.svn|**/.svn/**" output="artifacts/core/test/junit/target/classes" kind="src" path="artifacts/core/test/junit/java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="src" path="/i18n"/>
 	<classpathentry kind="src" path="/sheaf"/>
 	<classpathentry kind="src" path="/swag"/>
 	<classpathentry kind="src" path="/todo"/>
