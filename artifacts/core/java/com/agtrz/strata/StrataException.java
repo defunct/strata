@@ -3,8 +3,8 @@
  */
 package com.agtrz.strata;
 
-import com.agtrz.swag.Danger;
-import com.agtrz.swag.UniversalException;
+import com.agtrz.swag.danger.Danger;
+import com.agtrz.swag.danger.UniversalException;
 
 /**
  * @author Alan Gutierez

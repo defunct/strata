@@ -14,9 +14,8 @@ import com.agtrz.sheaf.SheafBuilder;
 import com.agtrz.sheaf.Write;
 import com.agtrz.strata.IndexCreator;
 import com.agtrz.strata.StrataCreateException;
-import com.agtrz.swag.Danger;
-import com.agtrz.swag.Dangerous;
 import com.agtrz.swag.SizeOf;
+import com.agtrz.swag.danger.Danger;
 
 /**
  * @author Alan Gutierez
@@ -37,8 +36,8 @@ implements IndexCreator
     {
         if (Comparator.class.isAssignableFrom(comparatorClass))
         {
-            Danger danger = new Dangerous(HashIndexFactory.class)
-                               .newDanger("not.a.comparator");
+            Danger danger = Danger.raise(HashIndexFactory.class)
+                                  .newDanger("not.a.comparator");
             throw new StrataCreateException(danger);
         }
         

@@ -12,8 +12,7 @@ import com.agtrz.sheaf.SheafLocker;
 import com.agtrz.strata.Index;
 import com.agtrz.strata.IndexOpener;
 import com.agtrz.strata.StrataIOException;
-import com.agtrz.swag.Danger;
-import com.agtrz.swag.Dangerous;
+import com.agtrz.swag.danger.Danger;
 
 /**
  * @author Alan Gutierez
@@ -39,8 +38,8 @@ implements IndexOpener
             }
             catch (ClassNotFoundException e)
             {
-                Danger danger = new Dangerous(HashIndexFactory.class)
-                                   .newDanger("class.not.found");
+                Danger danger = Danger.raise(HashIndexFactory.class)
+                                      .newDanger("class.not.found");
                 throw new StrataIOException(danger, e);
             }
         }

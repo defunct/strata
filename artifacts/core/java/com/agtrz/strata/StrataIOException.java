@@ -3,7 +3,7 @@
  */
 package com.agtrz.strata;
 
-import com.agtrz.swag.Danger;
+import com.agtrz.swag.danger.Danger;
 
 /**
  * @author Alan Gutierez
