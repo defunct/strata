@@ -31,11 +31,6 @@
                     conf="test->default"
                     />
         <dependency org="agtrz"
-                    name="i18n"
-                    rev="latest.integration"
-                    conf="core->default"
-                    />
-        <dependency org="agtrz"
                     name="todo"
                     rev="latest.integration"
                     conf="core->default"

@@ -11,7 +11,6 @@
     <macrodef name="sibling-target">
       <attribute name="target"/>
       <sequential>
-        <sibling-ant sibling="i18n" target="@{target}"/>
         <sibling-ant sibling="todo" target="@{target}"/>
         <sibling-ant sibling="swag" target="@{target}"/>
         <sibling-ant sibling="sheaf" target="@{target}"/>
