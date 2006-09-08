@@ -3,12 +3,16 @@
  */
 package com.agtrz.strata;
 
+import java.util.Comparator;
+
 /**
  * @author Alan Gutierrez
  */
-public class Tier
+public interface Tier
 {
-
+    public Branch insert(Stratifier stratifier, Comparator comparator, Object object);
+    
+    public boolean isLeaf();
 }
 
 
