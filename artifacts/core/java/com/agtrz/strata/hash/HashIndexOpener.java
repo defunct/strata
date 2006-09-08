@@ -4,15 +4,14 @@
 package com.agtrz.strata.hash;
 
 import java.net.URI;
-import java.nio.ByteBuffer;
 
-import com.agtrz.sheaf.NIO;
 import com.agtrz.sheaf.SheafLock;
 import com.agtrz.sheaf.SheafLocker;
 import com.agtrz.strata.Index;
 import com.agtrz.strata.IndexOpener;
 import com.agtrz.strata.StrataIOException;
 import com.agtrz.swag.danger.Danger;
+import com.agtrz.util.ObjectReadBuffer;
 
 /**
  * @author Alan Gutierez
@@ -28,9 +27,9 @@ implements IndexOpener
             int pageOfHeader = locker.getSheaf()
                                      .getSchema()
                                      .getStaticPageNumber(uriOfIndex);
-            ByteBuffer bytes = shared.getRead().read(pageOfHeader);
-            /* int pageOfHashes = */ bytes.getInt();
-            String className = NIO.getString(bytes, bytes.getInt());
+            ObjectReadBuffer input = shared.getRead().read(pageOfHeader);
+            /* int pageOfHashes = */ input.readInteger();
+            String className = input.readString();
             try
             {
                 return new HashIndex(getClass().getClassLoader()

@@ -4,11 +4,9 @@
 package com.agtrz.strata.hash;
 
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.Comparator;
 
 import com.agtrz.sheaf.Address;
-import com.agtrz.sheaf.NIO;
 import com.agtrz.sheaf.PageRecorder;
 import com.agtrz.sheaf.SheafBuilder;
 import com.agtrz.sheaf.Write;
@@ -16,6 +14,7 @@ import com.agtrz.strata.IndexCreator;
 import com.agtrz.strata.StrataCreateException;
 import com.agtrz.swag.SizeOf;
 import com.agtrz.swag.danger.Danger;
+import com.agtrz.util.ObjectWriteBuffer;
 
 /**
  * @author Alan Gutierez
@@ -59,9 +58,8 @@ implements IndexCreator
 
         public void record(Write write, int page)
         {
-            ByteBuffer bytes = write.write(page);
-            bytes.putLong(0L);
-            NIO.putCharSequence(bytes, comparatorClass.getName());
+            ObjectWriteBuffer bytes = write.write(page);
+            bytes.write(comparatorClass.getName());
         }
     }
 }
