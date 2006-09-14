@@ -6,7 +6,13 @@ public class Branch
     
     private final Object object;
     
-    public final static Object TERMINAL = new Object();
+    public final static Object TERMINAL = new Object()
+    {
+        public String toString()
+        {
+            return "TERMINAL";
+        }
+    };
     
     public Branch(Tier left, Object object)
     {
@@ -27,6 +33,11 @@ public class Branch
     public boolean isTerminal()
     {
         return TERMINAL == object;
+    }
+    
+    public String toString()
+    {
+        return object.toString();
     }
 }
 

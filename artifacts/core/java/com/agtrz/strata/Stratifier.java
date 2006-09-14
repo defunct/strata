@@ -1,7 +1,7 @@
 package com.agtrz.strata;
 
-import com.agtrz.util.ObjectReadBuffer;
-import com.agtrz.util.ObjectWriteBuffer;
+import com.agtrz.swag.io.ObjectReadBuffer;
+import com.agtrz.swag.io.ObjectWriteBuffer;
 
 public interface Stratifier
 {

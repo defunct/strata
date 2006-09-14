@@ -11,7 +11,7 @@ import com.agtrz.strata.Index;
 import com.agtrz.strata.IndexOpener;
 import com.agtrz.strata.StrataIOException;
 import com.agtrz.swag.danger.Danger;
-import com.agtrz.util.ObjectReadBuffer;
+import com.agtrz.swag.io.ObjectReadBuffer;
 
 /**
  * @author Alan Gutierez

@@ -12,9 +12,9 @@ import com.agtrz.sheaf.SheafBuilder;
 import com.agtrz.sheaf.Write;
 import com.agtrz.strata.IndexCreator;
 import com.agtrz.strata.StrataCreateException;
-import com.agtrz.swag.SizeOf;
 import com.agtrz.swag.danger.Danger;
-import com.agtrz.util.ObjectWriteBuffer;
+import com.agtrz.swag.io.ObjectWriteBuffer;
+import com.agtrz.swag.io.SizeOf;
 
 /**
  * @author Alan Gutierez
