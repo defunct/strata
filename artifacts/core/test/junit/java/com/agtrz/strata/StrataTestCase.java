@@ -195,4 +195,4 @@ extends TestCase
     }
 }
 
-/* vim: set et sw=4 ts=4 ai tw=68: */
+/* vim: set et sw=4 ts=4 ai tw=78 nowrap: */
