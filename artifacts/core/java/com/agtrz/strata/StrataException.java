@@ -3,25 +3,24 @@
  */
 package com.agtrz.strata;
 
-import com.agtrz.swag.danger.Danger;
-import com.agtrz.swag.danger.UniversalException;
+import com.agtrz.swag.danger.UniversalExceptionRedux;
 
 /**
  * @author Alan Gutierez
  */
 public class StrataException
-extends UniversalException
+extends UniversalExceptionRedux
 {
     private final static long serialVersionUID = 20051009L;
 
-    public StrataException(Danger danger)
+    public StrataException()
     {
-        super(danger);
+        super();
     }
 
-    public StrataException(Danger danger, Throwable cause)
+    public StrataException(Throwable cause)
     {
-        super(danger, cause);
+        super(cause);
     }
 }
 

@@ -3,7 +3,6 @@
  */
 package com.agtrz.strata;
 
-import com.agtrz.swag.danger.Danger;
 
 /**
  * @author Alan Gutierez
@@ -13,9 +12,9 @@ extends StrataException
 {
     private final static long serialVersionUID = 20051009L;
 
-    public StrataIOException(Danger danger, Throwable cause)
+    public StrataIOException(Throwable cause)
     {
-        super(danger, cause);
+        super(cause);
     }
 }
 

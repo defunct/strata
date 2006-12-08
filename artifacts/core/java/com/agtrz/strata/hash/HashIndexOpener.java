@@ -10,7 +10,6 @@ import com.agtrz.sheaf.SheafLocker;
 import com.agtrz.strata.Index;
 import com.agtrz.strata.IndexOpener;
 import com.agtrz.strata.StrataIOException;
-import com.agtrz.swag.danger.Danger;
 import com.agtrz.swag.io.ObjectReadBuffer;
 
 /**
@@ -37,9 +36,8 @@ implements IndexOpener
             }
             catch (ClassNotFoundException e)
             {
-                Danger danger = Danger.raise(HashIndexFactory.class)
-                                      .newDanger("class.not.found");
-                throw new StrataIOException(danger, e);
+                throw new StrataIOException(e).raise(HashIndexFactory.class)
+                                              .newDanger("class.not.found");
             }
         }
         finally
