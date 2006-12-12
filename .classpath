@@ -6,10 +6,10 @@
 	<classpathentry excluding="**/.svn|**/.svn/**" output="artifacts/core/test/junit/target/classes" kind="src" path="artifacts/core/test/junit/java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="src" path="/swag"/>
-	<classpathentry kind="lib" path="lib/test/junit.jar"/>
 	<classpathentry exported="true" kind="lib" path="/Applications/eclipse/plugins/org.codehaus.groovy.eclipse_1.0.0.20060905/lib/commons-io-1.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="/Applications/eclipse/plugins/org.codehaus.groovy.eclipse_1.0.0.20060905/lib/commons-lang-2.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="/Applications/eclipse/plugins/org.codehaus.groovy.eclipse_1.0.0.20060905/lib/groovy-all-1.0-JSR-06.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/sheaf"/>
+	<classpathentry kind="lib" path="/mix/lib/junit/junit.jar"/>
 	<classpathentry kind="output" path="ERRORS-IN-PATH"/>
 </classpath>
