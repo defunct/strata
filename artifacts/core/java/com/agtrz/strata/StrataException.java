@@ -3,13 +3,13 @@
  */
 package com.agtrz.strata;
 
-import com.agtrz.swag.danger.UniversalExceptionRedux;
+import com.agtrz.swag.danger.Danger;
 
 /**
  * @author Alan Gutierez
  */
 public class StrataException
-extends UniversalExceptionRedux
+extends Danger
 {
     private final static long serialVersionUID = 20051009L;
 
