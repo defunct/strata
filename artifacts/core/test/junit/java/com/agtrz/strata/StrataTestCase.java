@@ -6,45 +6,18 @@ import com.agtrz.swag.io.ObjectReadBuffer;
 import com.agtrz.swag.io.ObjectWriteBuffer;
 
 public class StrataTestCase
-extends TestCase 
+extends TestCase
 {
-    private final static String[] ALPHABET = new String[]
-    {                                        
-        "alpha",
-        "beta",
-        "charlie",
-        "delta",
-        "echo",
-        "foxtrot",
-        "golf",
-        "hotel",
-        "india",
-        "juliet",
-        "kilo",
-        "lima",
-        "mike",
-        "november",
-        "oscar",
-        "papa",
-        "quebec",
-        "romeo",
-        "sierra",
-        "tango",
-        "uniform",
-        "victor",
-        "whisky",
-        "x-ray",
-        "zebra"
-    };
+    private final static String[] ALPHABET = new String[] { "alpha", "beta", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet", "kilo", "lima", "mike", "november", "oscar", "papa", "quebec", "romeo", "sierra", "tango", "uniform", "victor", "whisky", "x-ray", "zebra" };
 
     public static class Employee
     {
         public final long employeeId;
-        
+
         public final String firstName;
-        
+
         public final String lastName;
-        
+
         public Employee(long employeeId, String firstName, String lastName)
         {
             this.employeeId = employeeId;
@@ -52,7 +25,7 @@ extends TestCase
             this.lastName = lastName;
         }
     }
-    
+
     public void testConstruction()
     {
         Strata strata = new Strata(new MemoryTierFactory());
@@ -62,12 +35,10 @@ extends TestCase
             {
                 return new Long(((Employee) object).employeeId);
             }
-            
+
             public Object deserialize(ObjectReadBuffer input)
             {
-                return new Employee(input.readLong(),
-                                    input.readString(),
-                                    input.readString()); 
+                return new Employee(input.readLong(), input.readString(), input.readString());
             }
 
             public void serialize(ObjectWriteBuffer output, Object object)
@@ -76,15 +47,15 @@ extends TestCase
                 output.write(employee.employeeId);
                 output.write(employee.firstName);
                 output.write(employee.lastName);
-            } 
+            }
         });
-//        for (int i = 0; i < 1; i++)
-//        {
-            strata.insert(ALPHABET[0]);
-            assertEquals(ALPHABET[0], strata.find(ALPHABET[0]));
-//        }
+        // for (int i = 0; i < 1; i++)
+        // {
+        strata.insert(ALPHABET[0]);
+        assertEquals(ALPHABET[0], strata.find(ALPHABET[0]));
+        // }
     }
-    
+
     public void testMultiple()
     {
         Strata strata = new Strata(new MemoryTierFactory());
@@ -99,7 +70,7 @@ extends TestCase
         }
         strata.copacetic();
     }
-    
+
     public void testSplit()
     {
         Strata strata = new Strata(new MemoryTierFactory());
@@ -188,10 +159,9 @@ extends TestCase
             strata.copacetic();
         }
     }
-    
+
     public void testInsertDuplicates()
     {
-        
     }
 }
 

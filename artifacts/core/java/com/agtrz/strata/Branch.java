@@ -3,9 +3,9 @@ package com.agtrz.strata;
 public class Branch
 {
     private final Tier left;
-    
+
     private final Object object;
-    
+
     public final static Object TERMINAL = new Object()
     {
         public String toString()
@@ -13,7 +13,7 @@ public class Branch
             return "TERMINAL";
         }
     };
-    
+
     public Branch(Tier left, Object object)
     {
         this.left = left;
@@ -24,21 +24,21 @@ public class Branch
     {
         return left;
     }
-    
+
     public Object getObject()
     {
         return object;
     }
-    
+
     public boolean isTerminal()
     {
         return TERMINAL == object;
     }
-    
+
     public String toString()
     {
         return object.toString();
     }
 }
 
-/* vim: set et sw=4 ts=4 ai tw=68: */
+/* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

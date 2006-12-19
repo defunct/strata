@@ -8,8 +8,8 @@ import java.util.List;
 /**
  * Doesn't need to handle new types dynamically, does it?
  * <p>
- * The first use case for this project is an index of articles by 
- * GUID, from which one can create an atom feed.
+ * The first use case for this project is an index of articles by GUID, from
+ * which one can create an atom feed.
  * <p>
  * Only need identities. Only need one type of node.
  * <p>
@@ -23,32 +23,32 @@ import java.util.List;
  */
 public class Strata
 {
-//    private final TierFactory tiers;
-    
+    // private final TierFactory tiers;
+
     private final InnerTier root;
-    
+
     private final StrataSchema schema;
-    
+
     private final Comparator comparator;
-    
+
     public Strata(TierFactory tiers, Comparator comparitor)
     {
-//        this.tiers = tiers;
+        // this.tiers = tiers;
         this.root = tiers.newRootTier(1, 5);
         this.schema = new StrataSchema();
         this.comparator = comparitor;
     }
-    
+
     public void copacetic()
     {
         root.copacetic(comparator);
     }
-    
+
     public Strata(TierFactory tiers)
     {
         this(tiers, new ComparableComparator());
     }
-    
+
     public StrataSchema getSchema()
     {
         return schema;
@@ -58,15 +58,15 @@ public class Strata
     {
         // Maintaining a list of tiers to split.
         //
-        // During the decent into the tree, we check for full tiers.
-        // When a full tier is first encountered, a list of full tiers
-        // is begun starting with the parent of the first full tier, and
-        // followed by all of the full tiers to the leaf tier. If less
-        // than full tier is encountered, we reset the list of tiers.
+        // During the decent into the tree, we check for full tiers. When a
+        // full tier is first encountered, a list of full tiers is begun
+        // starting with the parent of the first full tier, and followed by
+        // all of the full tiers to the leaf tier. If less than full tier is
+        // encountered, we reset the list of tiers.
         //
-        // The list of tiers is locked in order from upper most teirs to
-        // the leaf.
-        
+        // The list of tiers is locked in order from upper most teirs to the
+        // leaf.
+
         List listOfFullTiers = new ArrayList();
         InnerTier parent = null;
         InnerTier inner = root;
@@ -90,13 +90,13 @@ public class Strata
             {
                 listOfFullTiers.clear();
             }
-            
+
             if (tier.isLeaf())
             {
                 if (tier.isFull())
                 {
                     listOfFullTiers.add(tier);
-                    
+
                     Iterator ancestors = listOfFullTiers.iterator();
                     tier = (Tier) ancestors.next();
                     for (;;)
@@ -111,7 +111,7 @@ public class Strata
                         }
                         else
                         {
-                            reciever.replace(comparator, full, split);      
+                            reciever.replace(comparator, full, split);
                         }
                         tier = reciever.find(comparator, object).getLeft();
                         if (!ancestors.hasNext())
@@ -120,16 +120,16 @@ public class Strata
                         }
                     }
                 }
-                
+
                 LeafTier leaf = (LeafTier) tier;
                 leaf.insert(comparator, object);
                 break;
             }
-            
+
             inner = (InnerTier) tier;
         }
     }
-    
+
     public Object find(Object object)
     {
         InnerTier tier = root;
@@ -144,7 +144,7 @@ public class Strata
             tier = (InnerTier) branch.getLeft();
         }
     }
-    
+
     public final static class ComparableComparator
     implements Comparator
     {
@@ -155,4 +155,4 @@ public class Strata
     }
 }
 
-/* vim: set et sw=4 ts=4 ai tw=68: */
+/* vim: set et sw=4 ts=4 ai tw=78 nowrap: */
