@@ -16,17 +16,17 @@ public interface Tier
 
     /**
      * Split a tier into two tiers.
-     * <p>
-     * The
      * 
      * @param comparator
-     * @return
+     *            The comparator to use to compare objects.
+     * @return A <tt>Split</tt> object containing the partition object and
+     *         the new right and left containers.
      */
     public Split split(Comparator comparator);
 
     public void clear();
 
-    public void copacetic(Comparator comparator);
+    public void copacetic(Strata.Copacetic copacetic);
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

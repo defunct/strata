@@ -1,5 +1,8 @@
 package com.agtrz.strata;
 
+import java.util.Collection;
+import java.util.Iterator;
+
 import junit.framework.TestCase;
 
 import com.agtrz.swag.io.ObjectReadBuffer;
@@ -28,7 +31,7 @@ extends TestCase
 
     public void testConstruction()
     {
-        Strata strata = new Strata(new MemoryTierFactory());
+        Strata strata = new Strata();
         strata.getSchema().addStratifier(String.class, new Stratifier()
         {
             public Object getReference(Object object)
@@ -52,38 +55,57 @@ extends TestCase
         // for (int i = 0; i < 1; i++)
         // {
         strata.insert(ALPHABET[0]);
-        assertEquals(ALPHABET[0], strata.find(ALPHABET[0]));
+        assertOneEquals(ALPHABET[0], strata.find(ALPHABET[0]));
         // }
     }
 
     public void testMultiple()
     {
-        Strata strata = new Strata(new MemoryTierFactory());
+        Strata strata = new Strata();
         for (int i = 0; i < 8; i++)
         {
             strata.insert(ALPHABET[i]);
-            assertEquals(ALPHABET[i], strata.find(ALPHABET[i]));
+            assertOneEquals(ALPHABET[i], strata.find(ALPHABET[i]));
         }
         for (int i = 0; i < 8; i++)
         {
-            assertEquals(ALPHABET[i], strata.find(ALPHABET[i]));
+            assertOneEquals(ALPHABET[i], strata.find(ALPHABET[i]));
         }
         strata.copacetic();
+    }
+    
+    private static void assertOneEquals(Object object, Collection collection)
+    {
+        Iterator iterator = collection.iterator();
+        assertTrue(iterator.hasNext());
+        assertEquals(object.toString(), iterator.next().toString());
+        assertFalse(iterator.hasNext());
+    }
+
+    private static void assertEquals(int count, Object object, Collection collection)
+    {
+        Iterator iterator = collection.iterator();
+        for (int i = 0; i < count; i++)
+        {
+            assertTrue(iterator.hasNext());
+            assertEquals(object.toString(), iterator.next().toString());
+        }
+        assertFalse(iterator.hasNext());
     }
 
     public void testSplit()
     {
-        Strata strata = new Strata(new MemoryTierFactory());
+        Strata strata = new Strata();
         for (int i = 0; i < 9; i++)
         {
             strata.insert(ALPHABET[i]);
-            assertEquals(ALPHABET[i], strata.find(ALPHABET[i]));
+            assertOneEquals(ALPHABET[i], strata.find(ALPHABET[i]));
         }
         for (int i = 0; i < 9; i++)
         {
             try
             {
-                assertEquals(ALPHABET[i], strata.find(ALPHABET[i]));
+                assertOneEquals(ALPHABET[i], strata.find(ALPHABET[i]));
             }
             catch (Throwable e)
             {
@@ -94,7 +116,7 @@ extends TestCase
 
     public void testSplitRoot()
     {
-        Strata strata = new Strata(new MemoryTierFactory());
+        Strata strata = new Strata();
         for (int i = 0; i < 1000; i++)
         {
             Object insert = new Integer(i);
@@ -106,7 +128,7 @@ extends TestCase
             {
                 throw new RuntimeException("Cannot insert: " + insert, e);
             }
-            assertEquals(insert, strata.find(insert));
+            assertOneEquals(insert, strata.find(insert));
             strata.copacetic();
         }
         for (int i = 0; i < 1000; i++)
@@ -114,7 +136,7 @@ extends TestCase
             Object insert = new Integer(i);
             try
             {
-                assertEquals(insert, strata.find(insert));
+                assertOneEquals(insert, strata.find(insert));
             }
             catch (Throwable e)
             {
@@ -126,7 +148,7 @@ extends TestCase
 
     public void testSplitRootPseudoRandom()
     {
-        Strata strata = new Strata(new MemoryTierFactory());
+        Strata strata = new Strata();
         int hashCode = 1;
         for (int i = 0; i < 99; i++)
         {
@@ -140,7 +162,7 @@ extends TestCase
             {
                 throw new RuntimeException("Cannot insert: " + insert, e);
             }
-            assertEquals(insert, strata.find(insert));
+            assertOneEquals(insert, strata.find(insert));
             strata.copacetic();
         }
         hashCode = 1;
@@ -150,7 +172,7 @@ extends TestCase
             Object insert = new Integer(hashCode);
             try
             {
-                assertEquals(insert, strata.find(insert));
+                assertOneEquals(insert, strata.find(insert));
             }
             catch (Throwable e)
             {
@@ -162,6 +184,18 @@ extends TestCase
 
     public void testInsertDuplicates()
     {
+        Strata strata = new Strata();
+        for (int i = 0; i < 5; i++)
+        {
+            strata.insert(new Integer(i));
+            strata.copacetic();
+        }
+        for (int i = 0; i < 5; i++)
+        {
+            strata.insert(new Integer(3));
+            strata.copacetic();
+        }
+        assertEquals(6, new Integer(3), strata.find(new Integer(3)));
     }
 }
 

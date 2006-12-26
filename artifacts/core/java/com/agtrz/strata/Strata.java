@@ -1,9 +1,12 @@
 package com.agtrz.strata;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Doesn't need to handle new types dynamically, does it?
@@ -23,30 +26,27 @@ import java.util.List;
  */
 public class Strata
 {
-    // private final TierFactory tiers;
-
     private final InnerTier root;
 
     private final StrataSchema schema;
 
     private final Comparator comparator;
 
-    public Strata(TierFactory tiers, Comparator comparitor)
+    public Strata(Comparator comparitor)
     {
-        // this.tiers = tiers;
-        this.root = tiers.newRootTier(1, 5);
+        this.root = new InnerTier(5);
         this.schema = new StrataSchema();
         this.comparator = comparitor;
     }
 
     public void copacetic()
     {
-        root.copacetic(comparator);
+        root.copacetic(new Copacetic(comparator));
     }
 
-    public Strata(TierFactory tiers)
+    public Strata()
     {
-        this(tiers, new ComparableComparator());
+        this(new ComparableComparator());
     }
 
     public StrataSchema getSchema()
@@ -130,7 +130,7 @@ public class Strata
         }
     }
 
-    public Object find(Object object)
+    public Collection find(Object object)
     {
         InnerTier tier = root;
         for (;;)
@@ -151,6 +151,34 @@ public class Strata
         public int compare(Object left, Object right)
         {
             return ((Comparable) left).compareTo(right);
+        }
+    }
+    
+    public static class Copacetic
+    {
+        private final Comparator comparator;
+        
+        private final Set seen;
+        
+        private Copacetic(Comparator comparator)
+        {
+            this.comparator = comparator;
+            this.seen = new TreeSet(comparator);
+        }
+
+        public Comparator getComparator()
+        {
+            return comparator;
+        }
+
+        public boolean unique(Object object)
+        {
+            if (seen.contains(object))
+            {
+                return false;
+            }
+            seen.add(object);
+            return true;
         }
     }
 }
