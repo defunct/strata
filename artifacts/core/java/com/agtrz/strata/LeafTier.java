@@ -43,7 +43,7 @@ implements Tier
 
     public boolean isFull()
     {
-        return listOfObjects.size() == size + 1;
+        return listOfObjects.size() == size;
     }
 
     public Split split(Comparator comparator)
@@ -58,10 +58,10 @@ implements Tier
         boolean odd = (size & 1) == 1;
         int lesser = middle - 1;
         int greater = odd ? middle + 1 : middle;
-        
+
         Object candidate = listOfObjects.get(middle);
         int partition = -1;
-        
+
         for (int i = 0; partition == -1 && i < middle; i++)
         {
             if (comparator.compare(candidate, listOfObjects.get(lesser)) != 0)
@@ -76,54 +76,78 @@ implements Tier
             greater++;
         }
 
+        Split split = null;
         if (partition == -1)
         {
-            if (nextLeafTier == null)
+            Object repeated = listOfObjects.get(0);
+            if (comparator.compare(candidate, repeated) == 0)
             {
-                
-            }
-            else
-            {
-                
-            }
-            if (comparator.compare(nextLeafTier.listOfObjects.get(0), candidate) == 0)
-            {
-                
+                split = null; // TODO For sake of breakpoint.
             }
         }
+        else
+        {
+            List listOfLeft = listOfObjects.subList(0, partition);
+            List listOfRight = listOfObjects.subList(partition, size);
 
-        List listOfLeft = listOfObjects.subList(0, partition);
-        List listOfRight = listOfObjects.subList(partition, size);
+            Tier left = new LeafTier(size, listOfLeft);
+            Tier right = new LeafTier(size, listOfRight);
 
-        Tier left = new LeafTier(size, listOfLeft);
-        Tier right = new LeafTier(size, listOfRight);
+            split = new Split(listOfLeft.get(listOfLeft.size() - 1), left, right);
+        }
 
-        return new Split(listOfLeft.get(listOfLeft.size() - 1), left, right);
+        return split;
+    }
+
+    private void ensureNextLeafTier(Comparator comparator, Object object)
+    {
+        if (nextLeafTier == null || comparator.compare(listOfObjects.get(0), nextLeafTier.listOfObjects.get(0)) != 0)
+        {
+            LeafTier newNextLeafTier = new LeafTier(size);
+            newNextLeafTier.nextLeafTier = nextLeafTier;
+            nextLeafTier = newNextLeafTier;
+        }
+    }
+
+    public void append(Comparator comparator, Object object)
+    {
+        if (listOfObjects.size() == size)
+        {
+            ensureNextLeafTier(comparator, object);
+            nextLeafTier.append(comparator, object);
+        }
+        else
+        {
+            listOfObjects.add(object);
+        }
     }
 
     public void insert(Comparator comparator, Object object)
     {
         if (listOfObjects.size() == size)
         {
-            throw new IllegalStateException();
+            ensureNextLeafTier(comparator, object);
+            nextLeafTier.append(comparator, object);
         }
-
-        ListIterator objects = listOfObjects.listIterator();
-        while (objects.hasNext())
+        else
         {
-            Object before = objects.next();
-            if (comparator.compare(object, before) <= 0)
+            ListIterator objects = listOfObjects.listIterator();
+            while (objects.hasNext())
             {
-                objects.previous();
-                objects.add(object);
-                break;
+                Object before = objects.next();
+                if (comparator.compare(object, before) <= 0)
+                {
+                    objects.previous();
+                    objects.add(object);
+                    break;
+                }
             }
-        }
 
-        if (!objects.hasNext())
-        {
-            objects.previous();
-            objects.add(object);
+            if (!objects.hasNext())
+            {
+
+                listOfObjects.add(object);
+            }
         }
     }
 
@@ -149,7 +173,7 @@ implements Tier
     public void copacetic(Strata.Copacetic copacetic)
     {
         TRACER.debug().record(listOfObjects, new ListFreezer(NullFreezer.INSTANCE));
-        if (listOfObjects.size() < 2)
+        if (listOfObjects.size() < 1)
         {
             throw new IllegalStateException();
         }

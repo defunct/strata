@@ -104,7 +104,12 @@ public class Strata
                         InnerTier reciever = (InnerTier) tier;
                         Tier full = (Tier) ancestors.next();
                         Split split = full.split(comparator);
-                        if (reciever == null)
+                        if (split == null)
+                        {
+                            tier = full;
+                            break;
+                        }
+                        else if (reciever == null)
                         {
                             reciever = (InnerTier) full;
                             reciever.replace(split);

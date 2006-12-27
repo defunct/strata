@@ -73,7 +73,7 @@ extends TestCase
         }
         strata.copacetic();
     }
-    
+
     private static void assertOneEquals(Object object, Collection collection)
     {
         Iterator iterator = collection.iterator();
@@ -182,20 +182,40 @@ extends TestCase
         }
     }
 
-    public void testInsertDuplicates()
+    public void testDuplicate()
+    {
+        Strata strata = new Strata();
+        strata.insert(new Integer(2));
+        strata.copacetic();
+        strata.insert(new Integer(2));
+        strata.copacetic();
+        assertEquals(2, new Integer(2), strata.find(new Integer(2)));
+    }
+
+    public void testUnsplittable()
     {
         Strata strata = new Strata();
         for (int i = 0; i < 5; i++)
         {
-            strata.insert(new Integer(i));
+            strata.insert(new Integer(2));
             strata.copacetic();
         }
-        for (int i = 0; i < 5; i++)
+        strata.insert(new Integer(2));
+        strata.copacetic();
+        assertEquals(6, new Integer(2), strata.find(new Integer(2)));
+    }
+
+    public void testTwoUnsplittables()
+    {
+        Strata strata = new Strata();
+        for (int i = 0; i < 10; i++)
         {
-            strata.insert(new Integer(3));
+            strata.insert(new Integer(2));
             strata.copacetic();
         }
-        assertEquals(6, new Integer(3), strata.find(new Integer(3)));
+        strata.insert(new Integer(2));
+        strata.copacetic();
+        assertEquals(11, new Integer(2), strata.find(new Integer(2)));
     }
 }
 

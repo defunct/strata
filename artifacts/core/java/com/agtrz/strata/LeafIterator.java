@@ -50,7 +50,7 @@ implements Iterator
             throw new IllegalStateException();
         }
         Object next = current;
-        if (index == leafTier.listOfObjects.size() - 1)
+        if (index == leafTier.listOfObjects.size())
         {
             leafTier = leafTier.nextLeafTier;
             index = 0;
@@ -59,10 +59,22 @@ implements Iterator
         {
             current = null;
         }
-        else
+        else if (index < leafTier.listOfObjects.size())
         {
             Object object = leafTier.listOfObjects.get(index);
-            current = condition.operate(object) ? object : null;
+            if (condition.operate(object))
+            {
+                current = object;
+                index++;
+            }
+            else
+            {
+                current = null;
+            }
+        }
+        else
+        {
+            current = null;
         }
         return next;
     }
