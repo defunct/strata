@@ -20,19 +20,23 @@ implements Tier
 
     private final int size;
 
+    private final Comparator comparator;
+
     final List listOfObjects;
 
     LeafTier nextLeafTier;
 
-    public LeafTier(int size)
+    public LeafTier(Comparator comparator, int size)
     {
         this.size = size;
+        this.comparator = comparator;
         this.listOfObjects = new ArrayList(size);
     }
 
-    public LeafTier(int size, List listOfObjects)
+    public LeafTier(Comparator comparator, int size, List listOfObjects)
     {
         this.size = size;
+        this.comparator = comparator;
         this.listOfObjects = new ArrayList(listOfObjects);
     }
 
@@ -46,7 +50,7 @@ implements Tier
         return listOfObjects.size() == size;
     }
 
-    public Split split(Comparator comparator)
+    public Split split(Object object)
     {
         // This method actually throws away the current tier.
         if (listOfObjects.size() != size)
@@ -80,9 +84,32 @@ implements Tier
         if (partition == -1)
         {
             Object repeated = listOfObjects.get(0);
-            if (comparator.compare(candidate, repeated) == 0)
+            int compare = comparator.compare(object, repeated);
+            if (compare == 0)
             {
                 split = null; // TODO For sake of breakpoint.
+            }
+            else if (compare < 0)
+            {
+                LeafTier left = new LeafTier(comparator, size, new ArrayList());
+                
+                left.nextLeafTier = this;
+                
+                split = new Split(object, left, this);
+            }
+            else
+            {
+                LeafTier last = this;
+                while (!endOfList(repeated, last))
+                {
+                    last = last.nextLeafTier;
+                }
+
+                LeafTier right = new LeafTier(comparator, size, new ArrayList());
+                right.nextLeafTier = last.nextLeafTier;
+                last.nextLeafTier = right;
+                
+                split = new Split(repeated, this, right);
             }
         }
         else
@@ -90,8 +117,10 @@ implements Tier
             List listOfLeft = listOfObjects.subList(0, partition);
             List listOfRight = listOfObjects.subList(partition, size);
 
-            Tier left = new LeafTier(size, listOfLeft);
-            Tier right = new LeafTier(size, listOfRight);
+            LeafTier left = new LeafTier(comparator, size, listOfLeft);
+            LeafTier right = new LeafTier(comparator, size, listOfRight);
+
+            left.nextLeafTier = right;
 
             split = new Split(listOfLeft.get(listOfLeft.size() - 1), left, right);
         }
@@ -99,22 +128,27 @@ implements Tier
         return split;
     }
 
-    private void ensureNextLeafTier(Comparator comparator, Object object)
+    private boolean endOfList(Object object, LeafTier last)
+    {
+        return last.nextLeafTier == null || comparator.compare(last.nextLeafTier.listOfObjects.get(0), object) != 0;
+    }
+
+    private void ensureNextLeafTier(Object object)
     {
         if (nextLeafTier == null || comparator.compare(listOfObjects.get(0), nextLeafTier.listOfObjects.get(0)) != 0)
         {
-            LeafTier newNextLeafTier = new LeafTier(size);
+            LeafTier newNextLeafTier = new LeafTier(comparator, size);
             newNextLeafTier.nextLeafTier = nextLeafTier;
             nextLeafTier = newNextLeafTier;
         }
     }
 
-    public void append(Comparator comparator, Object object)
+    public void append(Object object)
     {
         if (listOfObjects.size() == size)
         {
-            ensureNextLeafTier(comparator, object);
-            nextLeafTier.append(comparator, object);
+            ensureNextLeafTier(object);
+            nextLeafTier.append(object);
         }
         else
         {
@@ -122,12 +156,12 @@ implements Tier
         }
     }
 
-    public void insert(Comparator comparator, Object object)
+    public void insert(Object object)
     {
         if (listOfObjects.size() == size)
         {
-            ensureNextLeafTier(comparator, object);
-            nextLeafTier.append(comparator, object);
+            ensureNextLeafTier(object);
+            nextLeafTier.append(object);
         }
         else
         {
@@ -151,7 +185,7 @@ implements Tier
         }
     }
 
-    public Collection find(Comparator comparator, Object object)
+    public Collection find(Object object)
     {
         for (int i = 0; i < listOfObjects.size(); i++)
         {
@@ -177,7 +211,6 @@ implements Tier
         {
             throw new IllegalStateException();
         }
-        Comparator comparator = copacetic.getComparator();
         Object previous = null;
         Iterator objects = listOfObjects.iterator();
         while (objects.hasNext())

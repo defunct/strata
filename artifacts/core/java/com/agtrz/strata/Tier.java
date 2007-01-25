@@ -3,8 +3,6 @@
  */
 package com.agtrz.strata;
 
-import java.util.Comparator;
-
 /**
  * @author Alan Gutierrez
  */
@@ -22,7 +20,7 @@ public interface Tier
      * @return A <tt>Split</tt> object containing the partition object and
      *         the new right and left containers.
      */
-    public Split split(Comparator comparator);
+    public Split split(Object object);
 
     public void clear();
 

@@ -93,6 +93,15 @@ extends TestCase
         assertFalse(iterator.hasNext());
     }
 
+    private void assertInsert(Strata strata, int[] insert)
+    {
+        for (int i = 0; i < insert.length; i++)
+        {
+            strata.insert(new Integer(insert[i]));
+            strata.copacetic();
+        }
+    }
+
     public void testSplit()
     {
         Strata strata = new Strata();
@@ -216,6 +225,93 @@ extends TestCase
         strata.insert(new Integer(2));
         strata.copacetic();
         assertEquals(11, new Integer(2), strata.find(new Integer(2)));
+    }
+
+    public void testDuplicatesInCenter()
+    {
+        Strata strata = new Strata();
+        int[] insert = new int[] { 1, 2, 2, 2, 3 };
+
+        assertInsert(strata, insert);
+
+        strata.insert(new Integer(2));
+        strata.copacetic();
+
+        assertEquals(1, new Integer(1), strata.find(new Integer(1)));
+        assertEquals(4, new Integer(2), strata.find(new Integer(2)));
+        assertEquals(1, new Integer(3), strata.find(new Integer(3)));
+    }
+
+    public void testDuplicatesLeftOfCenter()
+    {
+        Strata strata = new Strata();
+        int[] insert = new int[] { 1, 2, 2, 2, 3 };
+
+        assertInsert(strata, insert);
+
+        strata.insert(new Integer(1));
+        strata.copacetic();
+
+        assertEquals(2, new Integer(1), strata.find(new Integer(1)));
+        assertEquals(3, new Integer(2), strata.find(new Integer(2)));
+        assertEquals(1, new Integer(3), strata.find(new Integer(3)));
+    }
+
+    public void testDuplicatesRightOfCenter()
+    {
+        Strata strata = new Strata();
+        int[] insert = new int[] { 1, 2, 2, 2, 3 };
+
+        assertInsert(strata, insert);
+
+        strata.insert(new Integer(3));
+        strata.copacetic();
+
+        assertEquals(1, new Integer(1), strata.find(new Integer(1)));
+        assertEquals(3, new Integer(2), strata.find(new Integer(2)));
+        assertEquals(2, new Integer(3), strata.find(new Integer(3)));
+    }
+
+    public void testUnsplittableRight()
+    {
+        Strata strata = new Strata();
+        int[] insert = new int[] { 2, 2, 2, 2, 2 };
+
+        assertInsert(strata, insert);
+
+        strata.insert(new Integer(3));
+        strata.copacetic();
+
+        assertEquals(5, new Integer(2), strata.find(new Integer(2)));
+        assertEquals(1, new Integer(3), strata.find(new Integer(3)));
+    }
+
+    public void testLinkedUnsplittableRight()
+    {
+        Strata strata = new Strata();
+        int[] insert = new int[] { 2, 2, 2, 2, 2, 2 };
+
+        assertInsert(strata, insert);
+
+        strata.insert(new Integer(3));
+        strata.copacetic();
+
+        assertEquals(6, new Integer(2), strata.find(new Integer(2)));
+        assertEquals(1, new Integer(3), strata.find(new Integer(3)));
+    }
+
+    public void testUnsplittableLeft()
+    {
+        Strata strata = new Strata();
+        int[] insert = new int[] { 2, 2, 2, 2, 2 };
+
+        assertInsert(strata, insert);
+
+        strata.insert(new Integer(1));
+        strata.copacetic();
+
+        assertEquals(1, new Integer(1), strata.find(new Integer(1)));
+        assertEquals(5, new Integer(2), strata.find(new Integer(2)));
     }
 }
 

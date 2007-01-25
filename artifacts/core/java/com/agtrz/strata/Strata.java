@@ -32,11 +32,11 @@ public class Strata
 
     private final Comparator comparator;
 
-    public Strata(Comparator comparitor)
+    public Strata(Comparator comparator)
     {
-        this.root = new InnerTier(5);
+        this.root = new InnerTier(comparator, 5);
         this.schema = new StrataSchema();
-        this.comparator = comparitor;
+        this.comparator = comparator;
     }
 
     public void copacetic()
@@ -79,7 +79,7 @@ public class Strata
         for (;;)
         {
             parent = inner;
-            Branch branch = inner.find(comparator, object);
+            Branch branch = inner.find(object);
             Tier tier = branch.getLeft();
 
             if (tier.isFull())
@@ -103,7 +103,7 @@ public class Strata
                     {
                         InnerTier reciever = (InnerTier) tier;
                         Tier full = (Tier) ancestors.next();
-                        Split split = full.split(comparator);
+                        Split split = full.split(object);
                         if (split == null)
                         {
                             tier = full;
@@ -116,9 +116,9 @@ public class Strata
                         }
                         else
                         {
-                            reciever.replace(comparator, full, split);
+                            reciever.replace(full, split);
                         }
-                        tier = reciever.find(comparator, object).getLeft();
+                        tier = reciever.find(object).getLeft();
                         if (!ancestors.hasNext())
                         {
                             break;
@@ -127,7 +127,7 @@ public class Strata
                 }
 
                 LeafTier leaf = (LeafTier) tier;
-                leaf.insert(comparator, object);
+                leaf.insert(object);
                 break;
             }
 
@@ -140,11 +140,11 @@ public class Strata
         InnerTier tier = root;
         for (;;)
         {
-            Branch branch = tier.find(comparator, object);
+            Branch branch = tier.find(object);
             if (branch.getLeft().isLeaf())
             {
                 LeafTier leaf = (LeafTier) branch.getLeft();
-                return leaf.find(comparator, object);
+                return leaf.find(object);
             }
             tier = (InnerTier) branch.getLeft();
         }
@@ -158,22 +158,14 @@ public class Strata
             return ((Comparable) left).compareTo(right);
         }
     }
-    
+
     public static class Copacetic
     {
-        private final Comparator comparator;
-        
         private final Set seen;
-        
+
         private Copacetic(Comparator comparator)
         {
-            this.comparator = comparator;
             this.seen = new TreeSet(comparator);
-        }
-
-        public Comparator getComparator()
-        {
-            return comparator;
         }
 
         public boolean unique(Object object)

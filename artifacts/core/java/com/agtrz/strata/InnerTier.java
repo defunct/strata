@@ -20,16 +20,20 @@ implements Tier
 
     private final List listOfBranches;
 
-    public InnerTier(int size)
+    private final Comparator comparator;
+
+    public InnerTier(Comparator comparator, int size)
     {
         this.size = size;
+        this.comparator = comparator;
         this.listOfBranches = new ArrayList(size + 1);
-        this.listOfBranches.add(new Branch(new LeafTier(size), Branch.TERMINAL));
+        this.listOfBranches.add(new Branch(new LeafTier(comparator, size), Branch.TERMINAL));
     }
 
-    public InnerTier(int size, List listOfBranches)
+    public InnerTier(Comparator comparator, int size, List listOfBranches)
     {
         this.size = size;
+        this.comparator = comparator;
         this.listOfBranches = newListOfBranches(listOfBranches);
     }
 
@@ -47,7 +51,7 @@ implements Tier
         listOfBranches.clear();
     }
 
-    public Split split(Comparator comparator)
+    public Split split(Object object)
     {
         // This method actually throws away the current tier.
         int partition = (size + 1) / 2;
@@ -55,8 +59,8 @@ implements Tier
         List listOfLeft = listOfBranches.subList(0, partition);
         List listOfRight = listOfBranches.subList(partition, size + 1);
 
-        Tier left = new InnerTier(size, listOfLeft);
-        Tier right = new InnerTier(size, listOfRight);
+        Tier left = new InnerTier(comparator, size, listOfLeft);
+        Tier right = new InnerTier(comparator, size, listOfRight);
 
         return new Split(((Branch) listOfLeft.get(partition - 1)).getObject(), left, right);
     }
@@ -66,7 +70,7 @@ implements Tier
         return listOfBranches.size() == size + 1;
     }
 
-    public Branch find(Comparator comparator, Object object)
+    public Branch find(Object object)
     {
         ListIterator branches = listOfBranches.listIterator();
         while (branches.hasNext())
@@ -87,7 +91,7 @@ implements Tier
         listOfBranches.add(new Branch(split.getRight(), Branch.TERMINAL));
     }
 
-    public void replace(Comparator comparator, Tier tier, Split split)
+    public void replace(Tier tier, Split split)
     {
         ListIterator branches = listOfBranches.listIterator();
         while (branches.hasNext())
@@ -114,8 +118,7 @@ implements Tier
         {
             throw new IllegalStateException();
         }
-        
-        Comparator comparator = copacetic.getComparator();
+
         Object previous = null;
         Iterator branches = listOfBranches.iterator();
         while (branches.hasNext())
@@ -136,12 +139,11 @@ implements Tier
                 {
                     throw new IllegalStateException();
                 }
-                
+
                 // Each key must occur only once in the inner tiers.
                 if (!copacetic.unique(branch.getObject()))
                 {
-                    throw new StrataException().source(Tier.class)
-                                               .message("not.unqiue.in.inner.tiers");
+                    throw new StrataException().source(Tier.class).message("not.unqiue.in.inner.tiers");
                 }
             }
             previous = branch.getObject();
