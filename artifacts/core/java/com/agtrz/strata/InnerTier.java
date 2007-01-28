@@ -53,16 +53,21 @@ implements Tier
 
     public Split split(Object object)
     {
-        // This method actually throws away the current tier.
         int partition = (size + 1) / 2;
 
-        List listOfLeft = listOfBranches.subList(0, partition);
-        List listOfRight = listOfBranches.subList(partition, size + 1);
+        List listOfRight = new ArrayList(size + 1);
+        for (int i = partition; i < size + 1; i++)
+        {
+            listOfRight.add(listOfBranches.remove(partition));
+        }
 
-        Tier left = new InnerTier(comparator, size, listOfLeft);
+        Branch branch = (Branch) listOfBranches.remove(listOfBranches.size() - 1);
+        Object pivot = branch.getObject();
+        listOfBranches.add(new Branch(branch.getLeft(), Branch.TERMINAL));
+
         Tier right = new InnerTier(comparator, size, listOfRight);
 
-        return new Split(((Branch) listOfLeft.get(partition - 1)).getObject(), left, right);
+        return new Split(pivot, right);
     }
 
     public boolean isFull()
@@ -84,10 +89,43 @@ implements Tier
         throw new IllegalStateException();
     }
 
+    public Object removeLeafTier(LeafTier leafTier)
+    {
+        Branch previous = null;
+        ListIterator branches = listOfBranches.listIterator();
+        while (branches.hasNext())
+        {
+            Branch branch = (Branch) branches.next();
+            if (branch.getLeft() == leafTier)
+            {
+                branches.remove();
+                break;
+            }
+            previous = branch;
+        }
+        return previous.getObject();
+    }
+
+    public void replace(Object oldPivot, Object newPivot)
+    {
+        ListIterator branches = listOfBranches.listIterator();
+        while (branches.hasNext())
+        {
+            Branch branch = (Branch) branches.next();
+            if (comparator.compare(branch.getObject(), oldPivot) == 0)
+            {
+                branches.set(new Branch(branch.getLeft(), newPivot));
+            }
+        }
+    }
+
     public void replace(Split split)
     {
+        List listOfLeft = new ArrayList(size + 1);
+        listOfLeft.addAll(listOfBranches);
+        Tier left = new InnerTier(comparator, size, listOfLeft);
         listOfBranches.clear();
-        listOfBranches.add(new Branch(split.getLeft(), split.getKey()));
+        listOfBranches.add(new Branch(left, split.getKey()));
         listOfBranches.add(new Branch(split.getRight(), Branch.TERMINAL));
     }
 
@@ -99,7 +137,7 @@ implements Tier
             Branch branch = (Branch) branches.next();
             if (branch.getLeft() == tier)
             {
-                branches.set(new Branch(split.getLeft(), split.getKey()));
+                branches.set(new Branch(tier, split.getKey()));
                 branches.add(new Branch(split.getRight(), branch.getObject()));
             }
         }
@@ -108,6 +146,11 @@ implements Tier
     public boolean isLeaf()
     {
         return false;
+    }
+
+    public Branch getBranch(int index)
+    {
+        return (Branch) listOfBranches.get(index);
     }
 
     public void copacetic(Strata.Copacetic copacetic)

@@ -1,6 +1,7 @@
 /* Copyright Alan Gutierrez 2006 */
 package com.agtrz.strata;
 
+/** @fixme Move to Swag. */
 public interface UrnaryOperator
 {
     public boolean operate(Object object);

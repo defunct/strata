@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.agtrz.swag.util.ComparatorEquator;
+import com.agtrz.swag.util.Equator;
+
 /**
  * Doesn't need to handle new types dynamically, does it?
  * <p>
@@ -32,16 +35,52 @@ public class Strata
 
     private final Comparator comparator;
 
-    public Strata(Comparator comparator)
+    private final Equator equator;
+
+    private int size;
+
+    public Strata(Comparator comparator, Equator equator)
     {
         this.root = new InnerTier(comparator, 5);
         this.schema = new StrataSchema();
         this.comparator = comparator;
+        this.equator = equator;
     }
 
     public void copacetic()
     {
         root.copacetic(new Copacetic(comparator));
+        Iterator iterator = values().iterator();
+        if (size != 0)
+        {
+            Object previous = iterator.next();
+            for (int i = 1; i < size; i++)
+            {
+                if (!iterator.hasNext())
+                {
+                    throw new IllegalStateException();
+                }
+                Object next = iterator.next();
+                if (comparator.compare(previous, next) > 0)
+                {
+                    throw new IllegalStateException();
+                }
+                previous = next;
+            }
+            if (iterator.hasNext())
+            {
+                throw new IllegalStateException();
+            }
+        }
+        else if (iterator.hasNext())
+        {
+            throw new IllegalStateException();
+        }
+    }
+
+    public Strata(Comparator comparator)
+    {
+        this(comparator, new ComparatorEquator(comparator));
     }
 
     public Strata()
@@ -52,6 +91,22 @@ public class Strata
     public StrataSchema getSchema()
     {
         return schema;
+    }
+
+    public Collection values()
+    {
+        Branch branch = null;
+        InnerTier tier = root;
+        for (;;)
+        {
+            branch = tier.getBranch(0);
+            if (branch.getLeft().isLeaf())
+            {
+                break;
+            }
+            tier = (InnerTier) branch.getLeft();
+        }
+        return new LeafCollection((LeafTier) branch.getLeft(), 0, True.INSTANCE);
     }
 
     public void insert(Object object)
@@ -132,6 +187,31 @@ public class Strata
             }
 
             inner = (InnerTier) tier;
+        }
+
+        size++;
+    }
+
+    public Collection remove(Object object)
+    {
+        InnerTier inner = null;
+        InnerTier parent = null;
+        InnerTier tier = root;
+        for (;;)
+        {
+            parent = tier;
+            Branch branch = tier.find(object);
+            if (equator.equals(branch.getObject(), object))
+            {
+                inner = tier;
+            }
+            if (branch.getLeft().isLeaf())
+            {
+                LeafTier leaf = (LeafTier) branch.getLeft();
+                Collection collection = leaf.remove(inner, parent, object, equator);
+                size -= collection.size();
+                return collection;
+            }
         }
     }
 

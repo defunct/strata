@@ -12,6 +12,7 @@ import com.agtrz.swag.trace.ListFreezer;
 import com.agtrz.swag.trace.NullFreezer;
 import com.agtrz.swag.trace.Tracer;
 import com.agtrz.swag.trace.TracerFactory;
+import com.agtrz.swag.util.Equator;
 
 public class LeafTier
 implements Tier
@@ -52,7 +53,6 @@ implements Tier
 
     public Split split(Object object)
     {
-        // This method actually throws away the current tier.
         if (listOfObjects.size() != size)
         {
             throw new IllegalStateException();
@@ -91,11 +91,16 @@ implements Tier
             }
             else if (compare < 0)
             {
-                LeafTier left = new LeafTier(comparator, size, new ArrayList());
-                
-                left.nextLeafTier = this;
-                
-                split = new Split(object, left, this);
+                List listOfRight = new ArrayList(size);
+                listOfRight.addAll(listOfObjects);
+                listOfObjects.clear();
+
+                LeafTier right = new LeafTier(comparator, size, listOfRight);
+
+                right.nextLeafTier = nextLeafTier;
+                nextLeafTier = right;
+
+                split = new Split(object, right);
             }
             else
             {
@@ -108,21 +113,26 @@ implements Tier
                 LeafTier right = new LeafTier(comparator, size, new ArrayList());
                 right.nextLeafTier = last.nextLeafTier;
                 last.nextLeafTier = right;
-                
-                split = new Split(repeated, this, right);
+
+                split = new Split(repeated, right);
             }
         }
         else
         {
-            List listOfLeft = listOfObjects.subList(0, partition);
-            List listOfRight = listOfObjects.subList(partition, size);
+            List listOfRight = new ArrayList(size);
 
-            LeafTier left = new LeafTier(comparator, size, listOfLeft);
+            listOfObjects.subList(partition, size);
+            for (int i = partition; i < size; i++)
+            {
+                listOfRight.add(listOfObjects.remove(partition));
+            }
+
             LeafTier right = new LeafTier(comparator, size, listOfRight);
 
-            left.nextLeafTier = right;
+            right.nextLeafTier = nextLeafTier;
+            nextLeafTier = right;
 
-            split = new Split(listOfLeft.get(listOfLeft.size() - 1), left, right);
+            split = new Split(listOfObjects.get(listOfObjects.size() - 1), right);
         }
 
         return split;
@@ -199,6 +209,54 @@ implements Tier
         return Collections.EMPTY_LIST;
     }
 
+    public Collection remove(InnerTier replace, InnerTier parent, Object object, Equator equator)
+    {
+        List listOfRemoved = new ArrayList();
+        Iterator objects = listOfObjects.iterator();
+        Object previous = null;
+        while (objects.hasNext())
+        {
+            Object candidate = objects.next();
+            if (equator.equals(candidate, object))
+            {
+                if (replace != null && previous != null)
+                {
+                    replace.replace(object, previous);
+                    replace = null;
+                }
+                listOfRemoved.add(candidate);
+                objects.remove();
+            }
+            previous = candidate;
+        }
+        while (objects.hasNext())
+        {
+            Object candidate = objects.next();
+            if (equator.equals(candidate, object))
+            {
+                listOfRemoved.add(candidate);
+                objects.remove();
+            }
+        }
+        if (replace != null)
+        {
+            if (listOfObjects.size() != 0)
+            {
+                throw new IllegalStateException();
+            }
+            if (replace.getBranch(0).getLeft().isLeaf())
+            {
+                replace.removeLeafTier(this);
+            }
+            else
+            {
+                Object replacement = parent.removeLeafTier(this);
+                replace.replace(object, replacement);
+            }
+        }
+        return listOfRemoved;
+    }
+
     public boolean isLeaf()
     {
         return true;
@@ -221,6 +279,10 @@ implements Tier
                 throw new IllegalStateException();
             }
             previous = object;
+        }
+        if (nextLeafTier != null && comparator.compare(listOfObjects.get(listOfObjects.size() - 1), nextLeafTier.listOfObjects.get(0)) == 0 && size != listOfObjects.size() && comparator.compare(listOfObjects.get(0), listOfObjects.get(listOfObjects.size() - 1)) != 0)
+        {
+            throw new IllegalStateException();
         }
     }
 

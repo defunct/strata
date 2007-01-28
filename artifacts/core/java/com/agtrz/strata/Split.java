@@ -4,25 +4,17 @@ public class Split
 {
     private final Object key;
 
-    private final Tier left;
-
     private final Tier right;
 
-    public Split(Object key, Tier left, Tier right)
+    public Split(Object key, Tier right)
     {
         this.key = key;
-        this.left = left;
         this.right = right;
     }
 
     public Object getKey()
     {
         return key;
-    }
-
-    public Tier getLeft()
-    {
-        return left;
     }
 
     public Tier getRight()

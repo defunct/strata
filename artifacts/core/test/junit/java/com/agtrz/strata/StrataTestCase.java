@@ -102,6 +102,11 @@ extends TestCase
         }
     }
 
+    private void assertContains(Strata strata, int[] contents)
+    {
+
+    }
+
     public void testSplit()
     {
         Strata strata = new Strata();
@@ -312,6 +317,69 @@ extends TestCase
 
         assertEquals(1, new Integer(1), strata.find(new Integer(1)));
         assertEquals(5, new Integer(2), strata.find(new Integer(2)));
+    }
+
+    public void testTraverse()
+    {
+        Strata strata = new Strata();
+
+        int[] insert = new int[] { 1, 2, 3, 4, 5, 6, 7, 7, 7, 8, 9 };
+        assertInsert(strata, insert);
+
+        Iterator iterator = strata.values().iterator();
+        for (int i = 0; i < insert.length; i++)
+        {
+            assertTrue(iterator.hasNext());
+            Integer integer = (Integer) iterator.next();
+            assertEquals(insert[i], integer.intValue());
+        }
+        assertFalse(iterator.hasNext());
+    }
+
+    public void testRemove()
+    {
+        Strata strata = new Strata();
+
+        int[] insert = new int[] { 1, 2, 3, 4, 5 };
+        assertInsert(strata, insert);
+
+        assertRemove(strata, 3, 1);
+        assertContains(strata, new int[] { 1, 2, 4, 5 });
+    }
+
+    public void testRemoveMany()
+    {
+        Strata strata = new Strata();
+
+        int[] insert = new int[] { 1, 3, 5, 3, 3 };
+        assertInsert(strata, insert);
+
+        assertRemove(strata, 3, 3);
+        assertContains(strata, new int[] { 1, 5 });
+
+    }
+
+    public void testRemoveSplit()
+    {
+        Strata strata = new Strata();
+
+        int[] insert = new int[] { 2, 3, 4, 5, 6, 1 };
+        assertInsert(strata, insert);
+
+        assertRemove(strata, 3, 1);
+        assertContains(strata, new int[] { 1, 2, 3, 4, 5 });
+    }
+
+    private void assertRemove(Strata strata, int value, int count)
+    {
+        Iterator iterator = strata.remove(new Integer(value)).iterator();
+        for (int i = 0; i < count; i++)
+        {
+            assertTrue(iterator.hasNext());
+            Integer integer = (Integer) iterator.next();
+            assertEquals(value, integer.intValue());
+        }
+        assertFalse(iterator.hasNext());
     }
 }
 
