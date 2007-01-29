@@ -8,6 +8,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
+import com.agtrz.operators.Curry;
+import com.agtrz.operators.Equals;
 import com.agtrz.swag.trace.ListFreezer;
 import com.agtrz.swag.trace.NullFreezer;
 import com.agtrz.swag.trace.Tracer;
@@ -189,7 +191,6 @@ implements Tier
 
             if (!objects.hasNext())
             {
-
                 listOfObjects.add(object);
             }
         }
@@ -209,50 +210,61 @@ implements Tier
         return Collections.EMPTY_LIST;
     }
 
-    public Collection remove(InnerTier replace, InnerTier parent, Object object, Equator equator)
+    public int getObjectCount()
+    {
+        return listOfObjects.size();
+    }
+
+    public Object getObject(int i)
+    {
+        return listOfObjects.get(i);
+    }
+
+    /**
+     * Remove all objects that match the object according to the equator,
+     * while updating the inner tree if the object removed was used as a pivot
+     * in the inner tree.
+     * 
+     * @param toRemove
+     *            An object that represents the objects that will be removed
+     *            from the B+Tree.
+     * @param equator
+     *            The comparison logic that will determine of an object in the
+     *            leaf is equal to the specified object.
+     * @return A colletion of the objects removed from the tree.
+     */
+    public Collection remove(Object toRemove, Equator equator)
     {
         List listOfRemoved = new ArrayList();
         Iterator objects = listOfObjects.iterator();
-        Object previous = null;
         while (objects.hasNext())
         {
             Object candidate = objects.next();
-            if (equator.equals(candidate, object))
+            if (equator.equals(candidate, toRemove))
             {
-                if (replace != null && previous != null)
+                listOfRemoved.add(candidate);
+                objects.remove();
+            }
+        }
+        LeafTier lastLeafTier = this;
+        LeafTier leafTier = nextLeafTier;
+        while (equator.equals(leafTier.getObject(0), toRemove))
+        {
+            objects = leafTier.listOfObjects.iterator();
+            while (objects.hasNext())
+            {
+                Object candidate = objects.next();
+                if (equator.equals(candidate, toRemove))
                 {
-                    replace.replace(object, previous);
-                    replace = null;
+                    listOfRemoved.add(candidate);
+                    objects.remove();
                 }
-                listOfRemoved.add(candidate);
-                objects.remove();
             }
-            previous = candidate;
-        }
-        while (objects.hasNext())
-        {
-            Object candidate = objects.next();
-            if (equator.equals(candidate, object))
+            if (leafTier.getObjectCount() == 0)
             {
-                listOfRemoved.add(candidate);
-                objects.remove();
+                lastLeafTier.nextLeafTier = leafTier.nextLeafTier;
             }
-        }
-        if (replace != null)
-        {
-            if (listOfObjects.size() != 0)
-            {
-                throw new IllegalStateException();
-            }
-            if (replace.getBranch(0).getLeft().isLeaf())
-            {
-                replace.removeLeafTier(this);
-            }
-            else
-            {
-                Object replacement = parent.removeLeafTier(this);
-                replace.replace(object, replacement);
-            }
+            leafTier = leafTier.nextLeafTier;
         }
         return listOfRemoved;
     }

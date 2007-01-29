@@ -5,9 +5,6 @@ import java.util.Iterator;
 
 import junit.framework.TestCase;
 
-import com.agtrz.swag.io.ObjectReadBuffer;
-import com.agtrz.swag.io.ObjectWriteBuffer;
-
 public class StrataTestCase
 extends TestCase
 {
@@ -32,31 +29,8 @@ extends TestCase
     public void testConstruction()
     {
         Strata strata = new Strata();
-        strata.getSchema().addStratifier(String.class, new Stratifier()
-        {
-            public Object getReference(Object object)
-            {
-                return new Long(((Employee) object).employeeId);
-            }
-
-            public Object deserialize(ObjectReadBuffer input)
-            {
-                return new Employee(input.readLong(), input.readString(), input.readString());
-            }
-
-            public void serialize(ObjectWriteBuffer output, Object object)
-            {
-                Employee employee = (Employee) object;
-                output.write(employee.employeeId);
-                output.write(employee.firstName);
-                output.write(employee.lastName);
-            }
-        });
-        // for (int i = 0; i < 1; i++)
-        // {
         strata.insert(ALPHABET[0]);
         assertOneEquals(ALPHABET[0], strata.find(ALPHABET[0]));
-        // }
     }
 
     public void testMultiple()
@@ -367,6 +341,17 @@ extends TestCase
         assertInsert(strata, insert);
 
         assertRemove(strata, 3, 1);
+        assertContains(strata, new int[] { 1, 2, 3, 4, 5 });
+    }
+
+    public void testRemoveSplitRightMost()
+    {
+        Strata strata = new Strata();
+
+        int[] insert = new int[] { 2, 3, 4, 5, 6, 1 };
+        assertInsert(strata, insert);
+
+        assertRemove(strata, 6, 1);
         assertContains(strata, new int[] { 1, 2, 3, 4, 5 });
     }
 

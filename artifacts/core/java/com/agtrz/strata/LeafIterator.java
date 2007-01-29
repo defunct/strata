@@ -3,6 +3,8 @@ package com.agtrz.strata;
 
 import java.util.Iterator;
 
+import com.agtrz.operators.UrnaryOperator;
+
 public class LeafIterator
 implements Iterator
 {

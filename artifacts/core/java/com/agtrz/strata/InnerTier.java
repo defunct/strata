@@ -89,6 +89,21 @@ implements Tier
         throw new IllegalStateException();
     }
 
+    public int getIndexOfTier(Tier tier)
+    {
+        int index = 0;
+        Iterator branches = listOfBranches.listIterator();
+        while (branches.hasNext())
+        {
+            Branch branch = (Branch) branches.next();
+            if (branch.getLeft() == tier)
+            {
+                return index;
+            }
+            index++;
+        }
+        return -1;
+    }
     public Object removeLeafTier(LeafTier leafTier)
     {
         Branch previous = null;
@@ -106,7 +121,7 @@ implements Tier
         return previous.getObject();
     }
 
-    public void replace(Object oldPivot, Object newPivot)
+    public void replacePivot(Object oldPivot, Object newPivot)
     {
         ListIterator branches = listOfBranches.listIterator();
         while (branches.hasNext())
@@ -115,11 +130,12 @@ implements Tier
             if (comparator.compare(branch.getObject(), oldPivot) == 0)
             {
                 branches.set(new Branch(branch.getLeft(), newPivot));
+                break;
             }
         }
     }
 
-    public void replace(Split split)
+    public void splitRootTier(Split split)
     {
         List listOfLeft = new ArrayList(size + 1);
         listOfLeft.addAll(listOfBranches);
@@ -196,6 +212,15 @@ implements Tier
     public String toString()
     {
         return listOfBranches.toString();
+    }
+
+    public boolean canMerge(Tier childTier)
+    {
+        return false;
+    }
+
+    public void merge(Tier childTier)
+    {
     }
 }
 

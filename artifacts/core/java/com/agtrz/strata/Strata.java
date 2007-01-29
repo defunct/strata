@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.agtrz.operators.True;
 import com.agtrz.swag.util.ComparatorEquator;
 import com.agtrz.swag.util.Equator;
 
@@ -31,8 +33,6 @@ public class Strata
 {
     private final InnerTier root;
 
-    private final StrataSchema schema;
-
     private final Comparator comparator;
 
     private final Equator equator;
@@ -42,7 +42,6 @@ public class Strata
     public Strata(Comparator comparator, Equator equator)
     {
         this.root = new InnerTier(comparator, 5);
-        this.schema = new StrataSchema();
         this.comparator = comparator;
         this.equator = equator;
     }
@@ -88,9 +87,9 @@ public class Strata
         this(new ComparableComparator());
     }
 
-    public StrataSchema getSchema()
+    public int size()
     {
-        return schema;
+        return size;
     }
 
     public Collection values()
@@ -167,7 +166,7 @@ public class Strata
                         else if (reciever == null)
                         {
                             reciever = (InnerTier) full;
-                            reciever.replace(split);
+                            reciever.splitRootTier(split);
                         }
                         else
                         {
@@ -194,24 +193,64 @@ public class Strata
 
     public Collection remove(Object object)
     {
+        LinkedList listOfAncestors = new LinkedList();
         InnerTier inner = null;
         InnerTier parent = null;
         InnerTier tier = root;
         for (;;)
         {
+            listOfAncestors.addLast(tier);
             parent = tier;
             Branch branch = tier.find(object);
-            if (equator.equals(branch.getObject(), object))
+            if (branch.getObject() != Branch.TERMINAL && equator.equals(branch.getObject(), object))
             {
                 inner = tier;
             }
             if (branch.getLeft().isLeaf())
             {
                 LeafTier leaf = (LeafTier) branch.getLeft();
-                Collection collection = leaf.remove(inner, parent, object, equator);
+                Collection collection = leaf.remove(object, equator);
+
+                if (inner != null)
+                {
+                    int objectCount = leaf.getObjectCount();
+                    if (objectCount == 0)
+                    {
+                        int index = parent.getIndexOfTier(leaf);
+                        if (inner.getBranch(0).getLeft().isLeaf())
+                        {
+                            parent.removeLeafTier(leaf);
+                        }
+                        else
+                        {
+                            Object newPivot = parent.getBranch(index - 1).getObject();
+                            parent.removeLeafTier(leaf);
+                            parent.replacePivot(newPivot, Branch.TERMINAL);
+                            inner.replacePivot(object, newPivot);
+                        }
+                    }
+                    else
+                    {
+                        Object newPivot = leaf.getObject(objectCount - 1);
+                        inner.replacePivot(object, newPivot);
+                    }
+                }
+
+                Tier childTier = leaf;
+                Iterator ancestors = listOfAncestors.iterator();
+                while (ancestors.hasNext())
+                {
+                    InnerTier innerTier = (InnerTier) ancestors.next();
+                    if (innerTier.canMerge(childTier))
+                    {
+                        innerTier.merge(childTier);
+                    }
+                }
+
                 size -= collection.size();
                 return collection;
             }
+            tier = (InnerTier) branch.getLeft();
         }
     }
 

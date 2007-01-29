@@ -4,6 +4,8 @@ package com.agtrz.strata;
 import java.util.AbstractCollection;
 import java.util.Iterator;
 
+import com.agtrz.operators.UrnaryOperator;
+
 public class LeafCollection
 extends AbstractCollection
 {
