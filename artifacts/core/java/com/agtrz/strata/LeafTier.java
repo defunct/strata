@@ -47,6 +47,11 @@ implements Tier
     {
         listOfObjects.clear();
     }
+    
+    public int size()
+    {
+        return listOfObjects.size();
+    }
 
     public boolean isFull()
     {

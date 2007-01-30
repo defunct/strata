@@ -22,9 +22,11 @@ public interface Tier
      */
     public Split split(Object object);
 
-    public void clear();
+//    public void clear();
 
     public void copacetic(Strata.Copacetic copacetic);
+    
+    public int size();
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

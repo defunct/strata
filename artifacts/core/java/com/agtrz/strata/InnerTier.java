@@ -34,16 +34,12 @@ implements Tier
     {
         this.size = size;
         this.comparator = comparator;
-        this.listOfBranches = newListOfBranches(listOfBranches);
+        this.listOfBranches = listOfBranches;
     }
 
-    public final static List newListOfBranches(List listOfBranches)
+    public int size()
     {
-        List newListOfBranches = new ArrayList();
-        newListOfBranches.addAll(listOfBranches.subList(0, listOfBranches.size() - 1));
-        Branch last = (Branch) listOfBranches.get(listOfBranches.size() - 1);
-        newListOfBranches.add(new Branch(last.getLeft(), Branch.TERMINAL));
-        return newListOfBranches;
+        return listOfBranches.size() - 1;
     }
 
     public void clear()
@@ -183,15 +179,16 @@ implements Tier
         while (branches.hasNext())
         {
             Branch branch = (Branch) branches.next();
-            branch.getLeft().copacetic(copacetic);
-            if (branch.isTerminal())
+            if (!branches.hasNext() && !branch.isTerminal())
             {
-                if (branches.hasNext())
-                {
-                    throw new IllegalStateException();
-                }
+                throw new IllegalStateException();
             }
-            else
+            branch.getLeft().copacetic(copacetic);
+            if (branch.getCount() != branch.getLeft().size())
+            {
+                throw new IllegalStateException();
+            }
+            if (!branch.isTerminal())
             {
                 // Each key must be less than the one next to it.
                 if (previous != null && comparator.compare(previous, branch.getObject()) >= 0)

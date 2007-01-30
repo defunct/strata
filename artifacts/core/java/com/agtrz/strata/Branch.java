@@ -5,6 +5,8 @@ public class Branch
     private final Tier left;
 
     private final Object object;
+    
+    private final int count;
 
     public final static Object TERMINAL = new Object()
     {
@@ -18,6 +20,7 @@ public class Branch
     {
         this.left = left;
         this.object = object;
+        this.count = left.size();
     }
 
     public Tier getLeft()
@@ -28,6 +31,11 @@ public class Branch
     public Object getObject()
     {
         return object;
+    }
+    
+    public int getCount()
+    {
+        return count;
     }
 
     public boolean isTerminal()
