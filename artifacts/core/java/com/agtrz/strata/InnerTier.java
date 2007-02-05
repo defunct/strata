@@ -6,19 +6,24 @@ import java.util.ListIterator;
 public abstract class InnerTier
 implements Tier
 {
-    // private final InnerPage page;
-
     protected final Strata.Structure structure;
 
     public InnerTier(Strata.Structure structure)
     {
-        // this.page = storage.getPager().newInnerPage(storage,
-        // typeOfChildren);
         this.structure = structure;
-        // this.listOfBranches = new ArrayList(size + 1);
-        // this.listOfBranches.add(new Branch(new LeafTier(comparator, size),
-        // Branch.TERMINAL));
     }
+
+    public abstract short getTypeOfChildren();
+
+    public abstract void add(Branch branch);
+
+    public abstract Branch remove(int index);
+
+    public abstract ListIterator listIterator();
+
+    public abstract Branch get(int index);
+
+    public abstract void shift(Branch branch);
 
     public Split split(Object txn, Strata.Criteria criteria)
     {
@@ -137,6 +142,50 @@ implements Tier
         return false;
     }
 
+    public boolean canMerge(Tier tier)
+    {
+        int index = getIndexOfTier(tier);
+        if (index > 0 && get(index - 1).getSize() + get(index).getSize() <= structure.getSize())
+        {
+            return true;
+        }
+        else if (index <= structure.getSize() && get(index).getSize() + get(index + 1).getSize() <= structure.getSize())
+        {
+            return true;
+
+        }
+        return false;
+    }
+
+    public void merge(Object txn, Tier tier)
+    {
+        int index = getIndexOfTier(tier);
+        if (canMerge(index - 1, index))
+        {
+            merge(txn, index - 1, index);
+        }
+        else if (canMerge(index, index + 1))
+        {
+            merge(txn, index, index + 1);
+        }
+    }
+
+    public void consume(Object txn, Tier left)
+    {
+        InnerTier innerTier = (InnerTier) left;
+        Branch oldPivot = innerTier.get(innerTier.getSize());
+        shift(new Branch(oldPivot.getKeyOfLeft(), oldPivot.getObject(), oldPivot.getSize()));
+        for (int i = left.getSize(); i > 0; i--)
+        {
+            shift(innerTier.get(i));
+        }
+    }
+
+    public Tier load(Object txn, Object keyOfTier)
+    {
+        return getPageLoader().load(structure, txn, keyOfTier);
+    }
+
     public void copacetic(Object txn, Strata.Copacetic copacetic)
     {
         if (getSize() == 0)
@@ -178,21 +227,6 @@ implements Tier
         }
     }
 
-    public boolean canMerge(Tier tier)
-    {
-        int index = getIndexOfTier(tier);
-        if (index > 0 && get(index - 1).getSize() + get(index).getSize() <= structure.getSize())
-        {
-            return true;
-        }
-        else if (index <= structure.getSize() && get(index).getSize() + get(index + 1).getSize() <= structure.getSize())
-        {
-            return true;
-
-        }
-        return false;
-    }
-
     private boolean canMerge(int indexOfLeft, int indexOfRight)
     {
         return indexOfLeft != 0 && indexOfRight != structure.getSize() && get(indexOfLeft).getSize() + get(indexOfRight).getSize() < structure.getSize();
@@ -207,49 +241,8 @@ implements Tier
     {
         Tier left = getPageLoader().load(structure, txn, get(indexOfLeft).getKeyOfLeft());
         Tier right = getPageLoader().load(structure, txn, get(indexOfRight).getKeyOfLeft());
-        right.consume(txn, left, null);
+        right.consume(txn, left);
     }
-
-    public void merge(Object txn, Tier tier)
-    {
-        int index = getIndexOfTier(tier);
-        if (canMerge(index - 1, index))
-        {
-            merge(txn, index - 1, index);
-        }
-        else if (canMerge(index, index + 1))
-        {
-            merge(txn, index, index + 1);
-        }
-    }
-
-    public void consume(Object txn, Tier left, Object key)
-    {
-        InnerTier innerTier = (InnerTier) left;
-        Branch oldPivot = innerTier.get(innerTier.getSize());
-        shift(new Branch(oldPivot.getKeyOfLeft(), oldPivot.getObject(), oldPivot.getSize()));
-        for (int i = left.getSize(); i > 0; i--)
-        {
-            shift(innerTier.get(i));
-        }
-    }
-
-    public Tier load(Object txn, Object keyOfTier)
-    {
-        return getPageLoader().load(structure, txn, keyOfTier);
-    }
-
-    public abstract short getTypeOfChildren();
-
-    public abstract void add(Branch branch);
-
-    public abstract Branch remove(int index);
-
-    public abstract ListIterator listIterator();
-
-    public abstract Branch get(int index);
-
-    public abstract void shift(Branch branch);
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

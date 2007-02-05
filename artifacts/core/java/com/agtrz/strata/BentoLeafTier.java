@@ -29,6 +29,8 @@ extends LeafTier
         int blockSize = SizeOf.INTEGER + (Bento.ADDRESS_SIZE * 2) + (Bento.ADDRESS_SIZE * structure.getSize());
         this.address = mutator.allocate(blockSize).getAddress();
         this.listOfObjects = new ArrayList(structure.getSize());
+        this.addressOfPrevious = Bento.NULL_ADDRESS;
+        this.addressOfNext = Bento.NULL_ADDRESS;
     }
 
     public BentoLeafTier(Strata.Structure structure, Bento.Mutator mutator, Bento.Address address, Strata.ObjectLoader blockLoader)
@@ -83,11 +85,6 @@ extends LeafTier
             Bento.NULL_ADDRESS.write(out);
         }
         block.write();
-    }
-
-    public int getType()
-    {
-        return Tier.LEAF;
     }
 
     public Object get(int index)

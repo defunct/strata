@@ -14,7 +14,7 @@ implements Iterator
 
     private int index;
 
-    private LeafTier leafTier;
+    private LeafTier leaf;
 
     private Object current;
 
@@ -22,7 +22,7 @@ implements Iterator
      * Create a new leaf iterator for the specified condition offset into a
      * leaf tier.
      * 
-     * @param leafTier
+     * @param leaf
      *            The leaf tier to iterate.
      * @param index
      *            The start index.
@@ -30,16 +30,16 @@ implements Iterator
      *            The condition that determines if the object is included by
      *            the iterator.
      */
-    public LeafIterator(Strata.Structure structure, Object txn, LeafTier leafTier, int index, Strata.Criteria criteria)
+    public LeafIterator(Strata.Structure structure, Object txn, LeafTier leaf, int index, Strata.Criteria criteria)
     {
-        if (!criteria.exactMatch(leafTier.get(index)))
+        if (!criteria.exactMatch(leaf.get(index)))
         {
             throw new IllegalArgumentException();
         }
         this.structure = structure;
         this.txn = txn;
-        this.current = leafTier.get(index);
-        this.leafTier = leafTier;
+        this.current = leaf.get(index);
+        this.leaf = leaf;
         this.index = index + 1;
         this.criteria = criteria;
     }
@@ -56,18 +56,26 @@ implements Iterator
             throw new IllegalStateException();
         }
         Object next = current;
-        if (index == leafTier.getSize())
+        if (index == leaf.getSize())
         {
-            leafTier = (LeafTier) structure.getStorage().getLeafPageLoader().load(structure, txn, leafTier.getNextLeafTier());
+            Storage storage = structure.getStorage();
+            if (storage.isKeyNull(leaf.getNextLeafTier()))
+            {
+                leaf = null;
+            }
+            else
+            {
+                leaf = (LeafTier) storage.getLeafPageLoader().load(structure, txn, leaf.getNextLeafTier());
+            }
             index = 0;
         }
-        if (leafTier == null)
+        if (leaf == null)
         {
             current = null;
         }
-        else if (index < leafTier.getSize())
+        else if (index < leaf.getSize())
         {
-            Object object = leafTier.get(index);
+            Object object = leaf.get(index);
             if (criteria.exactMatch(object))
             {
                 current = object;

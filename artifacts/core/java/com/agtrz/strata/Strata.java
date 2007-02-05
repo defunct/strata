@@ -247,7 +247,7 @@ public class Strata
                     listOfFullTiers.clear();
                 }
 
-                if (tier.isLeaf())
+                if (parent.getTypeOfChildren() == Tier.LEAF)
                 {
                     if (tier.isFull())
                     {

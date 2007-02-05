@@ -97,7 +97,7 @@ extends TestCase
         }
     }
 
-    public void testConstruction()
+    public void testUsingPair()
     {
         File file = newFile();
         Bento.Creator creator = new Bento.Creator();
@@ -138,7 +138,7 @@ extends TestCase
 
         Strata.Query query = strata.query(mutator);
 
-        query.insert(new PairCriteria(new Pair(block.getAddress(), new Integer(1))));
+        query.insert(new Pair(block.getAddress(), new Integer(1)));
 
         Iterator found = query.find(new PairQuery(new Integer(1))).iterator();
         while (found.hasNext())
@@ -148,6 +148,11 @@ extends TestCase
 
         mutator.getJournal().commit();
         bento.close();
+    }
+    
+    public void testUsingLookup()
+    {
+        
     }
 }
 

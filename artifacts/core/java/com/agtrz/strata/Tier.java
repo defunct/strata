@@ -14,8 +14,11 @@ public interface Tier
 
     public Object getKey();
 
-    public boolean isLeaf();
-
+    /**
+     * Return true if this tier is full.
+     * 
+     * @return True if the tier is full.
+     */
     public boolean isFull();
 
     /**
@@ -28,13 +31,26 @@ public interface Tier
      */
     public Split split(Object txn, Strata.Criteria criteria);
 
-    // public void clear();
-
     public void copacetic(Object txn, Strata.Copacetic copacetic);
 
+    /**
+     * Return the number of objects or objects used to pivot in this tier. For
+     * an inner tier the size is the number of objects, while the number of
+     * child tiers is the size plus one.
+     * 
+     * @return The size of the tier.
+     */
     public int getSize();
 
-    public void consume(Object txn, Tier left, Object key);
+    /**
+     * Merge the contents of a tier to the left of this tier into this tier.
+     * 
+     * @param txn
+     *            The transaction of the query.
+     * @param left
+     *            The tier to the left of this tier.
+     */
+    public void consume(Object txn, Tier left);
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

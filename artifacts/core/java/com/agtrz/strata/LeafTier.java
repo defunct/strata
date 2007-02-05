@@ -12,22 +12,11 @@ implements Tier
 {
     protected final Strata.Structure structure;
 
-    // private final LeafPage page;
-
-    // private final static Tracer TRACER =
-    // TracerFactory.INSTANCE.getTracer(Tier.class);
-
     public LeafTier(Strata.Structure structure)
     {
         // this.page = storage.getPager().newLeafPage(storage);
         this.structure = structure;
     }
-
-    // public int getSize()
-    // {
-    // // FIXME Include count of all linked leaves.
-    // return page.getSize();
-    // }
 
     public boolean isFull()
     {
@@ -267,11 +256,6 @@ implements Tier
         return listOfRemoved;
     }
 
-    public boolean isLeaf()
-    {
-        return true;
-    }
-
     public void copacetic(Object txn, Strata.Copacetic copacetic)
     {
         if (getSize() < 1)
@@ -295,7 +279,7 @@ implements Tier
         }
     }
 
-    public void consume(Object txn, Tier left, Object key)
+    public void consume(Object txn, Tier left)
     {
         LeafTier leafTier = (LeafTier) left;
 
