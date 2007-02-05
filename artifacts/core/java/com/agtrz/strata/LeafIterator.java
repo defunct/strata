@@ -8,6 +8,8 @@ import com.agtrz.operators.UrnaryOperator;
 public class LeafIterator
 implements Iterator
 {
+    private final Storage storage;
+
     private final UrnaryOperator condition;
 
     private int index;
@@ -28,13 +30,14 @@ implements Iterator
      *            The condition that determines if the object is included by
      *            the iterator.
      */
-    public LeafIterator(LeafTier leafTier, int index, UrnaryOperator condition)
+    public LeafIterator(Storage storage, LeafTier leafTier, int index, UrnaryOperator condition)
     {
-        if (!condition.operate(leafTier.listOfObjects.get(index)))
+        if (!condition.operate(leafTier.get(index)))
         {
             throw new IllegalArgumentException();
         }
-        this.current = leafTier.listOfObjects.get(index);
+        this.storage = storage;
+        this.current = leafTier.get(index);
         this.leafTier = leafTier;
         this.index = index + 1;
         this.condition = condition;
@@ -52,18 +55,18 @@ implements Iterator
             throw new IllegalStateException();
         }
         Object next = current;
-        if (index == leafTier.listOfObjects.size())
+        if (index == leafTier.getSize())
         {
-            leafTier = leafTier.nextLeafTier;
+            leafTier = (LeafTier) storage.getPager().getLeafPageLoader().load(storage, leafTier.getNextLeafTier());
             index = 0;
         }
         if (leafTier == null)
         {
             current = null;
         }
-        else if (index < leafTier.listOfObjects.size())
+        else if (index < leafTier.getSize())
         {
-            Object object = leafTier.listOfObjects.get(index);
+            Object object = leafTier.get(index);
             if (condition.operate(object))
             {
                 current = object;

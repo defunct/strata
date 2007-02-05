@@ -11,5 +11,6 @@
 	<classpathentry exported="true" kind="lib" path="/Applications/eclipse/plugins/org.codehaus.groovy.eclipse_1.0.0.20060905/lib/groovy-all-1.0-JSR-06.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/sheaf"/>
 	<classpathentry kind="lib" path="/mix/lib/junit/junit.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/bento"/>
 	<classpathentry kind="output" path="ERRORS-IN-PATH"/>
 </classpath>

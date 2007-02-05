@@ -10,76 +10,58 @@ import java.util.ListIterator;
 
 import com.agtrz.operators.Curry;
 import com.agtrz.operators.Equals;
-import com.agtrz.swag.trace.ListFreezer;
-import com.agtrz.swag.trace.NullFreezer;
-import com.agtrz.swag.trace.Tracer;
-import com.agtrz.swag.trace.TracerFactory;
 import com.agtrz.swag.util.Equator;
 
-public class LeafTier
+public abstract class LeafTier
 implements Tier
 {
-    private final static Tracer TRACER = TracerFactory.INSTANCE.getTracer(Tier.class);
+    protected final Storage storage;
 
-    private final int size;
+    // private final LeafPage page;
 
-    private final Comparator comparator;
+    // private final static Tracer TRACER =
+    // TracerFactory.INSTANCE.getTracer(Tier.class);
 
-    final List listOfObjects;
-
-    LeafTier nextLeafTier;
-
-    public LeafTier(Comparator comparator, int size)
+    public LeafTier(Storage storage)
     {
-        this.size = size;
-        this.comparator = comparator;
-        this.listOfObjects = new ArrayList(size);
+        // this.page = storage.getPager().newLeafPage(storage);
+        this.storage = storage;
     }
 
-    public LeafTier(Comparator comparator, int size, List listOfObjects)
-    {
-        this.size = size;
-        this.comparator = comparator;
-        this.listOfObjects = new ArrayList(listOfObjects);
-    }
-
-    public void clear()
-    {
-        listOfObjects.clear();
-    }
-    
-    public int size()
-    {
-        return listOfObjects.size();
-    }
+    // public int getSize()
+    // {
+    // // FIXME Include count of all linked leaves.
+    // return page.getSize();
+    // }
 
     public boolean isFull()
     {
-        return listOfObjects.size() == size;
+        return getSize() == storage.getSize();
     }
 
-    public Split split(Object object)
+    public Split split(Object object, Object keyOfObject)
     {
-        if (listOfObjects.size() != size)
+        if (!isFull())
         {
             throw new IllegalStateException();
         }
 
-        int middle = size >> 1;
-        boolean odd = (size & 1) == 1;
+        int middle = storage.getSize() >> 1;
+        boolean odd = (storage.getSize() & 1) == 1;
         int lesser = middle - 1;
         int greater = odd ? middle + 1 : middle;
 
-        Object candidate = listOfObjects.get(middle);
+        Object candidate = get(middle);
         int partition = -1;
 
+        Comparator comparator = storage.getComparator();
         for (int i = 0; partition == -1 && i < middle; i++)
         {
-            if (comparator.compare(candidate, listOfObjects.get(lesser)) != 0)
+            if (comparator.compare(candidate, get(lesser)) != 0)
             {
                 partition = lesser + 1;
             }
-            else if (comparator.compare(candidate, listOfObjects.get(greater)) != 0)
+            else if (comparator.compare(candidate, get(greater)) != 0)
             {
                 partition = greater;
             }
@@ -87,10 +69,12 @@ implements Tier
             greater++;
         }
 
+        Pager pager = storage.getPager();
         Split split = null;
         if (partition == -1)
         {
-            Object repeated = listOfObjects.get(0);
+            Object repeated = get(0);
+            Object keyOfRepeated = getKey(0);
             int compare = comparator.compare(object, repeated);
             if (compare == 0)
             {
@@ -98,91 +82,117 @@ implements Tier
             }
             else if (compare < 0)
             {
-                List listOfRight = new ArrayList(size);
-                listOfRight.addAll(listOfObjects);
-                listOfObjects.clear();
+                LeafTier right = storage.getPager().newLeafPage(storage);
+                while (getSize() != 0)
+                {
+                    right.add(remove(0));
+                }
 
-                LeafTier right = new LeafTier(comparator, size, listOfRight);
+                LeafTier next = (LeafTier) pager.getLeafPageLoader().load(storage, getNextLeafTier());
 
-                right.nextLeafTier = nextLeafTier;
-                nextLeafTier = right;
+                right.setNextLeafTier(getNextLeafTier());
+                setNextLeafTier(right.getKey());
 
-                split = new Split(object, right);
+                next.setPreviousLeafTier(right.getKey());
+                right.setPreviousLeafTier(getKey());
+
+                split = new Split(object, keyOfObject, right);
             }
             else
             {
                 LeafTier last = this;
                 while (!endOfList(repeated, last))
                 {
-                    last = last.nextLeafTier;
+                    last = last.getNext();
                 }
 
-                LeafTier right = new LeafTier(comparator, size, new ArrayList());
-                right.nextLeafTier = last.nextLeafTier;
-                last.nextLeafTier = right;
+                LeafTier right = pager.newLeafPage(storage);
 
-                split = new Split(repeated, right);
+                last.setNextLeafTier(right.getKey());
+                right.setNextLeafTier(last.getNextLeafTier());
+
+                right.getNext().setPreviousLeafTier(right.getKey());
+                right.setPreviousLeafTier(last.getKey());
+
+                split = new Split(repeated, keyOfRepeated, right);
             }
         }
         else
         {
-            List listOfRight = new ArrayList(size);
+            LeafTier right = pager.newLeafPage(storage);
 
-            listOfObjects.subList(partition, size);
-            for (int i = partition; i < size; i++)
+            for (int i = partition; i < getSize(); i++)
             {
-                listOfRight.add(listOfObjects.remove(partition));
+                right.add(remove(partition));
             }
 
-            LeafTier right = new LeafTier(comparator, size, listOfRight);
+            Object keyOfNextLeafTier = getNextLeafTier();
+            setNextLeafTier(right.getKey());
+            right.setNextLeafTier(keyOfNextLeafTier);
 
-            right.nextLeafTier = nextLeafTier;
-            nextLeafTier = right;
+            right.getNext().setPreviousLeafTier(right.getKey());
+            right.setPreviousLeafTier(getKey());
 
-            split = new Split(listOfObjects.get(listOfObjects.size() - 1), right);
+            split = new Split(get(getSize() - 1), getKey(getSize() - 1), right);
         }
 
         return split;
     }
 
+     private LeafTier getPrevious()
+    {
+        return (LeafTier) storage.getPager().getLeafPageLoader().load(storage, getPreviousLeafTier());
+    }
+
+    private LeafTier getNext()
+    {
+        return (LeafTier) storage.getPager().getLeafPageLoader().load(storage, getNextLeafTier());
+    }
+
     private boolean endOfList(Object object, LeafTier last)
     {
-        return last.nextLeafTier == null || comparator.compare(last.nextLeafTier.listOfObjects.get(0), object) != 0;
+        return storage.getPager().isKeyNull(getNextLeafTier()) || storage.getComparator().compare(last.getNext().get(0), object) != 0;
     }
 
     private void ensureNextLeafTier(Object object)
     {
-        if (nextLeafTier == null || comparator.compare(listOfObjects.get(0), nextLeafTier.listOfObjects.get(0)) != 0)
+        Pager pager = storage.getPager();
+        if (pager.isKeyNull(getNextLeafTier()) || storage.getComparator().compare(get(0), getNext().get(0)) != 0)
         {
-            LeafTier newNextLeafTier = new LeafTier(comparator, size);
-            newNextLeafTier.nextLeafTier = nextLeafTier;
-            nextLeafTier = newNextLeafTier;
+            LeafTier newNextLeafTier = pager.newLeafPage(storage);
+
+            newNextLeafTier.setNextLeafTier(getNextLeafTier());
+            setNextLeafTier(newNextLeafTier.getKey());
+
+            getNext().setPreviousLeafTier(newNextLeafTier.getKey());
+            newNextLeafTier.setPreviousLeafTier(getKey());
         }
     }
 
     public void append(Object object)
     {
-        if (listOfObjects.size() == size)
+        if (getSize() == storage.getSize())
         {
             ensureNextLeafTier(object);
-            nextLeafTier.append(object);
+            getNext().append(object);
         }
         else
         {
-            listOfObjects.add(object);
+            add(object);
         }
     }
 
     public void insert(Object object)
     {
-        if (listOfObjects.size() == size)
+        if (getSize() == storage.getSize())
         {
             ensureNextLeafTier(object);
-            nextLeafTier.append(object);
+            getNext().append(object);
         }
         else
         {
-            ListIterator objects = listOfObjects.listIterator();
+            Comparator comparator = storage.getComparator();
+            ListIterator objects = listIterator();
             while (objects.hasNext())
             {
                 Object before = objects.next();
@@ -196,33 +206,24 @@ implements Tier
 
             if (!objects.hasNext())
             {
-                listOfObjects.add(object);
+                add(object);
             }
         }
     }
 
     public Collection find(Object object)
     {
-        for (int i = 0; i < listOfObjects.size(); i++)
+        Comparator comparator = storage.getComparator();
+        for (int i = 0; i < getSize(); i++)
         {
-            Object before = listOfObjects.get(i);
+            Object before = get(i);
             if (comparator.compare(object, before) == 0)
             {
-                return new LeafCollection(this, i, new Curry(new Equals(comparator), object));
+                return new LeafCollection(storage, this, i, new Curry(new Equals(comparator), object));
             }
         }
 
         return Collections.EMPTY_LIST;
-    }
-
-    public int getObjectCount()
-    {
-        return listOfObjects.size();
-    }
-
-    public Object getObject(int i)
-    {
-        return listOfObjects.get(i);
     }
 
     /**
@@ -241,7 +242,7 @@ implements Tier
     public Collection remove(Object toRemove, Equator equator)
     {
         List listOfRemoved = new ArrayList();
-        Iterator objects = listOfObjects.iterator();
+        Iterator objects = listIterator();
         while (objects.hasNext())
         {
             Object candidate = objects.next();
@@ -252,10 +253,10 @@ implements Tier
             }
         }
         LeafTier lastLeafTier = this;
-        LeafTier leafTier = nextLeafTier;
-        while (equator.equals(leafTier.getObject(0), toRemove))
+        LeafTier leafTier = getNext();
+        while (equator.equals(leafTier.get(0), toRemove))
         {
-            objects = leafTier.listOfObjects.iterator();
+            objects = leafTier.listIterator();
             while (objects.hasNext())
             {
                 Object candidate = objects.next();
@@ -265,11 +266,12 @@ implements Tier
                     objects.remove();
                 }
             }
-            if (leafTier.getObjectCount() == 0)
+            if (leafTier.getSize() == 0)
             {
-                lastLeafTier.nextLeafTier = leafTier.nextLeafTier;
+                lastLeafTier.setNextLeafTier(leafTier.getNextLeafTier());
+                leafTier.getNext().setPreviousLeafTier(lastLeafTier.getKey());
             }
-            leafTier = leafTier.nextLeafTier;
+            leafTier = leafTier.getNext();
         }
         return listOfRemoved;
     }
@@ -281,13 +283,13 @@ implements Tier
 
     public void copacetic(Strata.Copacetic copacetic)
     {
-        TRACER.debug().record(listOfObjects, new ListFreezer(NullFreezer.INSTANCE));
-        if (listOfObjects.size() < 1)
+        if (getSize() < 1)
         {
             throw new IllegalStateException();
         }
         Object previous = null;
-        Iterator objects = listOfObjects.iterator();
+        Iterator objects = listIterator();
+        Comparator comparator = storage.getComparator();
         while (objects.hasNext())
         {
             Object object = objects.next();
@@ -297,16 +299,45 @@ implements Tier
             }
             previous = object;
         }
-        if (nextLeafTier != null && comparator.compare(listOfObjects.get(listOfObjects.size() - 1), nextLeafTier.listOfObjects.get(0)) == 0 && size != listOfObjects.size() && comparator.compare(listOfObjects.get(0), listOfObjects.get(listOfObjects.size() - 1)) != 0)
+        if (!storage.getPager().isKeyNull(getNextLeafTier()) && comparator.compare(get(getSize() - 1), getNext().get(0)) == 0 && storage.getSize() != getSize() && comparator.compare(get(0), get(getSize() - 1)) != 0)
         {
             throw new IllegalStateException();
         }
     }
 
-    public String toString()
+    public void consume(Tier left, Object key)
     {
-        return listOfObjects.toString();
+        LeafTier leafTier = (LeafTier) left;
+
+        setPreviousLeafTier(leafTier.getPreviousLeafTier());
+        getPrevious().setNextLeafTier(getKey());
+
+        while (leafTier.getSize() != 0)
+        {
+            shift(leafTier.remove(0));
+        }
     }
+
+    public abstract Object getKey(int index);
+
+    public abstract Object get(int index);
+
+    public abstract Object remove(int index);
+
+    public abstract void add(Object object);
+    
+    public abstract void shift(Object object);
+
+    public abstract ListIterator listIterator();
+
+    // FIXME Rename.
+    public abstract Object getPreviousLeafTier();
+
+    public abstract void setPreviousLeafTier(Object keyOfPreviousLeafTier);
+
+    public abstract Object getNextLeafTier();
+
+    public abstract void setNextLeafTier(Object keyOfNextLeafTier);
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

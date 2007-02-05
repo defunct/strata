@@ -2,11 +2,13 @@ package com.agtrz.strata;
 
 public class Branch
 {
-    private final Tier left;
+    private final Object keyOfLeft;
+    
+    private final Object keyOfObject;
 
     private final Object object;
-    
-    private final int count;
+
+    private int size;
 
     public final static Object TERMINAL = new Object()
     {
@@ -16,26 +18,39 @@ public class Branch
         }
     };
 
-    public Branch(Tier left, Object object)
+    public Branch(Object keyOfLeft, Object keyOfObject, Object object, int size)
     {
-        this.left = left;
+        this.keyOfLeft = keyOfLeft;
         this.object = object;
-        this.count = left.size();
+        this.keyOfObject = keyOfObject;
+        this.size = size;
     }
 
-    public Tier getLeft()
+    public Object getKeyOfLeft()
     {
-        return left;
+        return keyOfLeft;
     }
 
+    public Object getKeyOfObject()
+    {
+        return keyOfObject;
+    }
+    
+    // FIXME rename pivot.
+    
     public Object getObject()
     {
         return object;
     }
-    
-    public int getCount()
+
+    public int getSize()
     {
-        return count;
+        return size;
+    }
+
+    public void setSize(int size)
+    {
+        this.size = size;
     }
 
     public boolean isTerminal()

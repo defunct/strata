@@ -9,14 +9,17 @@ import com.agtrz.operators.UrnaryOperator;
 public class LeafCollection
 extends AbstractCollection
 {
+    private final Storage storage;
+
     private final UrnaryOperator condition;
-    
+
     private final int index;
-    
+
     private final LeafTier leafTier;
-    
-    public LeafCollection(LeafTier leafTier, int index, UrnaryOperator condition)
+
+    public LeafCollection(Storage storage, LeafTier leafTier, int index, UrnaryOperator condition)
     {
+        this.storage = storage;
         this.leafTier = leafTier;
         this.index = index;
         this.condition = condition;
@@ -24,7 +27,7 @@ extends AbstractCollection
 
     public Iterator iterator()
     {
-        return new LeafIterator(leafTier, index, condition);
+        return new LeafIterator(storage, leafTier, index, condition);
     }
 
     public int size()

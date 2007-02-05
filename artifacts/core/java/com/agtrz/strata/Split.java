@@ -2,19 +2,27 @@ package com.agtrz.strata;
 
 public class Split
 {
-    private final Object key;
+    private final Object pivot;
+    
+    private final Object keyOfPivot;
 
     private final Tier right;
 
-    public Split(Object key, Tier right)
+    public Split(Object pivot, Object keyOfPivot, Tier right)
     {
-        this.key = key;
+        this.pivot = pivot;
+        this.keyOfPivot = keyOfPivot;
         this.right = right;
     }
 
-    public Object getKey()
+    public Object getKeyOfPivot()
     {
-        return key;
+        return keyOfPivot;
+    }
+
+    public Object getPivot()
+    {
+        return pivot;
     }
 
     public Tier getRight()

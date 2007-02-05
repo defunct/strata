@@ -136,13 +136,13 @@ public class StrataStressor
         for (int i = 0; i < count; i++)
         {
             Operation operation = null;
-            if (strata.size() == 0)
+            if (strata.getSize() == 0)
             {
                 operation = new Add(newCompound());
             }
             else
             {
-                double probablity = ((double) strata.size())/ max;
+                double probablity = ((double) strata.getSize())/ max;
                 int add = random.nextInt((int) (probablity * max));
                 if (add < (max / 2))
                 {

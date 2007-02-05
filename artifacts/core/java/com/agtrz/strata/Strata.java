@@ -31,27 +31,25 @@ import com.agtrz.swag.util.Equator;
  */
 public class Strata
 {
+    private final Storage storage;
+
     private final InnerTier root;
-
-    private final Comparator comparator;
-
-    private final Equator equator;
 
     private int size;
 
     public Strata(Comparator comparator, Equator equator)
     {
-        this.root = new InnerTier(comparator, 5);
-        this.comparator = comparator;
-        this.equator = equator;
+        this.storage = new Storage(new ArrayListPager(), null, comparator, equator, 5);
+        this.root = storage.getPager().newInnerPage(storage, Tier.LEAF);
     }
 
     public void copacetic()
     {
-        root.copacetic(new Copacetic(comparator));
+        root.copacetic(new Copacetic(storage.getComparator()));
         Iterator iterator = values().iterator();
-        if (size != 0)
+        if (getSize() != 0)
         {
+            Comparator comparator = storage.getComparator();
             Object previous = iterator.next();
             for (int i = 1; i < size; i++)
             {
@@ -87,7 +85,7 @@ public class Strata
         this(new ComparableComparator());
     }
 
-    public int size()
+    public int getSize()
     {
         return size;
     }
@@ -98,17 +96,22 @@ public class Strata
         InnerTier tier = root;
         for (;;)
         {
-            branch = tier.getBranch(0);
-            if (branch.getLeft().isLeaf())
+            branch = tier.get(0);
+            if (tier.getTypeOfChildren() == Tier.LEAF)
             {
                 break;
             }
-            tier = (InnerTier) branch.getLeft();
+            tier = (InnerTier) tier.load(branch.getKeyOfLeft());
         }
-        return new LeafCollection((LeafTier) branch.getLeft(), 0, True.INSTANCE);
+        return new LeafCollection(storage, (LeafTier) tier.load(branch.getKeyOfLeft()), 0, True.INSTANCE);
     }
 
     public void insert(Object object)
+    {
+        insert(object, null);
+    }
+
+    public void insert(Object object, Object keyOfObject)
     {
         // Maintaining a list of tiers to split.
         //
@@ -134,7 +137,7 @@ public class Strata
         {
             parent = inner;
             Branch branch = inner.find(object);
-            Tier tier = branch.getLeft();
+            Tier tier = parent.load(branch.getKeyOfLeft());
 
             if (tier.isFull())
             {
@@ -157,7 +160,7 @@ public class Strata
                     {
                         InnerTier reciever = (InnerTier) tier;
                         Tier full = (Tier) ancestors.next();
-                        Split split = full.split(object);
+                        Split split = full.split(object, keyOfObject);
                         if (split == null)
                         {
                             tier = full;
@@ -172,7 +175,8 @@ public class Strata
                         {
                             reciever.replace(full, split);
                         }
-                        tier = reciever.find(object).getLeft();
+                        branch = reciever.find(object);
+                        tier = reciever.load(branch.getKeyOfLeft());
                         if (!ancestors.hasNext())
                         {
                             break;
@@ -181,6 +185,7 @@ public class Strata
                 }
 
                 LeafTier leaf = (LeafTier) tier;
+                branch.setSize(branch.getSize() + 1);
                 leaf.insert(object);
                 break;
             }
@@ -197,6 +202,7 @@ public class Strata
         InnerTier inner = null;
         InnerTier parent = null;
         InnerTier tier = root;
+        Equator equator = storage.getEquator();
         for (;;)
         {
             listOfAncestors.addLast(tier);
@@ -206,33 +212,35 @@ public class Strata
             {
                 inner = tier;
             }
-            if (branch.getLeft().isLeaf())
+            if (tier.getTypeOfChildren() == Tier.LEAF)
             {
-                LeafTier leaf = (LeafTier) branch.getLeft();
+                LeafTier leaf = (LeafTier) tier.load(branch.getKeyOfLeft());
                 Collection collection = leaf.remove(object, equator);
+                branch.setSize(branch.getSize() - collection.size());
 
                 if (inner != null)
                 {
-                    int objectCount = leaf.getObjectCount();
+                    int objectCount = leaf.getSize();
                     if (objectCount == 0)
                     {
                         int index = parent.getIndexOfTier(leaf);
-                        if (inner.getBranch(0).getLeft().isLeaf())
+                        if (inner.getTypeOfChildren() == Tier.LEAF)
                         {
                             parent.removeLeafTier(leaf);
                         }
                         else
                         {
-                            Object newPivot = parent.getBranch(index - 1).getObject();
+                            Branch newPivot = parent.get(index - 1);
                             parent.removeLeafTier(leaf);
-                            parent.replacePivot(newPivot, Branch.TERMINAL);
-                            inner.replacePivot(object, newPivot);
+                            parent.replacePivot(newPivot.getObject(), newPivot.getKeyOfObject(), Branch.TERMINAL);
+                            inner.replacePivot(object, newPivot.getObject(), newPivot.getKeyOfObject());
                         }
                     }
                     else
                     {
-                        Object newPivot = leaf.getObject(objectCount - 1);
-                        inner.replacePivot(object, newPivot);
+                        Object newPivot = leaf.get(objectCount - 1);
+                        Object keyOfNewPivot = leaf.getKey(objectCount - 1);
+                        inner.replacePivot(object, newPivot, keyOfNewPivot);
                     }
                 }
 
@@ -250,7 +258,7 @@ public class Strata
                 size -= collection.size();
                 return collection;
             }
-            tier = (InnerTier) branch.getLeft();
+            tier = (InnerTier) parent.load(branch.getKeyOfLeft());
         }
     }
 
@@ -260,12 +268,12 @@ public class Strata
         for (;;)
         {
             Branch branch = tier.find(object);
-            if (branch.getLeft().isLeaf())
+            if (tier.getTypeOfChildren() == Tier.LEAF)
             {
-                LeafTier leaf = (LeafTier) branch.getLeft();
+                LeafTier leaf = (LeafTier) tier.load(branch.getKeyOfLeft());
                 return leaf.find(object);
             }
-            tier = (InnerTier) branch.getLeft();
+            tier = (InnerTier) tier.load(branch.getKeyOfLeft());
         }
     }
 

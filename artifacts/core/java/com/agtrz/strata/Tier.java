@@ -8,6 +8,12 @@ package com.agtrz.strata;
  */
 public interface Tier
 {
+    public final static short INNER = 1;
+
+    public final static short LEAF = 2;
+
+    public Object getKey();
+
     public boolean isLeaf();
 
     public boolean isFull();
@@ -20,13 +26,15 @@ public interface Tier
      * @return A <tt>Split</tt> object containing the partition object and
      *         the new right and left containers.
      */
-    public Split split(Object object);
+    public Split split(Object object, Object keyOfObject);
 
-//    public void clear();
+    // public void clear();
 
     public void copacetic(Strata.Copacetic copacetic);
-    
-    public int size();
+
+    public int getSize();
+
+    public void consume(Tier left, Object key);
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */
