@@ -2,9 +2,9 @@
 package com.agtrz.strata;
 
 // FIXME REname.
-public interface PageLoader
+public interface TierLoader
 {
-    public Tier load(Storage storage, Object key);
+    public Tier load(Strata.Structure structure, Object storage, Object key);
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

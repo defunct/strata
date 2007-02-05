@@ -3,29 +3,24 @@ package com.agtrz.strata;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
-import com.agtrz.operators.Curry;
-import com.agtrz.operators.Equals;
-import com.agtrz.swag.util.Equator;
-
 public abstract class LeafTier
 implements Tier
 {
-    protected final Storage storage;
+    protected final Strata.Structure structure;
 
     // private final LeafPage page;
 
     // private final static Tracer TRACER =
     // TracerFactory.INSTANCE.getTracer(Tier.class);
 
-    public LeafTier(Storage storage)
+    public LeafTier(Strata.Structure structure)
     {
         // this.page = storage.getPager().newLeafPage(storage);
-        this.storage = storage;
+        this.structure = structure;
     }
 
     // public int getSize()
@@ -36,32 +31,31 @@ implements Tier
 
     public boolean isFull()
     {
-        return getSize() == storage.getSize();
+        return getSize() == structure.getSize();
     }
 
-    public Split split(Object object, Object keyOfObject)
+    public Split split(Object txn, Strata.Criteria criteria)
     {
         if (!isFull())
         {
             throw new IllegalStateException();
         }
 
-        int middle = storage.getSize() >> 1;
-        boolean odd = (storage.getSize() & 1) == 1;
+        int middle = structure.getSize() >> 1;
+        boolean odd = (structure.getSize() & 1) == 1;
         int lesser = middle - 1;
         int greater = odd ? middle + 1 : middle;
 
-        Object candidate = get(middle);
         int partition = -1;
 
-        Comparator comparator = storage.getComparator();
+        Strata.Criteria candidate = structure.getCriterion().newCriteria(get(middle));
         for (int i = 0; partition == -1 && i < middle; i++)
         {
-            if (comparator.compare(candidate, get(lesser)) != 0)
+            if (candidate.partialMatch(get(lesser)) != 0)
             {
                 partition = lesser + 1;
             }
-            else if (comparator.compare(candidate, get(greater)) != 0)
+            else if (candidate.partialMatch(get(greater)) != 0)
             {
                 partition = greater;
             }
@@ -69,26 +63,25 @@ implements Tier
             greater++;
         }
 
-        Pager pager = storage.getPager();
+        Storage pager = structure.getStorage();
         Split split = null;
         if (partition == -1)
         {
             Object repeated = get(0);
-            Object keyOfRepeated = getKey(0);
-            int compare = comparator.compare(object, repeated);
+            int compare = criteria.partialMatch(repeated);
             if (compare == 0)
             {
                 split = null; // TODO For sake of breakpoint.
             }
             else if (compare < 0)
             {
-                LeafTier right = storage.getPager().newLeafPage(storage);
+                LeafTier right = structure.getStorage().newLeafPage(structure, txn);
                 while (getSize() != 0)
                 {
                     right.add(remove(0));
                 }
 
-                LeafTier next = (LeafTier) pager.getLeafPageLoader().load(storage, getNextLeafTier());
+                LeafTier next = (LeafTier) pager.getLeafPageLoader().load(structure, txn, getNextLeafTier());
 
                 right.setNextLeafTier(getNextLeafTier());
                 setNextLeafTier(right.getKey());
@@ -96,30 +89,30 @@ implements Tier
                 next.setPreviousLeafTier(right.getKey());
                 right.setPreviousLeafTier(getKey());
 
-                split = new Split(object, keyOfObject, right);
+                split = new Split(criteria.getObject(), right);
             }
             else
             {
                 LeafTier last = this;
-                while (!endOfList(repeated, last))
+                while (!endOfList(txn, repeated, last))
                 {
-                    last = last.getNext();
+                    last = last.getNext(txn);
                 }
 
-                LeafTier right = pager.newLeafPage(storage);
+                LeafTier right = pager.newLeafPage(structure, txn);
 
                 last.setNextLeafTier(right.getKey());
                 right.setNextLeafTier(last.getNextLeafTier());
 
-                right.getNext().setPreviousLeafTier(right.getKey());
+                right.getNext(txn).setPreviousLeafTier(right.getKey());
                 right.setPreviousLeafTier(last.getKey());
 
-                split = new Split(repeated, keyOfRepeated, right);
+                split = new Split(repeated, right);
             }
         }
         else
         {
-            LeafTier right = pager.newLeafPage(storage);
+            LeafTier right = pager.newLeafPage(structure, txn);
 
             for (int i = partition; i < getSize(); i++)
             {
@@ -130,96 +123,94 @@ implements Tier
             setNextLeafTier(right.getKey());
             right.setNextLeafTier(keyOfNextLeafTier);
 
-            right.getNext().setPreviousLeafTier(right.getKey());
+            right.getNext(txn).setPreviousLeafTier(right.getKey());
             right.setPreviousLeafTier(getKey());
 
-            split = new Split(get(getSize() - 1), getKey(getSize() - 1), right);
+            split = new Split(get(getSize() - 1), right);
         }
 
         return split;
     }
 
-     private LeafTier getPrevious()
+    private LeafTier getPrevious(Object txn)
     {
-        return (LeafTier) storage.getPager().getLeafPageLoader().load(storage, getPreviousLeafTier());
+        return (LeafTier) structure.getStorage().getLeafPageLoader().load(structure, txn, getPreviousLeafTier());
     }
 
-    private LeafTier getNext()
+    private LeafTier getNext(Object txn)
     {
-        return (LeafTier) storage.getPager().getLeafPageLoader().load(storage, getNextLeafTier());
+        return (LeafTier) structure.getStorage().getLeafPageLoader().load(structure, txn, getNextLeafTier());
     }
 
-    private boolean endOfList(Object object, LeafTier last)
+    private boolean endOfList(Object txn, Object object, LeafTier last)
     {
-        return storage.getPager().isKeyNull(getNextLeafTier()) || storage.getComparator().compare(last.getNext().get(0), object) != 0;
+        return structure.getStorage().isKeyNull(getNextLeafTier()) || structure.getCriterion().newCriteria(last.getNext(txn).get(0)).partialMatch(object) != 0;
     }
 
-    private void ensureNextLeafTier(Object object)
+    private void ensureNextLeafTier(Object txn, Strata.Criteria criteria)
     {
-        Pager pager = storage.getPager();
-        if (pager.isKeyNull(getNextLeafTier()) || storage.getComparator().compare(get(0), getNext().get(0)) != 0)
+        Storage pager = structure.getStorage();
+        if (pager.isKeyNull(getNextLeafTier()) || criteria.partialMatch(getNext(txn).get(0)) != 0)
         {
-            LeafTier newNextLeafTier = pager.newLeafPage(storage);
+            LeafTier newNextLeafTier = pager.newLeafPage(structure, txn);
 
             newNextLeafTier.setNextLeafTier(getNextLeafTier());
             setNextLeafTier(newNextLeafTier.getKey());
 
-            getNext().setPreviousLeafTier(newNextLeafTier.getKey());
+            getNext(txn).setPreviousLeafTier(newNextLeafTier.getKey());
             newNextLeafTier.setPreviousLeafTier(getKey());
         }
     }
 
-    public void append(Object object)
+    public void append(Object txn, Strata.Criteria criteria)
     {
-        if (getSize() == storage.getSize())
+        if (getSize() == structure.getSize())
         {
-            ensureNextLeafTier(object);
-            getNext().append(object);
+            ensureNextLeafTier(txn, criteria);
+            getNext(txn).append(txn, criteria);
         }
         else
         {
-            add(object);
+            add(criteria.getObject());
         }
     }
 
-    public void insert(Object object)
+    public void insert(Object txn, Strata.Criteria criteria)
     {
-        if (getSize() == storage.getSize())
+        if (getSize() == structure.getSize())
         {
-            ensureNextLeafTier(object);
-            getNext().append(object);
+            ensureNextLeafTier(txn, criteria);
+            getNext(txn).append(txn, criteria);
         }
         else
         {
-            Comparator comparator = storage.getComparator();
             ListIterator objects = listIterator();
             while (objects.hasNext())
             {
                 Object before = objects.next();
-                if (comparator.compare(object, before) <= 0)
+                if (criteria.partialMatch(before) <= 0)
                 {
                     objects.previous();
-                    objects.add(object);
+                    objects.add(criteria.getObject());
                     break;
                 }
             }
 
             if (!objects.hasNext())
             {
-                add(object);
+                add(criteria.getObject());
             }
         }
     }
 
-    public Collection find(Object object)
+    public Collection find(Object txn, Strata.Criteria criteria)
     {
-        Comparator comparator = storage.getComparator();
         for (int i = 0; i < getSize(); i++)
         {
             Object before = get(i);
-            if (comparator.compare(object, before) == 0)
+            if (criteria.partialMatch(before) == 0)
             {
-                return new LeafCollection(storage, this, i, new Curry(new Equals(comparator), object));
+                return new LeafCollection(structure, txn, this, i, criteria);
             }
         }
 
@@ -231,7 +222,7 @@ implements Tier
      * while updating the inner tree if the object removed was used as a pivot
      * in the inner tree.
      * 
-     * @param toRemove
+     * @param criteria
      *            An object that represents the objects that will be removed
      *            from the B+Tree.
      * @param equator
@@ -239,28 +230,28 @@ implements Tier
      *            leaf is equal to the specified object.
      * @return A colletion of the objects removed from the tree.
      */
-    public Collection remove(Object toRemove, Equator equator)
+    public Collection remove(Object txn, Strata.Criteria criteria)
     {
         List listOfRemoved = new ArrayList();
         Iterator objects = listIterator();
         while (objects.hasNext())
         {
             Object candidate = objects.next();
-            if (equator.equals(candidate, toRemove))
+            if (criteria.equals(candidate))
             {
                 listOfRemoved.add(candidate);
                 objects.remove();
             }
         }
         LeafTier lastLeafTier = this;
-        LeafTier leafTier = getNext();
-        while (equator.equals(leafTier.get(0), toRemove))
+        LeafTier leafTier = getNext(txn);
+        while (criteria.equals(leafTier.get(0)))
         {
             objects = leafTier.listIterator();
             while (objects.hasNext())
             {
                 Object candidate = objects.next();
-                if (equator.equals(candidate, toRemove))
+                if (criteria.equals(candidate))
                 {
                     listOfRemoved.add(candidate);
                     objects.remove();
@@ -269,9 +260,9 @@ implements Tier
             if (leafTier.getSize() == 0)
             {
                 lastLeafTier.setNextLeafTier(leafTier.getNextLeafTier());
-                leafTier.getNext().setPreviousLeafTier(lastLeafTier.getKey());
+                leafTier.getNext(txn).setPreviousLeafTier(lastLeafTier.getKey());
             }
-            leafTier = leafTier.getNext();
+            leafTier = leafTier.getNext(txn);
         }
         return listOfRemoved;
     }
@@ -281,7 +272,7 @@ implements Tier
         return true;
     }
 
-    public void copacetic(Strata.Copacetic copacetic)
+    public void copacetic(Object txn, Strata.Copacetic copacetic)
     {
         if (getSize() < 1)
         {
@@ -289,28 +280,27 @@ implements Tier
         }
         Object previous = null;
         Iterator objects = listIterator();
-        Comparator comparator = storage.getComparator();
         while (objects.hasNext())
         {
             Object object = objects.next();
-            if (previous != null && comparator.compare(previous, object) > 0)
+            if (previous != null && structure.getCriterion().newCriteria(previous).partialMatch(object) > 0)
             {
                 throw new IllegalStateException();
             }
             previous = object;
         }
-        if (!storage.getPager().isKeyNull(getNextLeafTier()) && comparator.compare(get(getSize() - 1), getNext().get(0)) == 0 && storage.getSize() != getSize() && comparator.compare(get(0), get(getSize() - 1)) != 0)
+        if (!structure.getStorage().isKeyNull(getNextLeafTier()) && structure.getCriterion().newCriteria(get(getSize() - 1)).partialMatch(getNext(txn).get(0)) == 0 && structure.getSize() != getSize() && structure.getCriterion().newCriteria(get(0)).partialMatch(get(getSize() - 1)) != 0)
         {
             throw new IllegalStateException();
         }
     }
 
-    public void consume(Tier left, Object key)
+    public void consume(Object txn, Tier left, Object key)
     {
         LeafTier leafTier = (LeafTier) left;
 
         setPreviousLeafTier(leafTier.getPreviousLeafTier());
-        getPrevious().setNextLeafTier(getKey());
+        getPrevious(txn).setNextLeafTier(getKey());
 
         while (leafTier.getSize() != 0)
         {
@@ -318,14 +308,12 @@ implements Tier
         }
     }
 
-    public abstract Object getKey(int index);
-
     public abstract Object get(int index);
 
     public abstract Object remove(int index);
 
     public abstract void add(Object object);
-    
+
     public abstract void shift(Object object);
 
     public abstract ListIterator listIterator();

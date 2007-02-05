@@ -7,7 +7,7 @@ import java.util.ListIterator;
 
 import com.agtrz.swag.util.IdentityObject;
 
-public class ArrayListLeafPage
+public class ArrayListLeafTier
 extends LeafTier
 {
     private Object previousLeafTier;
@@ -16,10 +16,10 @@ extends LeafTier
 
     private final List listOfObjects;
 
-    public ArrayListLeafPage(Storage storage)
+    public ArrayListLeafTier(Strata.Structure structure)
     {
-        super(storage);
-        this.listOfObjects = new ArrayList(storage.getSize());
+        super(structure);
+        this.listOfObjects = new ArrayList(structure.getSize());
     }
 
     public Object getKey()
@@ -41,11 +41,6 @@ extends LeafTier
     {
         return Tier.LEAF;
     }
-    
-    public Object getKey(int index)
-    {
-        return null;
-    }
 
     public Object get(int index)
     {
@@ -61,7 +56,7 @@ extends LeafTier
     {
         listOfObjects.add(object);
     }
-    
+
     public void shift(Object object)
     {
         listOfObjects.add(0, object);
@@ -81,7 +76,7 @@ extends LeafTier
     {
         return nextLeafTier;
     }
-    
+
     public void setNextLeafTier(Object keyOfNextLeafTier)
     {
         this.nextLeafTier = keyOfNextLeafTier;

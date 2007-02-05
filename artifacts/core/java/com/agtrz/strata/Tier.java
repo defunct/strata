@@ -26,15 +26,15 @@ public interface Tier
      * @return A <tt>Split</tt> object containing the partition object and
      *         the new right and left containers.
      */
-    public Split split(Object object, Object keyOfObject);
+    public Split split(Object txn, Strata.Criteria criteria);
 
     // public void clear();
 
-    public void copacetic(Strata.Copacetic copacetic);
+    public void copacetic(Object txn, Strata.Copacetic copacetic);
 
     public int getSize();
 
-    public void consume(Tier left, Object key);
+    public void consume(Object txn, Tier left, Object key);
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

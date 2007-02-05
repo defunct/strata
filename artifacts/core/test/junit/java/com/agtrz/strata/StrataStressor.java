@@ -25,7 +25,7 @@ import com.agtrz.swag.util.Equator;
 
 public class StrataStressor
 {
-    private final static String[] ALPHABET = new String[] { "alpha", "beta", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet", "kilo", "lima", "mike", "november", "oscar", "papa", "quebec", "romeo", "sierra", "tango", "uniform", "victor", "whisky", "x-ray", "zebra" };
+    public final static String[] ALPHABET = new String[] { "alpha", "beta", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet", "kilo", "lima", "mike", "november", "oscar", "papa", "quebec", "romeo", "sierra", "tango", "uniform", "victor", "whisky", "x-ray", "zebra" };
 
     private final Random random;
 
@@ -36,7 +36,7 @@ public class StrataStressor
 
     private interface Operation
     {
-        public void operate(Strata strata);
+        public void operate(Strata.Query  query);
     }
 
     public final static class Add
@@ -49,9 +49,9 @@ public class StrataStressor
             this.compound = compound;
         }
 
-        public void operate(Strata strata)
+        public void operate(Strata.Query query)
         {
-            strata.insert(compound);
+            query.insert(compound);
         }
     }
 
@@ -65,13 +65,13 @@ public class StrataStressor
             this.compound = compound;
         }
 
-        public void operate(Strata strata)
+        public void operate(Strata.Query query)
         {
-            strata.remove(compound);
+            query.remove(compound);
         }
     }
 
-    private final static class Compound
+    public final static class Compound
     implements Serializable
     {
         private final String one;
@@ -95,7 +95,7 @@ public class StrataStressor
         }
     }
 
-    private final static class CompoundComparator
+    public final static class CompoundComparator
     implements Comparator
     {
         public int compare(Object left, Object right)
@@ -104,7 +104,7 @@ public class StrataStressor
         }
     }
 
-    private final static class CompoundEquator
+    public final static class CompoundEquator
     implements Equator
     {
         public boolean equals(Object left, Object right)
@@ -115,7 +115,7 @@ public class StrataStressor
 
     public void dump(Strata strata, ObjectOutputStream out) throws IOException
     {
-        Iterator values = strata.values().iterator();
+        Iterator values = strata.query(null).values().iterator();
         while (values.hasNext())
         {
             Compound compound = (Compound) values.next();
@@ -132,7 +132,8 @@ public class StrataStressor
 
     public void kickTires(int count, int max, ObjectOutputStream out) throws IOException
     {
-        Strata strata = new Strata(new CompoundComparator(), new CompoundEquator());
+        Strata strata = new Strata();
+        Strata.Query query = strata.query(null);
         for (int i = 0; i < count; i++)
         {
             Operation operation = null;
@@ -155,7 +156,7 @@ public class StrataStressor
                     do
                     {
                         compound = newCompound();
-                        collection = strata.find(compound);
+                        collection = query.find(compound);
                     }
                     while (!collection.iterator().hasNext());
 
@@ -163,8 +164,8 @@ public class StrataStressor
                 }
             }
             out.writeObject(operation);
-            operation.operate(strata);
-            strata.copacetic();
+            operation.operate(query);
+            query.copacetic();
         }
     }
 
@@ -201,7 +202,8 @@ public class StrataStressor
                 System.out.print("Cannot open file: " + file.toString() + ", " + e.getMessage());
                 System.exit(1);
             }
-            Strata strata = new Strata(new CompoundComparator(), new CompoundEquator());
+            Strata strata = new Strata();
+            Strata.Query query = strata.query(null);
             for (;;)
             {
                 Operation operation = null;
@@ -227,7 +229,7 @@ public class StrataStressor
                 {
                     break;
                 }
-                operation.operate(strata);
+                operation.operate(query);
             }
         }
         else

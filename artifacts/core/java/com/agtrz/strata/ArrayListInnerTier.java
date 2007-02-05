@@ -7,17 +7,17 @@ import java.util.ListIterator;
 
 import com.agtrz.swag.util.IdentityObject;
 
-public class ArrayListInnerPage
+public class ArrayListInnerTier
 extends InnerTier
 {
-   private final short typeOfChildren;
+    private final short typeOfChildren;
 
     private final List listOfBranches;
 
-    public ArrayListInnerPage(Storage storage, int size, short typeOfChildren)
+    public ArrayListInnerTier(Strata.Structure structure, short typeOfChildren)
     {
-        super(storage);
-        this.listOfBranches = new ArrayList(size + 1);
+        super(structure);
+        this.listOfBranches = new ArrayList(structure.getSize() + 1);
         this.typeOfChildren = typeOfChildren;
     }
 

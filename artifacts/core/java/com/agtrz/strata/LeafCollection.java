@@ -4,30 +4,31 @@ package com.agtrz.strata;
 import java.util.AbstractCollection;
 import java.util.Iterator;
 
-import com.agtrz.operators.UrnaryOperator;
-
 public class LeafCollection
 extends AbstractCollection
 {
-    private final Storage storage;
+    private final Strata.Structure structure;
 
-    private final UrnaryOperator condition;
+    private final Object txn;
+
+    private final Strata.Criteria criteria;
 
     private final int index;
 
     private final LeafTier leafTier;
 
-    public LeafCollection(Storage storage, LeafTier leafTier, int index, UrnaryOperator condition)
+    public LeafCollection(Strata.Structure structure, Object txn, LeafTier leafTier, int index, Strata.Criteria criteria)
     {
-        this.storage = storage;
+        this.structure = structure;
+        this.txn = txn;
         this.leafTier = leafTier;
         this.index = index;
-        this.condition = condition;
+        this.criteria = criteria;
     }
 
     public Iterator iterator()
     {
-        return new LeafIterator(storage, leafTier, index, condition);
+        return new LeafIterator(structure, txn, leafTier, index, criteria);
     }
 
     public int size()

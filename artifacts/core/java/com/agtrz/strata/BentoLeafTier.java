@@ -10,10 +10,9 @@ import com.agtrz.bento.Bento;
 import com.agtrz.swag.io.ObjectReadBuffer;
 import com.agtrz.swag.io.ObjectWriteBuffer;
 import com.agtrz.swag.io.SizeOf;
-import com.agtrz.swag.util.Converter;
 import com.agtrz.swag.util.Pair;
 
-public class BentoLeafPage
+public class BentoLeafTier
 extends LeafTier
 {
     private final Bento.Address address;
@@ -24,43 +23,35 @@ extends LeafTier
 
     private final List listOfObjects;
 
-    private final List listOfAddresses;
-
-    public BentoLeafPage(Storage storage)
+    public BentoLeafTier(Strata.Structure structure, Bento.Mutator mutator)
     {
-        super(storage);
-        Bento.Mutator mutator = (Bento.Mutator) storage.getStore();
-        int blockSize = SizeOf.INTEGER + (Bento.ADDRESS_SIZE * 2) + (Bento.ADDRESS_SIZE * storage.getSize());
+        super(structure);
+        int blockSize = SizeOf.INTEGER + (Bento.ADDRESS_SIZE * 2) + (Bento.ADDRESS_SIZE * structure.getSize());
         this.address = mutator.allocate(blockSize).getAddress();
-        this.listOfObjects = new ArrayList(storage.getSize());
-        this.listOfAddresses = new ArrayList(storage.getSize());
+        this.listOfObjects = new ArrayList(structure.getSize());
     }
 
-    public BentoLeafPage(Storage storage, Bento.Address address, Converter objectConverter)
+    public BentoLeafTier(Strata.Structure structure, Bento.Mutator mutator, Bento.Address address, Strata.ObjectLoader blockLoader)
     {
-        super(storage);
-        Bento.Mutator mutator = (Bento.Mutator) storage.getStore();
+        super(structure);
         Bento.Block block = mutator.load(address);
         ByteBuffer bytes = block.toByteBuffer();
         Bento.Address addressOfPrevious = new Bento.Address(new ObjectReadBuffer(bytes));
         Bento.Address addressOfNext = new Bento.Address(new ObjectReadBuffer(bytes));
-        List listOfObjects = new ArrayList(storage.getSize());
-        List listOfAddresses = new ArrayList(storage.getSize());
-        for (int i = 0; i < storage.getSize(); i++)
+        List listOfObjects = new ArrayList(structure.getSize());
+        for (int i = 0; i < structure.getSize(); i++)
         {
             Bento.Address addressOfObject = new Bento.Address(new ObjectReadBuffer(bytes));
             if (addressOfObject.getPosition() == 0)
             {
                 break;
             }
-            listOfAddresses.add(listOfObjects);
-            listOfObjects.add(objectConverter.convert(mutator.load(addressOfObject)));
+            listOfObjects.add(blockLoader.load(mutator, addressOfObject));
         }
         this.address = address;
         this.addressOfPrevious = addressOfPrevious;
         this.addressOfNext = addressOfNext;
         this.listOfObjects = listOfObjects;
-        this.listOfAddresses = listOfAddresses;
     }
 
     public Object getKey()
@@ -87,7 +78,7 @@ extends LeafTier
             Bento.Address address = (Bento.Address) pair.getKey();
             address.write(out);
         }
-        for (int i = listOfObjects.size(); i < storage.getSize(); i++)
+        for (int i = listOfObjects.size(); i < structure.getSize(); i++)
         {
             Bento.NULL_ADDRESS.write(out);
         }
@@ -97,11 +88,6 @@ extends LeafTier
     public int getType()
     {
         return Tier.LEAF;
-    }
-
-    public Object getKey(int index)
-    {
-        return listOfAddresses.get(index);
     }
 
     public Object get(int index)

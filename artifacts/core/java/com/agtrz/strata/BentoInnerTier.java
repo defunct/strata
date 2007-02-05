@@ -9,9 +9,8 @@ import java.util.ListIterator;
 import com.agtrz.bento.Bento;
 import com.agtrz.swag.io.ObjectReadBuffer;
 import com.agtrz.swag.io.SizeOf;
-import com.agtrz.swag.util.Converter;
 
-public class BentoInnerPage
+public class BentoInnerTier
 extends InnerTier
 {
     private final short typeOfChildren;
@@ -20,22 +19,20 @@ extends InnerTier
 
     private final List listOfBranches;
 
-    public BentoInnerPage(Storage storage, short typeOfChildren)
+    public BentoInnerTier(Strata.Structure structure, Bento.Mutator mutator, short typeOfChildren)
     {
-        super(storage);
-        Bento.Mutator mutator = (Bento.Mutator) storage.getStore();
-        int blockSize = SizeOf.INTEGER + SizeOf.SHORT + ((Bento.ADDRESS_SIZE * 2) + SizeOf.INTEGER) * (storage.getSize() + 1);
+        super(structure);
+        int blockSize = SizeOf.SHORT + ((Bento.ADDRESS_SIZE * 2) + SizeOf.INTEGER) * (structure.getSize() + 1);
         this.address = mutator.allocate(blockSize).getAddress();
-        this.listOfBranches = new ArrayList(storage.getSize() + 1);
+        this.listOfBranches = new ArrayList(structure.getSize() + 1);
         this.typeOfChildren = typeOfChildren;
     }
 
-    public BentoInnerPage(Storage storage, Bento.Address address, Converter converter)
+    public BentoInnerTier(Strata.Structure structure, Bento.Mutator mutator, Bento.Address address, Strata.ObjectLoader loader)
     {
-        super(storage);
-        Bento.Mutator mutator = (Bento.Mutator) storage.getStore();
+        super(structure);
         ByteBuffer bytes = mutator.load(address).toByteBuffer();
-        List listOfBranches = new ArrayList(bytes.getInt() + 1);
+        List listOfBranches = new ArrayList(structure.getSize() + 1);
         short typeOfChildren = bytes.getShort();
         for (int i = 0; i < bytes.getInt(); i++)
         {
@@ -45,11 +42,11 @@ extends InnerTier
             Branch branch;
             if (addressOfObject.getPosition() == 0L)
             {
-                branch = new Branch(addressOfBranch, Bento.NULL_ADDRESS, Branch.TERMINAL, sizeOfChild);
+                branch = new Branch(addressOfBranch, Branch.TERMINAL, sizeOfChild);
             }
             else
             {
-                branch = new Branch(addressOfBranch, addressOfObject, converter.convert(addressOfObject), sizeOfChild);
+                branch = new Branch(addressOfBranch, loader.load(mutator, addressOfObject), sizeOfChild);
             }
             listOfBranches.add(branch);
         }

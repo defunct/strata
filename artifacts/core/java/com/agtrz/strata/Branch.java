@@ -3,8 +3,6 @@ package com.agtrz.strata;
 public class Branch
 {
     private final Object keyOfLeft;
-    
-    private final Object keyOfObject;
 
     private final Object object;
 
@@ -18,11 +16,10 @@ public class Branch
         }
     };
 
-    public Branch(Object keyOfLeft, Object keyOfObject, Object object, int size)
+    public Branch(Object keyOfLeft, Object object, int size)
     {
         this.keyOfLeft = keyOfLeft;
         this.object = object;
-        this.keyOfObject = keyOfObject;
         this.size = size;
     }
 
@@ -31,13 +28,6 @@ public class Branch
         return keyOfLeft;
     }
 
-    public Object getKeyOfObject()
-    {
-        return keyOfObject;
-    }
-    
-    // FIXME rename pivot.
-    
     public Object getObject()
     {
         return object;

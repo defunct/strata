@@ -4,20 +4,12 @@ public class Split
 {
     private final Object pivot;
     
-    private final Object keyOfPivot;
-
     private final Tier right;
 
-    public Split(Object pivot, Object keyOfPivot, Tier right)
+    public Split(Object pivot, Tier right)
     {
         this.pivot = pivot;
-        this.keyOfPivot = keyOfPivot;
         this.right = right;
-    }
-
-    public Object getKeyOfPivot()
-    {
-        return keyOfPivot;
     }
 
     public Object getPivot()

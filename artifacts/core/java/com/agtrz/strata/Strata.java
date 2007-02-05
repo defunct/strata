@@ -9,10 +9,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import com.agtrz.operators.True;
-import com.agtrz.swag.util.ComparatorEquator;
-import com.agtrz.swag.util.Equator;
-
 /**
  * Doesn't need to handle new types dynamically, does it?
  * <p>
@@ -31,58 +27,35 @@ import com.agtrz.swag.util.Equator;
  */
 public class Strata
 {
-    private final Storage storage;
+    public final static ObjectLoader NULL_OBJECT_LOADER = new ObjectLoader()
+    {
+        public Object load(Object storage, Object key)
+        {
+            return key;
+        }
+    };
+
+    private final Structure structure;
 
     private final InnerTier root;
 
     private int size;
 
-    public Strata(Comparator comparator, Equator equator)
-    {
-        this.storage = new Storage(new ArrayListPager(), null, comparator, equator, 5);
-        this.root = storage.getPager().newInnerPage(storage, Tier.LEAF);
-    }
-
-    public void copacetic()
-    {
-        root.copacetic(new Copacetic(storage.getComparator()));
-        Iterator iterator = values().iterator();
-        if (getSize() != 0)
-        {
-            Comparator comparator = storage.getComparator();
-            Object previous = iterator.next();
-            for (int i = 1; i < size; i++)
-            {
-                if (!iterator.hasNext())
-                {
-                    throw new IllegalStateException();
-                }
-                Object next = iterator.next();
-                if (comparator.compare(previous, next) > 0)
-                {
-                    throw new IllegalStateException();
-                }
-                previous = next;
-            }
-            if (iterator.hasNext())
-            {
-                throw new IllegalStateException();
-            }
-        }
-        else if (iterator.hasNext())
-        {
-            throw new IllegalStateException();
-        }
-    }
-
-    public Strata(Comparator comparator)
-    {
-        this(comparator, new ComparatorEquator(comparator));
-    }
-
     public Strata()
     {
-        this(new ComparableComparator());
+        this(new ArrayListTierServer(), null, new ObjectCriteriaServer());
+    }
+
+    public Strata(Storage storage, Object txn, CriteriaServer criterion)
+    {
+        this.structure = new Structure(storage, criterion, 5);
+        this.root = structure.getStorage().newInnerPage(structure, txn, Tier.LEAF);
+        this.root.add(new Branch(structure.getStorage().newLeafPage(structure, txn).getKey(), Branch.TERMINAL, 0));
+    }
+
+    public static Criteria criteria(Comparable comparable)
+    {
+        return new ObjectCriteria(comparable);
     }
 
     public int getSize()
@@ -90,199 +63,377 @@ public class Strata
         return size;
     }
 
-    public Collection values()
+    public Query query(Object txn)
     {
-        Branch branch = null;
-        InnerTier tier = root;
-        for (;;)
-        {
-            branch = tier.get(0);
-            if (tier.getTypeOfChildren() == Tier.LEAF)
-            {
-                break;
-            }
-            tier = (InnerTier) tier.load(branch.getKeyOfLeft());
-        }
-        return new LeafCollection(storage, (LeafTier) tier.load(branch.getKeyOfLeft()), 0, True.INSTANCE);
+        return new Query(txn);
     }
 
-    public void insert(Object object)
+    public final static class Creator
     {
-        insert(object, null);
-    }
+        private CriteriaServer criterion = new ObjectCriteriaServer();
 
-    public void insert(Object object, Object keyOfObject)
-    {
-        // Maintaining a list of tiers to split.
-        //
-        // During the decent into the tree, we check for full tiers. When a
-        // full tier is first encountered, a list of full tiers is begun
-        // starting with the parent of the first full tier, and followed by
-        // all of the full tiers to the leaf tier. If less than full tier is
-        // encountered, we reset the list of tiers.
-        //
-        // The list of tiers is locked in order from upper most teirs to the
-        // leaf.
+        private Storage storage = new ArrayListTierServer();
 
-        List listOfFullTiers = new ArrayList();
-        InnerTier parent = null;
-        InnerTier inner = root;
-
-        if (inner.isFull())
+        public Strata create(Object txn)
         {
-            listOfFullTiers.add(parent);
+            return new Strata(storage, txn, criterion);
         }
 
-        for (;;)
+        public void setCriteriaServer(CriteriaServer criterion)
         {
-            parent = inner;
-            Branch branch = inner.find(object);
-            Tier tier = parent.load(branch.getKeyOfLeft());
+            this.criterion = criterion;
+        }
 
-            if (tier.isFull())
+        public void setStorage(Storage storage)
+        {
+            this.storage = storage;
+        }
+    }
+
+    public class Structure
+    {
+        private final Storage storage;
+
+        private final CriteriaServer criterion;
+
+        private final int size;
+
+        public Structure(Storage storage, CriteriaServer criterion, int size)
+        {
+            this.storage = storage;
+            this.criterion = criterion;
+            this.size = size;
+        }
+
+        public Storage getStorage()
+        {
+            return storage;
+        }
+
+        public CriteriaServer getCriterion()
+        {
+            return criterion;
+        }
+
+        public int getSize()
+        {
+            return size;
+        }
+    }
+
+    public interface ObjectLoader
+    {
+        public Object load(Object txn, Object key);
+    }
+
+    public interface Criteria
+    {
+        public Object getObject();
+
+        public int partialMatch(Object object);
+
+        public boolean exactMatch(Object object);
+    }
+
+    public interface CriteriaServer
+    {
+        public Criteria newCriteria(Object object);
+    }
+
+    public static class ObjectCriteriaServer
+    implements CriteriaServer
+    {
+        public Criteria newCriteria(Object object)
+        {
+            return new ObjectCriteria(object);
+        }
+    }
+
+    public static class ObjectCriteria
+    implements Criteria
+    {
+        private final Object criteria;
+
+        public ObjectCriteria(Object criteria)
+        {
+            this.criteria = criteria;
+        }
+
+        public int partialMatch(Object object)
+        {
+            return ((Comparable) criteria).compareTo(object);
+        }
+
+        public boolean exactMatch(Object object)
+        {
+            return criteria.equals(object);
+        }
+
+        public Object getObject()
+        {
+            return criteria;
+        }
+    }
+
+    public static class ValuesCriteria
+    implements Criteria
+    {
+        public int partialMatch(Object object)
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        public boolean exactMatch(Object object)
+        {
+            return true;
+        }
+
+        public Object getObject()
+        {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    public final class Query
+    {
+        private final Object txn;
+
+        public Query(Object txn)
+        {
+            this.txn = txn;
+        }
+
+        public int getSize()
+        {
+            return size;
+        }
+
+        public void insert(Object object)
+        {
+            Criteria criteria = structure.getCriterion().newCriteria(object);
+
+            // Maintaining a list of tiers to split.
+            //
+            // During the decent into the tree, we check for full tiers. When
+            // a full tier is first encountered, a list of full tiers is begun
+            // starting with the parent of the first full tier, and followed
+            // by all of the full tiers to the leaf tier. If less than full
+            // tier is encountered, we reset the list of tiers.
+            //
+            // The list of tiers is locked in order from upper most teirs to
+            // the leaf.
+
+            List listOfFullTiers = new ArrayList();
+            InnerTier parent = null;
+            InnerTier inner = root;
+
+            if (inner.isFull())
             {
                 listOfFullTiers.add(parent);
             }
-            else
-            {
-                listOfFullTiers.clear();
-            }
 
-            if (tier.isLeaf())
+            for (;;)
             {
+                parent = inner;
+                Branch branch = inner.find(criteria);
+                Tier tier = parent.load(txn, branch.getKeyOfLeft());
+
                 if (tier.isFull())
                 {
-                    listOfFullTiers.add(tier);
+                    listOfFullTiers.add(parent);
+                }
+                else
+                {
+                    listOfFullTiers.clear();
+                }
 
-                    Iterator ancestors = listOfFullTiers.iterator();
-                    tier = (Tier) ancestors.next();
-                    for (;;)
+                if (tier.isLeaf())
+                {
+                    if (tier.isFull())
                     {
-                        InnerTier reciever = (InnerTier) tier;
-                        Tier full = (Tier) ancestors.next();
-                        Split split = full.split(object, keyOfObject);
-                        if (split == null)
+                        listOfFullTiers.add(tier);
+
+                        Iterator ancestors = listOfFullTiers.iterator();
+                        tier = (Tier) ancestors.next();
+                        for (;;)
                         {
-                            tier = full;
-                            break;
+                            InnerTier reciever = (InnerTier) tier;
+                            Tier full = (Tier) ancestors.next();
+                            Split split = full.split(txn, criteria);
+                            if (split == null)
+                            {
+                                tier = full;
+                                break;
+                            }
+                            else if (reciever == null)
+                            {
+                                reciever = (InnerTier) full;
+                                reciever.splitRootTier(txn, split);
+                            }
+                            else
+                            {
+                                reciever.replace(full, split);
+                            }
+                            branch = reciever.find(criteria);
+                            tier = reciever.load(txn, branch.getKeyOfLeft());
+                            if (!ancestors.hasNext())
+                            {
+                                break;
+                            }
                         }
-                        else if (reciever == null)
+                    }
+
+                    LeafTier leaf = (LeafTier) tier;
+                    branch.setSize(branch.getSize() + 1);
+                    leaf.insert(txn, criteria);
+                    break;
+                }
+
+                inner = (InnerTier) tier;
+            }
+
+            size++;
+        }
+
+        public Collection find(Object object)
+        {
+            return find(structure.getCriterion().newCriteria(object));
+        }
+
+        public Collection find(Strata.Criteria criteria)
+        {
+            InnerTier tier = root;
+            for (;;)
+            {
+                Branch branch = tier.find(criteria);
+                if (tier.getTypeOfChildren() == Tier.LEAF)
+                {
+                    LeafTier leaf = (LeafTier) tier.load(txn, branch.getKeyOfLeft());
+                    return leaf.find(txn, criteria);
+                }
+                tier = (InnerTier) tier.load(txn, branch.getKeyOfLeft());
+            }
+        }
+
+        public Collection remove(Object object)
+        {
+            Criteria criteria = structure.getCriterion().newCriteria(object);
+            LinkedList listOfAncestors = new LinkedList();
+            InnerTier inner = null;
+            InnerTier parent = null;
+            InnerTier tier = root;
+            for (;;)
+            {
+                listOfAncestors.addLast(tier);
+                parent = tier;
+                Branch branch = tier.find(criteria);
+                if (branch.getObject() != Branch.TERMINAL && criteria.exactMatch(branch.getObject()))
+                {
+                    inner = tier;
+                }
+                if (tier.getTypeOfChildren() == Tier.LEAF)
+                {
+                    LeafTier leaf = (LeafTier) tier.load(txn, branch.getKeyOfLeft());
+                    Collection collection = leaf.remove(txn, criteria);
+                    branch.setSize(branch.getSize() - collection.size());
+
+                    if (inner != null)
+                    {
+                        int objectCount = leaf.getSize();
+                        if (objectCount == 0)
                         {
-                            reciever = (InnerTier) full;
-                            reciever.splitRootTier(split);
+                            int index = parent.getIndexOfTier(leaf);
+                            if (inner.getTypeOfChildren() == Tier.LEAF)
+                            {
+                                parent.removeLeafTier(leaf);
+                            }
+                            else
+                            {
+                                Branch newPivot = parent.get(index - 1);
+                                parent.removeLeafTier(leaf);
+                                parent.replacePivot(structure.getCriterion().newCriteria(newPivot.getObject()), Branch.TERMINAL);
+                                inner.replacePivot(criteria, newPivot.getObject());
+                            }
                         }
                         else
                         {
-                            reciever.replace(full, split);
-                        }
-                        branch = reciever.find(object);
-                        tier = reciever.load(branch.getKeyOfLeft());
-                        if (!ancestors.hasNext())
-                        {
-                            break;
+                            Object newPivot = leaf.get(objectCount - 1);
+                            inner.replacePivot(criteria, newPivot);
                         }
                     }
+
+                    Tier childTier = leaf;
+                    Iterator ancestors = listOfAncestors.iterator();
+                    while (ancestors.hasNext())
+                    {
+                        InnerTier innerTier = (InnerTier) ancestors.next();
+                        if (innerTier.canMerge(childTier))
+                        {
+                            innerTier.merge(txn, childTier);
+                        }
+                    }
+
+                    size -= collection.size();
+                    return collection;
                 }
-
-                LeafTier leaf = (LeafTier) tier;
-                branch.setSize(branch.getSize() + 1);
-                leaf.insert(object);
-                break;
+                tier = (InnerTier) parent.load(txn, branch.getKeyOfLeft());
             }
-
-            inner = (InnerTier) tier;
         }
 
-        size++;
-    }
-
-    public Collection remove(Object object)
-    {
-        LinkedList listOfAncestors = new LinkedList();
-        InnerTier inner = null;
-        InnerTier parent = null;
-        InnerTier tier = root;
-        Equator equator = storage.getEquator();
-        for (;;)
+        public Collection values()
         {
-            listOfAncestors.addLast(tier);
-            parent = tier;
-            Branch branch = tier.find(object);
-            if (branch.getObject() != Branch.TERMINAL && equator.equals(branch.getObject(), object))
+            Branch branch = null;
+            InnerTier tier = root;
+            for (;;)
             {
-                inner = tier;
-            }
-            if (tier.getTypeOfChildren() == Tier.LEAF)
-            {
-                LeafTier leaf = (LeafTier) tier.load(branch.getKeyOfLeft());
-                Collection collection = leaf.remove(object, equator);
-                branch.setSize(branch.getSize() - collection.size());
-
-                if (inner != null)
+                branch = tier.get(0);
+                if (tier.getTypeOfChildren() == Tier.LEAF)
                 {
-                    int objectCount = leaf.getSize();
-                    if (objectCount == 0)
-                    {
-                        int index = parent.getIndexOfTier(leaf);
-                        if (inner.getTypeOfChildren() == Tier.LEAF)
-                        {
-                            parent.removeLeafTier(leaf);
-                        }
-                        else
-                        {
-                            Branch newPivot = parent.get(index - 1);
-                            parent.removeLeafTier(leaf);
-                            parent.replacePivot(newPivot.getObject(), newPivot.getKeyOfObject(), Branch.TERMINAL);
-                            inner.replacePivot(object, newPivot.getObject(), newPivot.getKeyOfObject());
-                        }
-                    }
-                    else
-                    {
-                        Object newPivot = leaf.get(objectCount - 1);
-                        Object keyOfNewPivot = leaf.getKey(objectCount - 1);
-                        inner.replacePivot(object, newPivot, keyOfNewPivot);
-                    }
+                    break;
                 }
-
-                Tier childTier = leaf;
-                Iterator ancestors = listOfAncestors.iterator();
-                while (ancestors.hasNext())
-                {
-                    InnerTier innerTier = (InnerTier) ancestors.next();
-                    if (innerTier.canMerge(childTier))
-                    {
-                        innerTier.merge(childTier);
-                    }
-                }
-
-                size -= collection.size();
-                return collection;
+                tier = (InnerTier) tier.load(txn, branch.getKeyOfLeft());
             }
-            tier = (InnerTier) parent.load(branch.getKeyOfLeft());
+            return new LeafCollection(structure, txn, (LeafTier) tier.load(txn, branch.getKeyOfLeft()), 0, new ValuesCriteria());
         }
-    }
 
-    public Collection find(Object object)
-    {
-        InnerTier tier = root;
-        for (;;)
+        public void copacetic()
         {
-            Branch branch = tier.find(object);
-            if (tier.getTypeOfChildren() == Tier.LEAF)
+            root.copacetic(txn, new Copacetic(new CopaceticComparator()));
+            Iterator iterator = values().iterator();
+            if (getSize() != 0)
             {
-                LeafTier leaf = (LeafTier) tier.load(branch.getKeyOfLeft());
-                return leaf.find(object);
+                Object previous = iterator.next();
+                for (int i = 1; i < size; i++)
+                {
+                    if (!iterator.hasNext())
+                    {
+                        throw new IllegalStateException();
+                    }
+                    Object next = iterator.next();
+                    if (structure.getCriterion().newCriteria(previous).partialMatch(next) > 0)
+                    {
+                        throw new IllegalStateException();
+                    }
+                    previous = next;
+                }
+                if (iterator.hasNext())
+                {
+                    throw new IllegalStateException();
+                }
             }
-            tier = (InnerTier) tier.load(branch.getKeyOfLeft());
+            else if (iterator.hasNext())
+            {
+                throw new IllegalStateException();
+            }
         }
     }
 
-    public final static class ComparableComparator
+    public class CopaceticComparator
     implements Comparator
     {
         public int compare(Object left, Object right)
         {
-            return ((Comparable) left).compareTo(right);
+            return structure.getCriterion().newCriteria(left).partialMatch(right);
         }
     }
 

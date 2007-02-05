@@ -8,49 +8,48 @@ implements Tier
 {
     // private final InnerPage page;
 
-    protected final Storage storage;
+    protected final Strata.Structure structure;
 
-    public InnerTier(Storage storage)
+    public InnerTier(Strata.Structure structure)
     {
         // this.page = storage.getPager().newInnerPage(storage,
         // typeOfChildren);
-        this.storage = storage;
+        this.structure = structure;
         // this.listOfBranches = new ArrayList(size + 1);
         // this.listOfBranches.add(new Branch(new LeafTier(comparator, size),
         // Branch.TERMINAL));
     }
 
-    public Split split(Object object, Object keyOfObject)
+    public Split split(Object txn, Strata.Criteria criteria)
     {
-        int partition = (storage.getSize() + 1) / 2;
+        int partition = (structure.getSize() + 1) / 2;
 
-        Pager pager = storage.getPager();
-        InnerTier right = pager.newInnerPage(storage, getTypeOfChildren());
-        for (int i = partition; i < storage.getSize() + 1; i++)
+        Storage pager = structure.getStorage();
+        InnerTier right = pager.newInnerPage(structure, txn, getTypeOfChildren());
+        for (int i = partition; i < structure.getSize() + 1; i++)
         {
             right.add(remove(partition));
         }
 
         Branch branch = remove(getSize() - 1);
         Object pivot = branch.getObject();
-        Object keyOfPivot = branch.getKeyOfObject();
-        add(new Branch(branch.getKeyOfLeft(), pager.getNullKey(), Branch.TERMINAL, branch.getSize()));
+        add(new Branch(branch.getKeyOfLeft(), Branch.TERMINAL, branch.getSize()));
 
-        return new Split(pivot, keyOfPivot, right);
+        return new Split(pivot, right);
     }
 
     public boolean isFull()
     {
-        return getSize() == storage.getSize();
+        return getSize() == structure.getSize();
     }
 
-    public Branch find(Object object)
+    public Branch find(Strata.Criteria criteria)
     {
         Iterator branches = listIterator();
         while (branches.hasNext())
         {
             Branch branch = (Branch) branches.next();
-            if (branch.isTerminal() || storage.getComparator().compare(object, branch.getObject()) <= 0)
+            if (branch.isTerminal() || criteria.partialMatch(branch.getObject()) <= 0)
             {
                 return branch;
             }
@@ -91,31 +90,31 @@ implements Tier
         return previous.getObject();
     }
 
-    public void replacePivot(Object oldPivot, Object keyOfNewPivot, Object newPivot)
+    public void replacePivot(Strata.Criteria oldPivot, Object newPivot)
     {
         ListIterator branches = listIterator();
         while (branches.hasNext())
         {
             Branch branch = (Branch) branches.next();
-            if (storage.getComparator().compare(branch.getObject(), oldPivot) == 0)
+            if (oldPivot.partialMatch(branch.getObject()) == 0)
             {
-                branches.set(new Branch(branch.getKeyOfLeft(), keyOfNewPivot, newPivot, branch.getSize()));
+                branches.set(new Branch(branch.getKeyOfLeft(), newPivot, branch.getSize()));
                 break;
             }
         }
     }
 
-    public void splitRootTier(Split split)
+    public void splitRootTier(Object txn, Split split)
     {
-        Pager pager = storage.getPager();
-        InnerTier left = pager.newInnerPage(storage, getTypeOfChildren());
+        Storage pager = structure.getStorage();
+        InnerTier left = pager.newInnerPage(structure, txn, getTypeOfChildren());
         int count = getSize() + 1;
         for (int i = 0; i < count; i++)
         {
             left.add(remove(0));
         }
-        add(new Branch(left.getKey(), split.getKeyOfPivot(), split.getPivot(), left.getSize()));
-        add(new Branch(split.getRight().getKey(), pager.getNullKey(), Branch.TERMINAL, split.getRight().getSize()));
+        add(new Branch(left.getKey(), split.getPivot(), left.getSize()));
+        add(new Branch(split.getRight().getKey(), Branch.TERMINAL, split.getRight().getSize()));
     }
 
     public void replace(Tier tier, Split split)
@@ -127,8 +126,8 @@ implements Tier
             Branch branch = (Branch) branches.next();
             if (branch.getKeyOfLeft().equals(keyOfTier))
             {
-                branches.set(new Branch(keyOfTier, split.getKeyOfPivot(), split.getPivot(), tier.getSize()));
-                branches.add(new Branch(split.getRight().getKey(), branch.getKeyOfObject(), branch.getObject(), split.getRight().getSize()));
+                branches.set(new Branch(keyOfTier, split.getPivot(), tier.getSize()));
+                branches.add(new Branch(split.getRight().getKey(), branch.getObject(), split.getRight().getSize()));
             }
         }
     }
@@ -138,7 +137,7 @@ implements Tier
         return false;
     }
 
-    public void copacetic(Strata.Copacetic copacetic)
+    public void copacetic(Object txn, Strata.Copacetic copacetic)
     {
         if (getSize() == 0)
         {
@@ -147,7 +146,7 @@ implements Tier
 
         Object previous = null;
         Iterator branches = listIterator();
-        PageLoader loader = getTypeOfChildren() == Tier.INNER ? storage.getPager().getInnerPageLoader() : storage.getPager().getLeafPageLoader();
+        TierLoader loader = getTypeOfChildren() == Tier.INNER ? structure.getStorage().getInnerPageLoader() : structure.getStorage().getLeafPageLoader();
         while (branches.hasNext())
         {
             Branch branch = (Branch) branches.next();
@@ -155,8 +154,8 @@ implements Tier
             {
                 throw new IllegalStateException();
             }
-            Tier left = loader.load(storage, branch.getKeyOfLeft());
-            left.copacetic(copacetic);
+            Tier left = loader.load(structure, txn, branch.getKeyOfLeft());
+            left.copacetic(txn, copacetic);
             if (branch.getSize() != left.getSize())
             {
                 throw new IllegalStateException();
@@ -164,7 +163,7 @@ implements Tier
             if (!branch.isTerminal())
             {
                 // Each key must be less than the one next to it.
-                if (previous != null && storage.getComparator().compare(previous, branch.getObject()) >= 0)
+                if (previous != null && structure.getCriterion().newCriteria(previous).partialMatch(branch.getObject()) >= 0)
                 {
                     throw new IllegalStateException();
                 }
@@ -182,11 +181,11 @@ implements Tier
     public boolean canMerge(Tier tier)
     {
         int index = getIndexOfTier(tier);
-        if (index > 0 && get(index - 1).getSize() + get(index).getSize() <= storage.getSize())
+        if (index > 0 && get(index - 1).getSize() + get(index).getSize() <= structure.getSize())
         {
             return true;
         }
-        else if (index <= storage.getSize() && get(index).getSize() + get(index + 1).getSize() <= storage.getSize())
+        else if (index <= structure.getSize() && get(index).getSize() + get(index + 1).getSize() <= structure.getSize())
         {
             return true;
 
@@ -196,48 +195,48 @@ implements Tier
 
     private boolean canMerge(int indexOfLeft, int indexOfRight)
     {
-        return indexOfLeft != 0 && indexOfRight != storage.getSize() && get(indexOfLeft).getSize() + get(indexOfRight).getSize() < storage.getSize();
+        return indexOfLeft != 0 && indexOfRight != structure.getSize() && get(indexOfLeft).getSize() + get(indexOfRight).getSize() < structure.getSize();
     }
 
-    private PageLoader getPageLoader()
+    private TierLoader getPageLoader()
     {
-        return getTypeOfChildren() == Tier.INNER ? storage.getPager().getInnerPageLoader() : storage.getPager().getLeafPageLoader();
+        return getTypeOfChildren() == Tier.INNER ? structure.getStorage().getInnerPageLoader() : structure.getStorage().getLeafPageLoader();
     }
 
-    private void merge(int indexOfLeft, int indexOfRight)
+    private void merge(Object txn, int indexOfLeft, int indexOfRight)
     {
-        Tier left = getPageLoader().load(storage, get(indexOfLeft).getKeyOfLeft());
-        Tier right = getPageLoader().load(storage, get(indexOfRight).getKeyOfLeft());
-        right.consume(left, null);
+        Tier left = getPageLoader().load(structure, txn, get(indexOfLeft).getKeyOfLeft());
+        Tier right = getPageLoader().load(structure, txn, get(indexOfRight).getKeyOfLeft());
+        right.consume(txn, left, null);
     }
 
-    public void merge(Tier tier)
+    public void merge(Object txn, Tier tier)
     {
         int index = getIndexOfTier(tier);
         if (canMerge(index - 1, index))
         {
-            merge(index - 1, index);
+            merge(txn, index - 1, index);
         }
         else if (canMerge(index, index + 1))
         {
-            merge(index, index + 1);
+            merge(txn, index, index + 1);
         }
     }
 
-    public void consume(Tier left, Object key)
+    public void consume(Object txn, Tier left, Object key)
     {
         InnerTier innerTier = (InnerTier) left;
         Branch oldPivot = innerTier.get(innerTier.getSize());
-        shift(new Branch(oldPivot.getKeyOfLeft(), oldPivot.getKeyOfObject(), oldPivot.getObject(), oldPivot.getSize()));
+        shift(new Branch(oldPivot.getKeyOfLeft(), oldPivot.getObject(), oldPivot.getSize()));
         for (int i = left.getSize(); i > 0; i--)
         {
             shift(innerTier.get(i));
         }
     }
-    
-    public Tier load(Object keyOfTier)
+
+    public Tier load(Object txn, Object keyOfTier)
     {
-        return getPageLoader().load(storage, keyOfTier);
+        return getPageLoader().load(structure, txn, keyOfTier);
     }
 
     public abstract short getTypeOfChildren();

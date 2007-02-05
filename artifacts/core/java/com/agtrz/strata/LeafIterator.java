@@ -3,14 +3,14 @@ package com.agtrz.strata;
 
 import java.util.Iterator;
 
-import com.agtrz.operators.UrnaryOperator;
-
 public class LeafIterator
 implements Iterator
 {
-    private final Storage storage;
+    private final Strata.Structure structure;
 
-    private final UrnaryOperator condition;
+    private final Object txn;
+
+    private final Strata.Criteria criteria;
 
     private int index;
 
@@ -30,17 +30,18 @@ implements Iterator
      *            The condition that determines if the object is included by
      *            the iterator.
      */
-    public LeafIterator(Storage storage, LeafTier leafTier, int index, UrnaryOperator condition)
+    public LeafIterator(Strata.Structure structure, Object txn, LeafTier leafTier, int index, Strata.Criteria criteria)
     {
-        if (!condition.operate(leafTier.get(index)))
+        if (!criteria.exactMatch(leafTier.get(index)))
         {
             throw new IllegalArgumentException();
         }
-        this.storage = storage;
+        this.structure = structure;
+        this.txn = txn;
         this.current = leafTier.get(index);
         this.leafTier = leafTier;
         this.index = index + 1;
-        this.condition = condition;
+        this.criteria = criteria;
     }
 
     public boolean hasNext()
@@ -57,7 +58,7 @@ implements Iterator
         Object next = current;
         if (index == leafTier.getSize())
         {
-            leafTier = (LeafTier) storage.getPager().getLeafPageLoader().load(storage, leafTier.getNextLeafTier());
+            leafTier = (LeafTier) structure.getStorage().getLeafPageLoader().load(structure, txn, leafTier.getNextLeafTier());
             index = 0;
         }
         if (leafTier == null)
@@ -67,7 +68,7 @@ implements Iterator
         else if (index < leafTier.getSize())
         {
             Object object = leafTier.get(index);
-            if (condition.operate(object))
+            if (criteria.exactMatch(object))
             {
                 current = object;
                 index++;
