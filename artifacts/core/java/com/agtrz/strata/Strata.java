@@ -126,33 +126,33 @@ public class Strata
     {
         public Criteria newCriteria(Object object)
         {
-            return new BasicCriteria(object);
+            return new BasicCriteria((Comparable) object);
         }
     }
 
     public static class BasicCriteria
     implements Criteria
     {
-        private final Object criteria;
+        private final Comparable comparable;
 
-        public BasicCriteria(Object criteria)
+        public BasicCriteria(Comparable comparable)
         {
-            this.criteria = criteria;
+            this.comparable = comparable;
         }
 
         public int partialMatch(Object object)
         {
-            return ((Comparable) criteria).compareTo(object);
+            return comparable.compareTo(object);
         }
 
         public boolean exactMatch(Object object)
         {
-            return criteria.equals(object);
+            return comparable.equals(object);
         }
 
         public Object getObject()
         {
-            return criteria;
+            return comparable;
         }
     }
 
@@ -223,39 +223,38 @@ public class Strata
                         listOfFullTiers.add(tier);
 
                         Iterator ancestors = listOfFullTiers.iterator();
-                        parent = (InnerTier) ancestors.next();
+                        InnerTier reciever = (InnerTier) ancestors.next();
                         tier = (Tier) ancestors.next();
-                        for (;;)
+                        do
                         {
-                            InnerTier reciever = (InnerTier) tier;
+                            parent = reciever;
+                            reciever = (InnerTier) tier;
                             Tier full = (Tier) ancestors.next();
                             Split split = full.split(txn, criteria);
                             if (split == null)
                             {
                                 tier = full;
-                                break;
-                            }
-                            else if (reciever == null)
-                            {
-                                reciever = (InnerTier) full;
-                                reciever.splitRootTier(txn, split);
                             }
                             else
                             {
-                                reciever.replace(full, split);
-                                if (parent != null)
+                                if (reciever == null)
                                 {
-                                    parent.find(criteria).setSize(reciever.getSize());
+                                    reciever = (InnerTier) full;
+                                    reciever.splitRootTier(txn, split);
                                 }
+                                else
+                                {
+                                    reciever.replace(full, split);
+                                    if (parent != null)
+                                    {
+                                        parent.find(criteria).setSize(reciever.getSize());
+                                    }
+                                }
+                                branch = reciever.find(criteria);
+                                tier = reciever.load(txn, branch.getKeyOfLeft());
                             }
-                            branch = reciever.find(criteria);
-                            tier = reciever.load(txn, branch.getKeyOfLeft());
-                            if (!ancestors.hasNext())
-                            {
-                                break;
-                            }
-                            parent = reciever;
                         }
+                        while (ancestors.hasNext());
                     }
 
                     LeafTier leaf = (LeafTier) tier;

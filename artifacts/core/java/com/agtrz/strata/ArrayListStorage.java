@@ -1,6 +1,7 @@
 /* Copyright Alan Gutierrez 2006 */
 package com.agtrz.strata;
 
+import com.agtrz.strata.Strata.Structure;
 import com.agtrz.swag.util.IdentityObject;
 
 public class ArrayListStorage
@@ -49,6 +50,14 @@ implements Storage
     public LeafTier newLeafTier(Strata.Structure structure, Object storage)
     {
         return new ArrayListLeafTier(structure);
+    }
+
+    public void write(Structure structure, Object txn, InnerTier inner)
+    {
+    }
+
+    public void write(Structure structure, Object txn, LeafTier leaf)
+    {
     }
 
     public Object getNullKey()

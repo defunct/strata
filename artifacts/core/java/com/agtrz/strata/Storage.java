@@ -6,13 +6,17 @@ public interface Storage
     public TierLoader getInnerTierLoader();
 
     public TierLoader getLeafTierLoader();
-    
+
     public InnerTier newInnerTier(Strata.Structure structure, Object txn, short typeOfChildren);
-    
+
     public LeafTier newLeafTier(Strata.Structure structure, Object txn);
-    
+
+    public void write(Strata.Structure structure, Object txn, InnerTier inner);
+
+    public void write(Strata.Structure structure, Object txn, LeafTier leaf);
+
     public Object getNullKey();
-    
+
     public boolean isKeyNull(Object object);
 }
 

@@ -126,37 +126,11 @@ implements Storage
         return tierStorage;
     }
 
-    private void collect()
+    public void write(Strata.Structure structure, Object txn, InnerTier inner)
     {
-        WeakMapValueReference reference = null;
-        while ((reference = (WeakMapValueReference) queue.poll()) != null)
-        {
-            mapOfTiers.remove(reference.getKey());
-        }
-    }
-
-    private Object getCached(Object key)
-    {
-        WeakMapValueReference reference = (WeakMapValueReference) mapOfTiers.get(key);
-        if (reference != null)
-        {
-            return reference.get();
-        }
-        return null;
-    }
-
-    public Object getNullKey()
-    {
-        return Bento.NULL_ADDRESS;
-    }
-
-    public boolean isKeyNull(Object object)
-    {
-        return ((Bento.Address) object).getPosition() == 0L;
-    }
-
-    void write(Strata.Structure structure, InnerTier inner, ByteBuffer bytes)
-    {
+        Bento.Mutator mutator = (Bento.Mutator) mutatorConverter.convert(txn);
+        Bento.Block block = mutator.load((Bento.Address) inner.getKey());
+        ByteBuffer bytes = block.toByteBuffer();
         ObjectWriteBuffer out = new ObjectWriteBuffer(bytes);
         out.write(inner.getChildType());
         for (int i = 0; i < inner.getSize() + 1; i++)
@@ -174,10 +148,19 @@ implements Storage
                 addressOfObject.write(out);
             }
         }
+        for (int i = inner.getSize() + 1; i < structure.getSize() + 1; i++)
+        {
+            Bento.NULL_ADDRESS.write(out);
+            Bento.NULL_ADDRESS.write(out);
+        }
+        block.write();
     }
 
-    void write(Strata.Structure structure, LeafTier leaf, ByteBuffer bytes)
+    public void write(Strata.Structure structure, Object txn, LeafTier leaf)
     {
+        Bento.Mutator mutator = (Bento.Mutator) mutatorConverter.convert(txn);
+        Bento.Block block = mutator.load((Bento.Address) leaf.getKey());
+        ByteBuffer bytes = block.toByteBuffer();
         ObjectWriteBuffer out = new ObjectWriteBuffer(bytes);
         Bento.Address addressOfPrevious = (Bento.Address) leaf.getPreviousLeafKey();
         addressOfPrevious.write(out);
@@ -192,6 +175,36 @@ implements Storage
         {
             Bento.NULL_ADDRESS.write(out);
         }
+        block.write();
+    }
+
+    public Object getNullKey()
+    {
+        return Bento.NULL_ADDRESS;
+    }
+
+    public boolean isKeyNull(Object object)
+    {
+        return ((Bento.Address) object).getPosition() == 0L;
+    }
+
+    private void collect()
+    {
+        WeakMapValueReference reference = null;
+        while ((reference = (WeakMapValueReference) queue.poll()) != null)
+        {
+            mapOfTiers.remove(reference.getKey());
+        }
+    }
+
+    private Object getCached(Object key)
+    {
+        WeakMapValueReference reference = (WeakMapValueReference) mapOfTiers.get(key);
+        if (reference != null)
+        {
+            return reference.get();
+        }
+        return null;
     }
 
     public final static class Creator
