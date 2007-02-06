@@ -17,11 +17,11 @@ extends LeafTier
 {
     private final Bento.Address address;
 
+    private final List listOfObjects;
+
     private Bento.Address addressOfPrevious;
 
     private Bento.Address addressOfNext;
-
-    private final List listOfObjects;
 
     public BentoLeafTier(Strata.Structure structure, Bento.Mutator mutator)
     {
@@ -33,7 +33,7 @@ extends LeafTier
         this.addressOfNext = Bento.NULL_ADDRESS;
     }
 
-    public BentoLeafTier(Strata.Structure structure, Bento.Mutator mutator, Bento.Address address, Strata.ObjectLoader blockLoader)
+    public BentoLeafTier(Strata.Structure structure, Bento.Mutator mutator, Bento.Address address, BentoStorage.ObjectLoader blockLoader)
     {
         super(structure);
         Bento.Block block = mutator.load(address);
@@ -117,24 +117,24 @@ extends LeafTier
         return listOfObjects.listIterator();
     }
 
-    public Object getPreviousLeafTier()
+    public Object getPreviousLeafKey()
     {
         return addressOfPrevious;
     }
 
-    public void setPreviousLeafTier(Object keyOfPreviousLeafTier)
+    public void setPreviousLeafKey(Object previousLeafKey)
     {
-        this.addressOfPrevious = (Bento.Address) keyOfPreviousLeafTier;
+        this.addressOfPrevious = (Bento.Address) previousLeafKey;
     }
 
-    public Object getNextLeafTier()
+    public Object getNextLeafKey()
     {
         return addressOfNext;
     }
 
-    public void setNextLeafTier(Object keyOfNextLeafTier)
+    public void setNextLeafKey(Object nextLeafKey)
     {
-        this.addressOfNext = (Bento.Address) keyOfNextLeafTier;
+        this.addressOfNext = (Bento.Address) nextLeafKey;
     }
 }
 

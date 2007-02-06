@@ -13,7 +13,7 @@ import com.agtrz.swag.io.SizeOf;
 import com.agtrz.swag.util.Converter;
 import com.agtrz.swag.util.Pair;
 
-public class BentoTierServerTestCase
+public class BentoStorageTestCase
 extends TestCase
 {
     private File newFile()
@@ -111,7 +111,7 @@ extends TestCase
                 return ((Pair) object).getKey();
             }
         };
-        Strata.ObjectLoader getInt = new Strata.ObjectLoader()
+        BentoStorage.ObjectLoader getInt = new BentoStorage.ObjectLoader()
         {
             public Object load(Object txn, Object key)
             {
@@ -140,7 +140,7 @@ extends TestCase
 
         query.insert(new Pair(block.getAddress(), new Integer(1)));
 
-        Iterator found = query.find(new PairQuery(new Integer(1))).iterator();
+        Iterator found = query.find(new PairQuery(new Integer(1)));
         while (found.hasNext())
         {
             System.out.println(((Pair) found.next()).getValue());
@@ -149,10 +149,10 @@ extends TestCase
         mutator.getJournal().commit();
         bento.close();
     }
-    
+
     public void testUsingLookup()
     {
-        
+
     }
 }
 

@@ -3,13 +3,13 @@ package com.agtrz.strata;
 
 public interface Storage
 {
-    public TierLoader getInnerPageLoader();
+    public TierLoader getInnerTierLoader();
 
-    public TierLoader getLeafPageLoader();
+    public TierLoader getLeafTierLoader();
     
-    public InnerTier newInnerPage(Strata.Structure structure, Object txn, short typeOfChildren);
+    public InnerTier newInnerTier(Strata.Structure structure, Object txn, short typeOfChildren);
     
-    public LeafTier newLeafPage(Strata.Structure structure, Object txn);
+    public LeafTier newLeafTier(Strata.Structure structure, Object txn);
     
     public Object getNullKey();
     

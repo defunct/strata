@@ -2,7 +2,6 @@ package com.agtrz.strata;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -14,9 +13,26 @@ implements Tier
 
     public LeafTier(Strata.Structure structure)
     {
-        // this.page = storage.getPager().newLeafPage(storage);
         this.structure = structure;
     }
+
+    public abstract Object get(int index);
+
+    public abstract Object remove(int index);
+
+    public abstract void add(Object object);
+
+    public abstract void shift(Object object);
+
+    public abstract ListIterator listIterator();
+
+    public abstract Object getPreviousLeafKey();
+
+    public abstract void setPreviousLeafKey(Object previousLeafKey);
+
+    public abstract Object getNextLeafKey();
+
+    public abstract void setNextLeafKey(Object nextLeafKey);
 
     public boolean isFull()
     {
@@ -52,7 +68,7 @@ implements Tier
             greater++;
         }
 
-        Storage pager = structure.getStorage();
+        Storage storage = structure.getStorage();
         Split split = null;
         if (partition == -1)
         {
@@ -64,19 +80,13 @@ implements Tier
             }
             else if (compare < 0)
             {
-                LeafTier right = structure.getStorage().newLeafPage(structure, txn);
+                LeafTier right = storage.newLeafTier(structure, txn);
                 while (getSize() != 0)
                 {
                     right.add(remove(0));
                 }
 
-                LeafTier next = (LeafTier) pager.getLeafPageLoader().load(structure, txn, getNextLeafTier());
-
-                right.setNextLeafTier(getNextLeafTier());
-                setNextLeafTier(right.getKey());
-
-                next.setPreviousLeafTier(right.getKey());
-                right.setPreviousLeafTier(getKey());
+                link(txn, this, right);
 
                 split = new Split(criteria.getObject(), right);
             }
@@ -88,67 +98,27 @@ implements Tier
                     last = last.getNext(txn);
                 }
 
-                LeafTier right = pager.newLeafPage(structure, txn);
-
-                last.setNextLeafTier(right.getKey());
-                right.setNextLeafTier(last.getNextLeafTier());
-
-                right.getNext(txn).setPreviousLeafTier(right.getKey());
-                right.setPreviousLeafTier(last.getKey());
+                LeafTier right = storage.newLeafTier(structure, txn);
+                link(txn, last, right);
 
                 split = new Split(repeated, right);
             }
         }
         else
         {
-            LeafTier right = pager.newLeafPage(structure, txn);
+            LeafTier right = storage.newLeafTier(structure, txn);
 
-            for (int i = partition; i < getSize(); i++)
+            while (partition != getSize())
             {
                 right.add(remove(partition));
             }
 
-            Object keyOfNextLeafTier = getNextLeafTier();
-            setNextLeafTier(right.getKey());
-            right.setNextLeafTier(keyOfNextLeafTier);
-
-            right.getNext(txn).setPreviousLeafTier(right.getKey());
-            right.setPreviousLeafTier(getKey());
+            link(txn, this, right);
 
             split = new Split(get(getSize() - 1), right);
         }
 
         return split;
-    }
-
-    private LeafTier getPrevious(Object txn)
-    {
-        return (LeafTier) structure.getStorage().getLeafPageLoader().load(structure, txn, getPreviousLeafTier());
-    }
-
-    private LeafTier getNext(Object txn)
-    {
-        return (LeafTier) structure.getStorage().getLeafPageLoader().load(structure, txn, getNextLeafTier());
-    }
-
-    private boolean endOfList(Object txn, Object object, LeafTier last)
-    {
-        return structure.getStorage().isKeyNull(getNextLeafTier()) || structure.getCriterion().newCriteria(last.getNext(txn).get(0)).partialMatch(object) != 0;
-    }
-
-    private void ensureNextLeafTier(Object txn, Strata.Criteria criteria)
-    {
-        Storage pager = structure.getStorage();
-        if (pager.isKeyNull(getNextLeafTier()) || criteria.partialMatch(getNext(txn).get(0)) != 0)
-        {
-            LeafTier newNextLeafTier = pager.newLeafPage(structure, txn);
-
-            newNextLeafTier.setNextLeafTier(getNextLeafTier());
-            setNextLeafTier(newNextLeafTier.getKey());
-
-            getNext(txn).setPreviousLeafTier(newNextLeafTier.getKey());
-            newNextLeafTier.setPreviousLeafTier(getKey());
-        }
     }
 
     public void append(Object txn, Strata.Criteria criteria)
@@ -192,18 +162,17 @@ implements Tier
         }
     }
 
-    public Collection find(Object txn, Strata.Criteria criteria)
+    public Strata.Cursor find(Object txn, Strata.Criteria criteria)
     {
         for (int i = 0; i < getSize(); i++)
         {
             Object before = get(i);
             if (criteria.partialMatch(before) == 0)
             {
-                return new LeafCollection(structure, txn, this, i, criteria);
+                return new Strata.ForwardCursor(structure, txn, this, i);
             }
         }
-
-        return Collections.EMPTY_LIST;
+        return Strata.EMPTY_CURSOR;
     }
 
     /**
@@ -248,12 +217,25 @@ implements Tier
             }
             if (leafTier.getSize() == 0)
             {
-                lastLeafTier.setNextLeafTier(leafTier.getNextLeafTier());
-                leafTier.getNext(txn).setPreviousLeafTier(lastLeafTier.getKey());
+                lastLeafTier.setNextLeafKey(leafTier.getNextLeafKey());
+                leafTier.getNext(txn).setPreviousLeafKey(lastLeafTier.getKey());
             }
             leafTier = leafTier.getNext(txn);
         }
         return listOfRemoved;
+    }
+
+    public void consume(Object txn, Tier left)
+    {
+        LeafTier leafTier = (LeafTier) left;
+
+        setPreviousLeafKey(leafTier.getPreviousLeafKey());
+        getPrevious(txn).setNextLeafKey(getKey());
+
+        while (leafTier.getSize() != 0)
+        {
+            shift(leafTier.remove(0));
+        }
     }
 
     public void copacetic(Object txn, Strata.Copacetic copacetic)
@@ -267,49 +249,54 @@ implements Tier
         while (objects.hasNext())
         {
             Object object = objects.next();
-            if (previous != null && structure.getCriterion().newCriteria(previous).partialMatch(object) > 0)
+            if (previous != null && structure.compare(previous, object) > 0)
             {
                 throw new IllegalStateException();
             }
             previous = object;
         }
-        if (!structure.getStorage().isKeyNull(getNextLeafTier()) && structure.getCriterion().newCriteria(get(getSize() - 1)).partialMatch(getNext(txn).get(0)) == 0 && structure.getSize() != getSize() && structure.getCriterion().newCriteria(get(0)).partialMatch(get(getSize() - 1)) != 0)
+        if (!structure.getStorage().isKeyNull(getNextLeafKey()) && structure.getCriterion().newCriteria(get(getSize() - 1)).partialMatch(getNext(txn).get(0)) == 0 && structure.getSize() != getSize() && structure.getCriterion().newCriteria(get(0)).partialMatch(get(getSize() - 1)) != 0)
         {
             throw new IllegalStateException();
         }
     }
 
-    public void consume(Object txn, Tier left)
+    private LeafTier getPrevious(Object txn)
     {
-        LeafTier leafTier = (LeafTier) left;
+        return (LeafTier) structure.getStorage().getLeafTierLoader().load(structure, txn, getPreviousLeafKey());
+    }
 
-        setPreviousLeafTier(leafTier.getPreviousLeafTier());
-        getPrevious(txn).setNextLeafTier(getKey());
+    private LeafTier getNext(Object txn)
+    {
+        return (LeafTier) structure.getStorage().getLeafTierLoader().load(structure, txn, getNextLeafKey());
+    }
 
-        while (leafTier.getSize() != 0)
+    private boolean endOfList(Object txn, Object object, LeafTier last)
+    {
+        return structure.getStorage().isKeyNull(last.getNextLeafKey()) || structure.getCriterion().newCriteria(last.getNext(txn).get(0)).partialMatch(object) != 0;
+    }
+
+    private void ensureNextLeafTier(Object txn, Strata.Criteria criteria)
+    {
+        Storage storage = structure.getStorage();
+        if (storage.isKeyNull(getNextLeafKey()) || criteria.partialMatch(getNext(txn).get(0)) != 0)
         {
-            shift(leafTier.remove(0));
+            LeafTier nextLeaf = storage.newLeafTier(structure, txn);
+            link(txn, this, nextLeaf);
         }
     }
 
-    public abstract Object get(int index);
-
-    public abstract Object remove(int index);
-
-    public abstract void add(Object object);
-
-    public abstract void shift(Object object);
-
-    public abstract ListIterator listIterator();
-
-    // FIXME Rename.
-    public abstract Object getPreviousLeafTier();
-
-    public abstract void setPreviousLeafTier(Object keyOfPreviousLeafTier);
-
-    public abstract Object getNextLeafTier();
-
-    public abstract void setNextLeafTier(Object keyOfNextLeafTier);
+    private void link(Object txn, LeafTier leaf, LeafTier nextLeaf)
+    {
+        Object nextLeafKey = leaf.getNextLeafKey();
+        leaf.setNextLeafKey(nextLeaf.getKey());
+        nextLeaf.setNextLeafKey(nextLeafKey);
+        if (!structure.getStorage().isKeyNull(nextLeafKey))
+        {
+            nextLeaf.getNext(txn).setPreviousLeafKey(nextLeaf.getKey());
+        }
+        nextLeaf.setPreviousLeafKey(leaf.getKey());
+    }
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

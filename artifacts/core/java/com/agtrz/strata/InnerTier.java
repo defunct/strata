@@ -13,7 +13,9 @@ implements Tier
         this.structure = structure;
     }
 
-    public abstract short getTypeOfChildren();
+    public abstract short getChildType();
+
+    public abstract void setChildType(short childType);
 
     public abstract void add(Branch branch);
 
@@ -29,14 +31,14 @@ implements Tier
     {
         int partition = (structure.getSize() + 1) / 2;
 
-        Storage pager = structure.getStorage();
-        InnerTier right = pager.newInnerPage(structure, txn, getTypeOfChildren());
+        Storage storage = structure.getStorage();
+        InnerTier right = storage.newInnerTier(structure, txn, getChildType());
         for (int i = partition; i < structure.getSize() + 1; i++)
         {
             right.add(remove(partition));
         }
 
-        Branch branch = remove(getSize() - 1);
+        Branch branch = remove(getSize());
         Object pivot = branch.getObject();
         add(new Branch(branch.getKeyOfLeft(), Branch.TERMINAL, branch.getSize()));
 
@@ -111,8 +113,8 @@ implements Tier
 
     public void splitRootTier(Object txn, Split split)
     {
-        Storage pager = structure.getStorage();
-        InnerTier left = pager.newInnerPage(structure, txn, getTypeOfChildren());
+        Storage storage = structure.getStorage();
+        InnerTier left = storage.newInnerTier(structure, txn, getChildType());
         int count = getSize() + 1;
         for (int i = 0; i < count; i++)
         {
@@ -120,6 +122,7 @@ implements Tier
         }
         add(new Branch(left.getKey(), split.getPivot(), left.getSize()));
         add(new Branch(split.getRight().getKey(), Branch.TERMINAL, split.getRight().getSize()));
+        setChildType(Tier.INNER);
     }
 
     public void replace(Tier tier, Split split)
@@ -188,14 +191,15 @@ implements Tier
 
     public void copacetic(Object txn, Strata.Copacetic copacetic)
     {
-        if (getSize() == 0)
+        if (getSize() < 0)
         {
             throw new IllegalStateException();
         }
 
         Object previous = null;
+        Object lastLeftmost = null;
+
         Iterator branches = listIterator();
-        TierLoader loader = getTypeOfChildren() == Tier.INNER ? structure.getStorage().getInnerPageLoader() : structure.getStorage().getLeafPageLoader();
         while (branches.hasNext())
         {
             Branch branch = (Branch) branches.next();
@@ -203,16 +207,19 @@ implements Tier
             {
                 throw new IllegalStateException();
             }
-            Tier left = loader.load(structure, txn, branch.getKeyOfLeft());
+
+            Tier left = load(txn, branch.getKeyOfLeft());
             left.copacetic(txn, copacetic);
-            if (branch.getSize() != left.getSize())
+
+            if (branch.getSize() < left.getSize())
             {
                 throw new IllegalStateException();
             }
+
             if (!branch.isTerminal())
             {
                 // Each key must be less than the one next to it.
-                if (previous != null && structure.getCriterion().newCriteria(previous).partialMatch(branch.getObject()) >= 0)
+                if (previous != null && structure.compare(previous, branch.getObject()) >= 0)
                 {
                     throw new IllegalStateException();
                 }
@@ -220,11 +227,30 @@ implements Tier
                 // Each key must occur only once in the inner tiers.
                 if (!copacetic.unique(branch.getObject()))
                 {
-                    throw new StrataException().source(Tier.class).message("not.unqiue.in.inner.tiers");
+                    throw new IllegalStateException();
                 }
             }
             previous = branch.getObject();
+
+            Object leftmost = getLeftMost(txn, left, getChildType());
+            if (lastLeftmost != null && structure.compare(lastLeftmost, leftmost) >= 0)
+            {
+                throw new IllegalStateException();
+            }
+            lastLeftmost = leftmost;
         }
+    }
+
+    private Object getLeftMost(Object txn, Tier tier, short childType)
+    {
+        while (childType != Tier.LEAF)
+        {
+            InnerTier inner = (InnerTier) tier;
+            childType = inner.getChildType();
+            tier = inner.load(txn, inner.get(0).getKeyOfLeft());
+        }
+        LeafTier leaf = (LeafTier) tier;
+        return leaf.get(0);
     }
 
     private boolean canMerge(int indexOfLeft, int indexOfRight)
@@ -234,7 +260,7 @@ implements Tier
 
     private TierLoader getPageLoader()
     {
-        return getTypeOfChildren() == Tier.INNER ? structure.getStorage().getInnerPageLoader() : structure.getStorage().getLeafPageLoader();
+        return getChildType() == Tier.INNER ? structure.getStorage().getInnerTierLoader() : structure.getStorage().getLeafTierLoader();
     }
 
     private void merge(Object txn, int indexOfLeft, int indexOfRight)

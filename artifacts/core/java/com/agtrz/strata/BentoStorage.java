@@ -15,6 +15,14 @@ import java.nio.ByteBuffer;
 public class BentoStorage
 implements Storage
 {
+    public final static ObjectLoader NULL_OBJECT_LOADER = new ObjectLoader()
+    {
+        public Object load(Object storage, Object key)
+        {
+            return key;
+        }
+    };
+
     private final ReferenceQueue queue = new ReferenceQueue();
 
     private final Map mapOfTiers = new HashMap();
@@ -23,23 +31,23 @@ implements Storage
 
     private final Converter addressConverter;
 
-    private final Strata.ObjectLoader blockLoader;
+    private final ObjectLoader blockLoader;
 
     public BentoStorage()
     {
         this.mutatorConverter = NullConverter.INSTANCE;
         this.addressConverter = NullConverter.INSTANCE;
-        this.blockLoader = Strata.NULL_OBJECT_LOADER;
+        this.blockLoader = NULL_OBJECT_LOADER;
     }
 
-    public BentoStorage(Converter mutatorConverter, Converter addressConverter, Strata.ObjectLoader blockLoader)
+    public BentoStorage(Converter mutatorConverter, Converter addressConverter, ObjectLoader blockLoader)
     {
         this.mutatorConverter = mutatorConverter;
         this.addressConverter = addressConverter;
         this.blockLoader = blockLoader;
     }
 
-    public TierLoader getInnerPageLoader()
+    public TierLoader getInnerTierLoader()
     {
         return new TierLoader()
         {
@@ -64,7 +72,7 @@ implements Storage
         };
     }
 
-    public TierLoader getLeafPageLoader()
+    public TierLoader getLeafTierLoader()
     {
         return new TierLoader()
         {
@@ -90,7 +98,7 @@ implements Storage
 
     }
 
-    public InnerTier newInnerPage(Strata.Structure structure, Object txn, short typeOfChildren)
+    public InnerTier newInnerTier(Strata.Structure structure, Object txn, short typeOfChildren)
     {
         Bento.Mutator mutator = (Bento.Mutator) mutatorConverter.convert(txn);
         InnerTier tierStorage = new BentoInnerTier(structure, mutator, typeOfChildren);
@@ -99,7 +107,7 @@ implements Storage
         return tierStorage;
     }
 
-    public LeafTier newLeafPage(Strata.Structure structure, Object txn)
+    public LeafTier newLeafTier(Strata.Structure structure, Object txn)
     {
         Bento.Mutator mutator = (Bento.Mutator) mutatorConverter.convert(txn);
         LeafTier tierStorage = new BentoLeafTier(structure, mutator);
@@ -140,7 +148,7 @@ implements Storage
     void write(Strata.Structure structure, InnerTier inner, ByteBuffer bytes)
     {
         ObjectWriteBuffer out = new ObjectWriteBuffer(bytes);
-        out.write(inner.getTypeOfChildren());
+        out.write(inner.getChildType());
         for (int i = 0; i < inner.getSize() + 1; i++)
         {
             Branch branch = inner.get(i);
@@ -161,9 +169,9 @@ implements Storage
     void write(Strata.Structure structure, LeafTier leaf, ByteBuffer bytes)
     {
         ObjectWriteBuffer out = new ObjectWriteBuffer(bytes);
-        Bento.Address addressOfPrevious = (Bento.Address) leaf.getPreviousLeafTier();
+        Bento.Address addressOfPrevious = (Bento.Address) leaf.getPreviousLeafKey();
         addressOfPrevious.write(out);
-        Bento.Address addressOfNext = (Bento.Address) leaf.getNextLeafTier();
+        Bento.Address addressOfNext = (Bento.Address) leaf.getNextLeafKey();
         addressOfNext.write(out);
         for (int i = 0; i < leaf.getSize(); i++)
         {
@@ -180,7 +188,7 @@ implements Storage
     {
         private Converter mutatorConverter = NullConverter.INSTANCE;
 
-        private Strata.ObjectLoader blockLoader;
+        private ObjectLoader blockLoader;
 
         private Converter addressConverter = NullConverter.INSTANCE;
 
@@ -189,7 +197,7 @@ implements Storage
             this.mutatorConverter = mutatorConverter;
         }
 
-        public void setBlockLoader(Strata.ObjectLoader blockLoader)
+        public void setBlockLoader(ObjectLoader blockLoader)
         {
             this.blockLoader = blockLoader;
         }
@@ -203,6 +211,11 @@ implements Storage
         {
             return new BentoStorage(mutatorConverter, addressConverter, blockLoader);
         }
+    }
+
+    public interface ObjectLoader
+    {
+        public Object load(Object txn, Object key);
     }
 }
 

@@ -10,9 +10,9 @@ import com.agtrz.swag.util.IdentityObject;
 public class ArrayListLeafTier
 extends LeafTier
 {
-    private Object previousLeafTier;
+    private Object previousLeafKey;
 
-    private Object nextLeafTier;
+    private Object nextLeafKey;
 
     private final List listOfObjects;
 
@@ -21,7 +21,7 @@ extends LeafTier
         super(structure);
         this.listOfObjects = new ArrayList(structure.getSize());
     }
-
+    
     public Object getKey()
     {
         return new IdentityObject(this);
@@ -62,24 +62,29 @@ extends LeafTier
         listOfObjects.add(0, object);
     }
 
-    public Object getPreviousLeafTier()
+    public Object getPreviousLeafKey()
     {
-        return previousLeafTier;
+        return previousLeafKey;
     }
 
-    public void setPreviousLeafTier(Object keyOfPreviousLeafTier)
+    public void setPreviousLeafKey(Object previousLeafKey)
     {
-        this.previousLeafTier = keyOfPreviousLeafTier;
+        this.previousLeafKey = previousLeafKey;
     }
 
-    public Object getNextLeafTier()
+    public Object getNextLeafKey()
     {
-        return nextLeafTier;
+        return nextLeafKey;
     }
 
-    public void setNextLeafTier(Object keyOfNextLeafTier)
+    public void setNextLeafKey(Object nextLeafKey)
     {
-        this.nextLeafTier = keyOfNextLeafTier;
+        this.nextLeafKey = nextLeafKey;
+    }
+    
+    public String toString()
+    {
+        return listOfObjects.toString();
     }
 }
 

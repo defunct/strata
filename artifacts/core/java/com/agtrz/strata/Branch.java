@@ -22,7 +22,7 @@ public class Branch
         this.object = object;
         this.size = size;
     }
-
+    // FIXME Rename.
     public Object getKeyOfLeft()
     {
         return keyOfLeft;

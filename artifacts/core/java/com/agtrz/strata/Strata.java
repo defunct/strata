@@ -9,31 +9,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-/**
- * Doesn't need to handle new types dynamically, does it?
- * <p>
- * The first use case for this project is an index of articles by GUID, from
- * which one can create an atom feed.
- * <p>
- * Only need identities. Only need one type of node.
- * <p>
- * <ul>
- * <li>Will <strong>not</strong> support multiple types of nodes.
- * <li>Will <strong>not</strong> support variable length keys.
- * <li>Will <strong>not</strong> store information in leaves, only pointers.
- * <li>Will <strong>not</strong> cache leaf objects.
- * <li>Will hold <strong>strong</strong> references to full text of key.
- * </ul>
- */
 public class Strata
 {
-    public final static ObjectLoader NULL_OBJECT_LOADER = new ObjectLoader()
-    {
-        public Object load(Object storage, Object key)
-        {
-            return key;
-        }
-    };
+    public final static Cursor EMPTY_CURSOR = new EmptyCursor(true);
 
     private final Structure structure;
 
@@ -43,19 +21,14 @@ public class Strata
 
     public Strata()
     {
-        this(new ArrayListTierServer(), null, new ObjectCriteriaServer());
+        this(new ArrayListStorage(), null, new BasicCriteriaServer(), 5);
     }
 
-    public Strata(Storage storage, Object txn, CriteriaServer criterion)
+    public Strata(Storage storage, Object txn, CriteriaServer criterion, int size)
     {
-        this.structure = new Structure(storage, criterion, 5);
-        this.root = structure.getStorage().newInnerPage(structure, txn, Tier.LEAF);
-        this.root.add(new Branch(structure.getStorage().newLeafPage(structure, txn).getKey(), Branch.TERMINAL, 0));
-    }
-
-    public static Criteria criteria(Comparable comparable)
-    {
-        return new ObjectCriteria(comparable);
+        this.structure = new Structure(storage, criterion, size);
+        this.root = structure.getStorage().newInnerTier(structure, txn, Tier.LEAF);
+        this.root.add(new Branch(structure.getStorage().newLeafTier(structure, txn).getKey(), Branch.TERMINAL, 0));
     }
 
     public int getSize()
@@ -70,13 +43,15 @@ public class Strata
 
     public final static class Creator
     {
-        private CriteriaServer criterion = new ObjectCriteriaServer();
+        private CriteriaServer criterion = new BasicCriteriaServer();
 
-        private Storage storage = new ArrayListTierServer();
+        private Storage storage = new ArrayListStorage();
+
+        private int size = 5;
 
         public Strata create(Object txn)
         {
-            return new Strata(storage, txn, criterion);
+            return new Strata(storage, txn, criterion, size);
         }
 
         public void setCriteriaServer(CriteriaServer criterion)
@@ -88,9 +63,15 @@ public class Strata
         {
             this.storage = storage;
         }
+
+        public void setSize(int size)
+        {
+            this.size = size;
+        }
     }
 
-    public class Structure
+    public static class Structure
+    implements Comparator
     {
         private final Storage storage;
 
@@ -119,11 +100,11 @@ public class Strata
         {
             return size;
         }
-    }
 
-    public interface ObjectLoader
-    {
-        public Object load(Object txn, Object key);
+        public int compare(Object left, Object right)
+        {
+            return getCriterion().newCriteria(left).partialMatch(right);
+        }
     }
 
     public interface Criteria
@@ -140,21 +121,21 @@ public class Strata
         public Criteria newCriteria(Object object);
     }
 
-    public static class ObjectCriteriaServer
+    public static class BasicCriteriaServer
     implements CriteriaServer
     {
         public Criteria newCriteria(Object object)
         {
-            return new ObjectCriteria(object);
+            return new BasicCriteria(object);
         }
     }
 
-    public static class ObjectCriteria
+    public static class BasicCriteria
     implements Criteria
     {
         private final Object criteria;
 
-        public ObjectCriteria(Object criteria)
+        public BasicCriteria(Object criteria)
         {
             this.criteria = criteria;
         }
@@ -172,25 +153,6 @@ public class Strata
         public Object getObject()
         {
             return criteria;
-        }
-    }
-
-    public static class ValuesCriteria
-    implements Criteria
-    {
-        public int partialMatch(Object object)
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        public boolean exactMatch(Object object)
-        {
-            return true;
-        }
-
-        public Object getObject()
-        {
-            throw new UnsupportedOperationException();
         }
     }
 
@@ -224,22 +186,29 @@ public class Strata
             // the leaf.
 
             List listOfFullTiers = new ArrayList();
+            InnerTier grandParent = null;
             InnerTier parent = null;
             InnerTier inner = root;
 
             if (inner.isFull())
             {
+                listOfFullTiers.add(grandParent);
                 listOfFullTiers.add(parent);
             }
 
             for (;;)
             {
+                grandParent = parent;
                 parent = inner;
                 Branch branch = inner.find(criteria);
                 Tier tier = parent.load(txn, branch.getKeyOfLeft());
 
                 if (tier.isFull())
                 {
+                    if (listOfFullTiers.isEmpty())
+                    {
+                        listOfFullTiers.add(grandParent);
+                    }
                     listOfFullTiers.add(parent);
                 }
                 else
@@ -247,13 +216,14 @@ public class Strata
                     listOfFullTiers.clear();
                 }
 
-                if (parent.getTypeOfChildren() == Tier.LEAF)
+                if (parent.getChildType() == Tier.LEAF)
                 {
                     if (tier.isFull())
                     {
                         listOfFullTiers.add(tier);
 
                         Iterator ancestors = listOfFullTiers.iterator();
+                        parent = (InnerTier) ancestors.next();
                         tier = (Tier) ancestors.next();
                         for (;;)
                         {
@@ -273,6 +243,10 @@ public class Strata
                             else
                             {
                                 reciever.replace(full, split);
+                                if (parent != null)
+                                {
+                                    parent.find(criteria).setSize(reciever.getSize());
+                                }
                             }
                             branch = reciever.find(criteria);
                             tier = reciever.load(txn, branch.getKeyOfLeft());
@@ -280,6 +254,7 @@ public class Strata
                             {
                                 break;
                             }
+                            parent = reciever;
                         }
                     }
 
@@ -295,18 +270,18 @@ public class Strata
             size++;
         }
 
-        public Collection find(Object object)
+        public Cursor find(Object object)
         {
             return find(structure.getCriterion().newCriteria(object));
         }
 
-        public Collection find(Strata.Criteria criteria)
+        public Cursor find(Strata.Criteria criteria)
         {
             InnerTier tier = root;
             for (;;)
             {
                 Branch branch = tier.find(criteria);
-                if (tier.getTypeOfChildren() == Tier.LEAF)
+                if (tier.getChildType() == Tier.LEAF)
                 {
                     LeafTier leaf = (LeafTier) tier.load(txn, branch.getKeyOfLeft());
                     return leaf.find(txn, criteria);
@@ -331,7 +306,7 @@ public class Strata
                 {
                     inner = tier;
                 }
-                if (tier.getTypeOfChildren() == Tier.LEAF)
+                if (tier.getChildType() == Tier.LEAF)
                 {
                     LeafTier leaf = (LeafTier) tier.load(txn, branch.getKeyOfLeft());
                     Collection collection = leaf.remove(txn, criteria);
@@ -343,7 +318,7 @@ public class Strata
                         if (objectCount == 0)
                         {
                             int index = parent.getIndexOfTier(leaf);
-                            if (inner.getTypeOfChildren() == Tier.LEAF)
+                            if (inner.getChildType() == Tier.LEAF)
                             {
                                 parent.removeLeafTier(leaf);
                             }
@@ -380,26 +355,26 @@ public class Strata
             }
         }
 
-        public Collection values()
+        public Cursor values()
         {
             Branch branch = null;
             InnerTier tier = root;
             for (;;)
             {
                 branch = tier.get(0);
-                if (tier.getTypeOfChildren() == Tier.LEAF)
+                if (tier.getChildType() == Tier.LEAF)
                 {
                     break;
                 }
                 tier = (InnerTier) tier.load(txn, branch.getKeyOfLeft());
             }
-            return new LeafCollection(structure, txn, (LeafTier) tier.load(txn, branch.getKeyOfLeft()), 0, new ValuesCriteria());
+            return new ForwardCursor(structure, txn, (LeafTier) tier.load(txn, branch.getKeyOfLeft()), 0);
         }
 
         public void copacetic()
         {
-            root.copacetic(txn, new Copacetic(new CopaceticComparator()));
-            Iterator iterator = values().iterator();
+            root.copacetic(txn, new Copacetic(structure));
+            Iterator iterator = values();
             if (getSize() != 0)
             {
                 Object previous = iterator.next();
@@ -428,12 +403,191 @@ public class Strata
         }
     }
 
-    public class CopaceticComparator
-    implements Comparator
+    public interface Cursor
+    extends Iterator
     {
-        public int compare(Object left, Object right)
+        public boolean isEmpty();
+
+        public boolean isForward();
+
+        public Cursor reverse();
+
+        public Cursor newCursor();
+    }
+
+    public final static class ForwardCursor
+    implements Cursor
+    {
+        private final Strata.Structure structure;
+
+        private final Object txn;
+
+        private int index;
+
+        private LeafTier leaf;
+
+        public ForwardCursor(Strata.Structure structure, Object txn, LeafTier leaf, int index)
         {
-            return structure.getCriterion().newCriteria(left).partialMatch(right);
+            this.structure = structure;
+            this.txn = txn;
+            this.leaf = leaf;
+            this.index = index;
+        }
+
+        public boolean isEmpty()
+        {
+            return false;
+        }
+
+        public boolean isForward()
+        {
+            return true;
+        }
+
+        public Cursor newCursor()
+        {
+            return new ForwardCursor(structure, txn, leaf, index);
+        }
+
+        public Cursor reverse()
+        {
+            return new ReverseCursor(structure, txn, leaf, index);
+        }
+
+        public boolean hasNext()
+        {
+            return index < leaf.getSize() || !structure.getStorage().isKeyNull(leaf.getNextLeafKey());
+        }
+
+        public Object next()
+        {
+            if (index == leaf.getSize())
+            {
+                Storage storage = structure.getStorage();
+                if (storage.isKeyNull(leaf.getNextLeafKey()))
+                {
+                    throw new IllegalStateException();
+                }
+                leaf = (LeafTier) structure.getStorage().getLeafTierLoader().load(structure, txn, leaf.getNextLeafKey());
+                index = 0;
+            }
+            return leaf.get(index++);
+        }
+
+        public void remove()
+        {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    public final static class ReverseCursor
+    implements Cursor
+    {
+        private final Strata.Structure structure;
+
+        private final Object txn;
+
+        private int index;
+
+        private LeafTier leaf;
+
+        public ReverseCursor(Strata.Structure structure, Object txn, LeafTier leaf, int index)
+        {
+            this.structure = structure;
+            this.txn = txn;
+            this.leaf = leaf;
+            this.index = index;
+        }
+
+        public boolean isEmpty()
+        {
+            return false;
+        }
+
+        public boolean isForward()
+        {
+            return false;
+        }
+
+        public Cursor newCursor()
+        {
+            return new ReverseCursor(structure, txn, leaf, index);
+        }
+
+        public Cursor reverse()
+        {
+            return new ForwardCursor(structure, txn, leaf, index);
+        }
+
+        public boolean hasNext()
+        {
+            return index > 0 || !structure.getStorage().isKeyNull(leaf.getPreviousLeafKey());
+        }
+
+        public Object next()
+        {
+            if (index == 0)
+            {
+                Storage storage = structure.getStorage();
+                if (storage.isKeyNull(leaf.getPreviousLeafKey()))
+                {
+                    throw new IllegalStateException();
+                }
+                leaf = (LeafTier) structure.getStorage().getLeafTierLoader().load(structure, txn, leaf.getPreviousLeafKey());
+                index = leaf.getSize();
+            }
+            return leaf.get(--index);
+        }
+
+        public void remove()
+        {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private final static class EmptyCursor
+    implements Cursor
+    {
+        public final boolean forward;
+
+        public EmptyCursor(boolean forward)
+        {
+            this.forward = forward;
+        }
+
+        public boolean isEmpty()
+        {
+            return true;
+        }
+
+        public boolean isForward()
+        {
+            return forward;
+        }
+
+        public Cursor newCursor()
+        {
+            return new EmptyCursor(forward);
+        }
+
+        public Cursor reverse()
+        {
+            return new EmptyCursor(!forward);
+        }
+
+        public boolean hasNext()
+        {
+            return false;
+        }
+
+        public Object next()
+        {
+            return new IllegalStateException();
+        }
+
+        public void remove()
+        {
+            throw new UnsupportedOperationException();
         }
     }
 

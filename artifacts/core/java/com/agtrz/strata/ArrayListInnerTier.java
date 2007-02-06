@@ -10,15 +10,15 @@ import com.agtrz.swag.util.IdentityObject;
 public class ArrayListInnerTier
 extends InnerTier
 {
-    private final short typeOfChildren;
-
     private final List listOfBranches;
+    
+    private short childType;
 
     public ArrayListInnerTier(Strata.Structure structure, short typeOfChildren)
     {
         super(structure);
         this.listOfBranches = new ArrayList(structure.getSize() + 1);
-        this.typeOfChildren = typeOfChildren;
+        this.childType = typeOfChildren;
     }
 
     public Object getKey()
@@ -31,9 +31,14 @@ extends InnerTier
         return listOfBranches.size() - 1;
     }
 
-    public short getTypeOfChildren()
+    public short getChildType()
     {
-        return typeOfChildren;
+        return childType;
+    }
+    
+    public void setChildType(short childType)
+    {
+        this.childType = childType;
     }
 
     public Branch get(int index)
@@ -60,10 +65,10 @@ extends InnerTier
     {
         return listOfBranches.listIterator();
     }
-
-    public int getType()
+    
+    public String toString()
     {
-        return Tier.INNER;
+        return listOfBranches.toString();
     }
 }
 

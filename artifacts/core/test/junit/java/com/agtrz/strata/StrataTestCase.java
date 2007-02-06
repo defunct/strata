@@ -1,6 +1,5 @@
 package com.agtrz.strata;
 
-import java.util.Collection;
 import java.util.Iterator;
 
 import junit.framework.TestCase;
@@ -42,6 +41,7 @@ extends TestCase
         {
             query.insert(ALPHABET[i]);
             assertOneEquals(ALPHABET[i], query.find(ALPHABET[i]));
+            query.copacetic();
         }
         for (int i = 0; i < 8; i++)
         {
@@ -50,17 +50,15 @@ extends TestCase
         query.copacetic();
     }
 
-    private static void assertOneEquals(Object object, Collection collection)
+    private static void assertOneEquals(Object object, Iterator iterator)
     {
-        Iterator iterator = collection.iterator();
         assertTrue(iterator.hasNext());
         assertEquals(object.toString(), iterator.next().toString());
         assertFalse(iterator.hasNext());
     }
 
-    private static void assertEquals(int count, Object object, Collection collection)
+    private static void assertEquals(int count, Object object, Iterator iterator)
     {
-        Iterator iterator = collection.iterator();
         for (int i = 0; i < count; i++)
         {
             assertTrue(iterator.hasNext());
@@ -315,7 +313,7 @@ extends TestCase
         int[] insert = new int[] { 1, 2, 3, 4, 5, 6, 7, 7, 7, 8, 9 };
         assertInsert(query, insert);
 
-        Iterator iterator = query.values().iterator();
+        Iterator iterator = query.values();
         for (int i = 0; i < insert.length; i++)
         {
             assertTrue(iterator.hasNext());

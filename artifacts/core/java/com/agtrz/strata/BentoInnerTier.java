@@ -13,22 +13,22 @@ import com.agtrz.swag.io.SizeOf;
 public class BentoInnerTier
 extends InnerTier
 {
-    private final short typeOfChildren;
-
     private final Bento.Address address;
 
     private final List listOfBranches;
 
-    public BentoInnerTier(Strata.Structure structure, Bento.Mutator mutator, short typeOfChildren)
+    private short childType;
+
+    public BentoInnerTier(Strata.Structure structure, Bento.Mutator mutator, short childType)
     {
         super(structure);
         int blockSize = SizeOf.SHORT + ((Bento.ADDRESS_SIZE * 2) + SizeOf.INTEGER) * (structure.getSize() + 1);
         this.address = mutator.allocate(blockSize).getAddress();
         this.listOfBranches = new ArrayList(structure.getSize() + 1);
-        this.typeOfChildren = typeOfChildren;
+        this.childType = childType;
     }
 
-    public BentoInnerTier(Strata.Structure structure, Bento.Mutator mutator, Bento.Address address, Strata.ObjectLoader loader)
+    public BentoInnerTier(Strata.Structure structure, Bento.Mutator mutator, Bento.Address address, BentoStorage.ObjectLoader loader)
     {
         super(structure);
         ByteBuffer bytes = mutator.load(address).toByteBuffer();
@@ -51,7 +51,7 @@ extends InnerTier
             listOfBranches.add(branch);
         }
         this.address = address;
-        this.typeOfChildren = typeOfChildren;
+        this.childType = typeOfChildren;
         this.listOfBranches = listOfBranches;
     }
 
@@ -65,9 +65,14 @@ extends InnerTier
         return listOfBranches.size() - 1;
     }
 
-    public short getTypeOfChildren()
+    public short getChildType()
     {
-        return typeOfChildren;
+        return childType;
+    }
+
+    public void setChildType(short childType)
+    {
+        this.childType = childType;
     }
 
     public void add(Branch branch)
