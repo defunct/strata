@@ -57,6 +57,11 @@ implements Storage
 
                 Bento.Address address = (Bento.Address) key;
 
+                if (address.getPosition() == 0L)
+                {
+                    return null;
+                }
+
                 Object box = address.toKey();
                 InnerTier tierStorage = (InnerTier) getCached(box);
 
@@ -81,6 +86,11 @@ implements Storage
                 collect();
 
                 Bento.Address address = (Bento.Address) key;
+
+                if (address.getPosition() == 0L)
+                {
+                    return null;
+                }
 
                 Object box = address.toKey();
                 LeafTier tierStorage = (LeafTier) getCached(box);

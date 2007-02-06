@@ -195,17 +195,18 @@ implements Tier
         while (objects.hasNext())
         {
             Object candidate = objects.next();
-            if (criteria.equals(candidate))
+            if (criteria.exactMatch(candidate))
             {
                 listOfRemoved.add(candidate);
                 objects.remove();
             }
         }
-        LeafTier lastLeafTier = this;
-        LeafTier leafTier = getNext(txn);
-        while (criteria.equals(leafTier.get(0)))
+        Storage storage = structure.getStorage();
+        LeafTier lastLeaf = this;
+        LeafTier leaf = null;
+        while (!storage.isKeyNull(lastLeaf.getNextLeafKey()) && criteria.exactMatch((leaf = lastLeaf.getNext(txn)).get(0)))
         {
-            objects = leafTier.listIterator();
+            objects = leaf.listIterator();
             while (objects.hasNext())
             {
                 Object candidate = objects.next();
@@ -215,26 +216,29 @@ implements Tier
                     objects.remove();
                 }
             }
-            if (leafTier.getSize() == 0)
+            if (leaf.getSize() == 0)
             {
-                lastLeafTier.setNextLeafKey(leafTier.getNextLeafKey());
-                leafTier.getNext(txn).setPreviousLeafKey(lastLeafTier.getKey());
+                lastLeaf.setNextLeafKey(leaf.getNextLeafKey());
+                leaf.getNext(txn).setPreviousLeafKey(lastLeaf.getKey());
             }
-            leafTier = leafTier.getNext(txn);
+            lastLeaf = leaf;
         }
         return listOfRemoved;
     }
 
     public void consume(Object txn, Tier left)
     {
-        LeafTier leafTier = (LeafTier) left;
+        LeafTier leaf = (LeafTier) left;
 
-        setPreviousLeafKey(leafTier.getPreviousLeafKey());
-        getPrevious(txn).setNextLeafKey(getKey());
-
-        while (leafTier.getSize() != 0)
+        setPreviousLeafKey(leaf.getPreviousLeafKey());
+        if (!structure.getStorage().isKeyNull(getPreviousLeafKey()))
         {
-            shift(leafTier.remove(0));
+            getPrevious(txn).setNextLeafKey(getKey());
+        }
+
+        while (leaf.getSize() != 0)
+        {
+            shift(leaf.remove(leaf.getSize() - 1));
         }
     }
 

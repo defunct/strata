@@ -54,7 +54,6 @@ extends TestCase
     {
         assertTrue(iterator.hasNext());
         assertEquals(object.toString(), iterator.next().toString());
-        assertFalse(iterator.hasNext());
     }
 
     private static void assertEquals(int count, Object object, Iterator iterator)
@@ -64,7 +63,6 @@ extends TestCase
             assertTrue(iterator.hasNext());
             assertEquals(object.toString(), iterator.next().toString());
         }
-        assertFalse(iterator.hasNext());
     }
 
     private void assertInsert(Strata.Query query, int[] insert)
@@ -357,6 +355,7 @@ extends TestCase
         assertInsert(query, insert);
 
         assertRemove(query, 3, 1);
+        query.copacetic();
         assertContains(query, new int[] { 1, 2, 3, 4, 5 });
     }
 
@@ -369,6 +368,7 @@ extends TestCase
         assertInsert(query, insert);
 
         assertRemove(query, 6, 1);
+        query.copacetic();
         assertContains(query, new int[] { 1, 2, 3, 4, 5 });
     }
 

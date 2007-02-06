@@ -160,17 +160,20 @@ implements Tier
         return false;
     }
 
-    public void merge(Object txn, Tier tier)
+    public boolean merge(Object txn, Tier tier)
     {
-        int index = getIndexOfTier(tier);
+        int index = getIndexOfTier(tier.getKey());
         if (canMerge(index - 1, index))
         {
             merge(txn, index - 1, index);
+            return true;
         }
         else if (canMerge(index, index + 1))
         {
             merge(txn, index, index + 1);
+            return true;
         }
+        return false;
     }
 
     public void consume(Object txn, Tier left)
@@ -255,7 +258,7 @@ implements Tier
 
     private boolean canMerge(int indexOfLeft, int indexOfRight)
     {
-        return indexOfLeft != 0 && indexOfRight != structure.getSize() && get(indexOfLeft).getSize() + get(indexOfRight).getSize() < structure.getSize();
+        return indexOfLeft >= 0 && indexOfRight <= getSize() && get(indexOfLeft).getSize() + get(indexOfRight).getSize() < structure.getSize() + 1;
     }
 
     private TierLoader getPageLoader()
@@ -268,6 +271,8 @@ implements Tier
         Tier left = getPageLoader().load(structure, txn, get(indexOfLeft).getKeyOfLeft());
         Tier right = getPageLoader().load(structure, txn, get(indexOfRight).getKeyOfLeft());
         right.consume(txn, left);
+        get(indexOfRight).setSize(right.getSize());
+        remove(indexOfLeft);
     }
 }
 

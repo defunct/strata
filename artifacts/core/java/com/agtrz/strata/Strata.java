@@ -310,7 +310,7 @@ public class Strata
                 {
                     LeafTier leaf = (LeafTier) tier.load(txn, branch.getKeyOfLeft());
                     Collection collection = leaf.remove(txn, criteria);
-                    branch.setSize(branch.getSize() - collection.size());
+                    branch.setSize(leaf.getSize());
 
                     if (inner != null)
                     {
@@ -341,11 +341,8 @@ public class Strata
                     Iterator ancestors = listOfAncestors.iterator();
                     while (ancestors.hasNext())
                     {
-                        InnerTier innerTier = (InnerTier) ancestors.next();
-                        if (innerTier.canMerge(childTier))
-                        {
-                            innerTier.merge(txn, childTier);
-                        }
+                        InnerTier merge = (InnerTier) ancestors.next();
+                        merge.merge(txn, childTier);
                     }
 
                     size -= collection.size();
