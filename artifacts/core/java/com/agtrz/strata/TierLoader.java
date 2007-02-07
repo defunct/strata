@@ -1,7 +1,6 @@
 /* Copyright Alan Gutierrez 2006 */
 package com.agtrz.strata;
 
-// FIXME REname.
 public interface TierLoader
 {
     public Tier load(Strata.Structure structure, Object storage, Object key);

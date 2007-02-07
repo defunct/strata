@@ -74,11 +74,7 @@ implements Tier
         {
             Object repeated = get(0);
             int compare = criteria.partialMatch(repeated);
-            if (compare == 0)
-            {
-                split = null; // TODO For sake of breakpoint.
-            }
-            else if (compare < 0)
+            if (compare < 0)
             {
                 LeafTier right = storage.newLeafTier(structure, txn);
                 while (getSize() != 0)
@@ -90,7 +86,7 @@ implements Tier
 
                 split = new Split(criteria.getObject(), right);
             }
-            else
+            else if (compare > 0)
             {
                 LeafTier last = this;
                 while (!endOfList(txn, repeated, last))

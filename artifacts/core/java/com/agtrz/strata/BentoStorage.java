@@ -136,7 +136,7 @@ implements Storage
         for (int i = 0; i < inner.getSize() + 1; i++)
         {
             Branch branch = inner.get(i);
-            Bento.Address addressOfChild = (Bento.Address) branch.getKeyOfLeft();
+            Bento.Address addressOfChild = (Bento.Address) branch.getLeftKey();
             addressOfChild.write(out);
             if (branch.isTerminal())
             {

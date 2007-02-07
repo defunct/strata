@@ -2,7 +2,7 @@ package com.agtrz.strata;
 
 public class Branch
 {
-    private final Object keyOfLeft;
+    private final Object leftKey;
 
     private final Object object;
 
@@ -18,14 +18,14 @@ public class Branch
 
     public Branch(Object keyOfLeft, Object object, int size)
     {
-        this.keyOfLeft = keyOfLeft;
+        this.leftKey = keyOfLeft;
         this.object = object;
         this.size = size;
     }
-    // FIXME Rename.
-    public Object getKeyOfLeft()
+
+    public Object getLeftKey()
     {
-        return keyOfLeft;
+        return leftKey;
     }
 
     public Object getObject()

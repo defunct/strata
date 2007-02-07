@@ -40,7 +40,7 @@ implements Tier
 
         Branch branch = remove(getSize());
         Object pivot = branch.getObject();
-        add(new Branch(branch.getKeyOfLeft(), Branch.TERMINAL, branch.getSize()));
+        add(new Branch(branch.getLeftKey(), Branch.TERMINAL, branch.getSize()));
 
         return new Split(pivot, right);
     }
@@ -71,7 +71,7 @@ implements Tier
         while (branches.hasNext())
         {
             Branch branch = (Branch) branches.next();
-            if (branch.getKeyOfLeft().equals(keyOfTier))
+            if (branch.getLeftKey().equals(keyOfTier))
             {
                 return index;
             }
@@ -87,7 +87,7 @@ implements Tier
         while (branches.hasNext())
         {
             Branch branch = (Branch) branches.next();
-            if (branch.getKeyOfLeft().equals(keyOfLeafTier))
+            if (branch.getLeftKey().equals(keyOfLeafTier))
             {
                 branches.remove();
                 break;
@@ -105,7 +105,7 @@ implements Tier
             Branch branch = (Branch) branches.next();
             if (oldPivot.partialMatch(branch.getObject()) == 0)
             {
-                branches.set(new Branch(branch.getKeyOfLeft(), newPivot, branch.getSize()));
+                branches.set(new Branch(branch.getLeftKey(), newPivot, branch.getSize()));
                 break;
             }
         }
@@ -132,7 +132,7 @@ implements Tier
         while (branches.hasNext())
         {
             Branch branch = (Branch) branches.next();
-            if (branch.getKeyOfLeft().equals(keyOfTier))
+            if (branch.getLeftKey().equals(keyOfTier))
             {
                 branches.set(new Branch(keyOfTier, split.getPivot(), tier.getSize()));
                 branches.add(new Branch(split.getRight().getKey(), branch.getObject(), split.getRight().getSize()));
@@ -180,7 +180,7 @@ implements Tier
     {
         InnerTier innerTier = (InnerTier) left;
         Branch oldPivot = innerTier.get(innerTier.getSize());
-        shift(new Branch(oldPivot.getKeyOfLeft(), oldPivot.getObject(), oldPivot.getSize()));
+        shift(new Branch(oldPivot.getLeftKey(), oldPivot.getObject(), oldPivot.getSize()));
         for (int i = left.getSize(); i > 0; i--)
         {
             shift(innerTier.get(i));
@@ -211,7 +211,7 @@ implements Tier
                 throw new IllegalStateException();
             }
 
-            Tier left = load(txn, branch.getKeyOfLeft());
+            Tier left = load(txn, branch.getLeftKey());
             left.copacetic(txn, copacetic);
 
             if (branch.getSize() < left.getSize())
@@ -250,7 +250,7 @@ implements Tier
         {
             InnerTier inner = (InnerTier) tier;
             childType = inner.getChildType();
-            tier = inner.load(txn, inner.get(0).getKeyOfLeft());
+            tier = inner.load(txn, inner.get(0).getLeftKey());
         }
         LeafTier leaf = (LeafTier) tier;
         return leaf.get(0);
@@ -268,8 +268,8 @@ implements Tier
 
     private void merge(Object txn, int indexOfLeft, int indexOfRight)
     {
-        Tier left = getPageLoader().load(structure, txn, get(indexOfLeft).getKeyOfLeft());
-        Tier right = getPageLoader().load(structure, txn, get(indexOfRight).getKeyOfLeft());
+        Tier left = getPageLoader().load(structure, txn, get(indexOfLeft).getLeftKey());
+        Tier right = getPageLoader().load(structure, txn, get(indexOfRight).getLeftKey());
         right.consume(txn, left);
         get(indexOfRight).setSize(right.getSize());
         remove(indexOfLeft);

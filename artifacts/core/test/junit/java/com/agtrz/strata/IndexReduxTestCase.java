@@ -434,7 +434,7 @@ extends TestCase
         assertStructure(tiers);
     }
 
-    // XXX Probably can constantly unallocate the first page, maybe it doesn't exist?
+    // Probably can constantly unallocate the first page, maybe it doesn't exist?
     public void testSplitTier()
     {
         Tier[] tiers = newFirstTier();

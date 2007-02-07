@@ -121,15 +121,6 @@ public class Strata
         public Criteria newCriteria(Object object);
     }
 
-    public static class BasicCriteriaServer
-    implements CriteriaServer
-    {
-        public Criteria newCriteria(Object object)
-        {
-            return new BasicCriteria((Comparable) object);
-        }
-    }
-
     public static class BasicCriteria
     implements Criteria
     {
@@ -153,6 +144,15 @@ public class Strata
         public Object getObject()
         {
             return comparable;
+        }
+    }
+
+    public static class BasicCriteriaServer
+    implements CriteriaServer
+    {
+        public Criteria newCriteria(Object object)
+        {
+            return new BasicCriteria((Comparable) object);
         }
     }
 
@@ -201,7 +201,7 @@ public class Strata
                 grandParent = parent;
                 parent = inner;
                 Branch branch = inner.find(criteria);
-                Tier tier = parent.load(txn, branch.getKeyOfLeft());
+                Tier tier = parent.load(txn, branch.getLeftKey());
 
                 if (tier.isFull())
                 {
@@ -251,7 +251,7 @@ public class Strata
                                     }
                                 }
                                 branch = reciever.find(criteria);
-                                tier = reciever.load(txn, branch.getKeyOfLeft());
+                                tier = reciever.load(txn, branch.getLeftKey());
                             }
                         }
                         while (ancestors.hasNext());
@@ -282,10 +282,10 @@ public class Strata
                 Branch branch = tier.find(criteria);
                 if (tier.getChildType() == Tier.LEAF)
                 {
-                    LeafTier leaf = (LeafTier) tier.load(txn, branch.getKeyOfLeft());
+                    LeafTier leaf = (LeafTier) tier.load(txn, branch.getLeftKey());
                     return leaf.find(txn, criteria);
                 }
-                tier = (InnerTier) tier.load(txn, branch.getKeyOfLeft());
+                tier = (InnerTier) tier.load(txn, branch.getLeftKey());
             }
         }
 
@@ -307,7 +307,7 @@ public class Strata
                 }
                 if (tier.getChildType() == Tier.LEAF)
                 {
-                    LeafTier leaf = (LeafTier) tier.load(txn, branch.getKeyOfLeft());
+                    LeafTier leaf = (LeafTier) tier.load(txn, branch.getLeftKey());
                     Collection collection = leaf.remove(txn, criteria);
                     branch.setSize(leaf.getSize());
 
@@ -336,18 +336,18 @@ public class Strata
                         }
                     }
 
-                    Tier childTier = leaf;
+                    Tier child = leaf;
                     Iterator ancestors = listOfAncestors.iterator();
                     while (ancestors.hasNext())
                     {
                         InnerTier merge = (InnerTier) ancestors.next();
-                        merge.merge(txn, childTier);
+                        merge.merge(txn, child);
                     }
 
                     size -= collection.size();
                     return collection;
                 }
-                tier = (InnerTier) parent.load(txn, branch.getKeyOfLeft());
+                tier = (InnerTier) parent.load(txn, branch.getLeftKey());
             }
         }
 
@@ -362,9 +362,9 @@ public class Strata
                 {
                     break;
                 }
-                tier = (InnerTier) tier.load(txn, branch.getKeyOfLeft());
+                tier = (InnerTier) tier.load(txn, branch.getLeftKey());
             }
-            return new ForwardCursor(structure, txn, (LeafTier) tier.load(txn, branch.getKeyOfLeft()), 0);
+            return new ForwardCursor(structure, txn, (LeafTier) tier.load(txn, branch.getLeftKey()), 0);
         }
 
         public void copacetic()
