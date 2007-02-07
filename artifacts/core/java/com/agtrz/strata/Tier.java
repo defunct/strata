@@ -21,14 +21,6 @@ public interface Tier
      */
     public boolean isFull();
 
-    /**
-     * Split a tier into two tiers.
-     * 
-     * @param comparator
-     *            The comparator to use to compare objects.
-     * @return A <tt>Split</tt> object containing the partition object and
-     *         the new right and left containers.
-     */
     public Split split(Object txn, Strata.Criteria criteria);
 
     public void copacetic(Object txn, Strata.Copacetic copacetic);

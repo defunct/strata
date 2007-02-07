@@ -11,7 +11,7 @@ public class ArrayListInnerTier
 extends InnerTier
 {
     private final List listOfBranches;
-    
+
     private short childType;
 
     public ArrayListInnerTier(Strata.Structure structure, short typeOfChildren)
@@ -35,7 +35,7 @@ extends InnerTier
     {
         return childType;
     }
-    
+
     public void setChildType(short childType)
     {
         this.childType = childType;
@@ -65,7 +65,7 @@ extends InnerTier
     {
         return listOfBranches.listIterator();
     }
-    
+
     public String toString()
     {
         return listOfBranches.toString();

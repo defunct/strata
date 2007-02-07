@@ -12,5 +12,6 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/sheaf"/>
 	<classpathentry kind="lib" path="/mix/lib/junit/junit.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/bento"/>
+	<classpathentry kind="lib" path="/mix/lib/concurrent/concurrent.jar"/>
 	<classpathentry kind="output" path="ERRORS-IN-PATH"/>
 </classpath>

@@ -3,9 +3,11 @@ package com.agtrz.strata;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -156,13 +158,28 @@ public class Strata
         }
     }
 
+    public final class TierCollection
+    implements Collection
+    {
+        private final Map mapOfWrittenTiers;
+
+        public boolean add(Object object)
+        {
+            Tier tier = (Tier) object;
+            mapOfWrittenTiers.put(tier.getKey(), tier)
+            return true;
+        }
+    }
     public final class Query
     {
         private final Object txn;
+        
+        private final Map mapOfWrittenTiers;
 
         public Query(Object txn)
         {
             this.txn = txn;
+            this.mapOfWrittenTiers = new HashMap();
         }
 
         public int getSize()
