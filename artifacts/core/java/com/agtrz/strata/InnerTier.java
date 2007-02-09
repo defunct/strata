@@ -1,5 +1,6 @@
 package com.agtrz.strata;
 
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.ListIterator;
 
@@ -223,6 +224,7 @@ implements Tier
         Object previous = null;
         Object lastLeftmost = null;
 
+        Comparator comparator = structure.newComparator(txn);
         Iterator branches = listIterator();
         while (branches.hasNext())
         {
@@ -243,7 +245,7 @@ implements Tier
             if (!branch.isTerminal())
             {
                 // Each key must be less than the one next to it.
-                if (previous != null && structure.compare(previous, branch.getObject()) >= 0)
+                if (previous != null && comparator.compare(previous, branch.getObject()) >= 0)
                 {
                     throw new IllegalStateException();
                 }
@@ -257,7 +259,7 @@ implements Tier
             previous = branch.getObject();
 
             Object leftmost = getLeftMost(txn, left, getChildType());
-            if (lastLeftmost != null && structure.compare(lastLeftmost, leftmost) >= 0)
+            if (lastLeftmost != null && comparator.compare(lastLeftmost, leftmost) >= 0)
             {
                 throw new IllegalStateException();
             }

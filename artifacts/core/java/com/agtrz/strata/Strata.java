@@ -27,12 +27,12 @@ implements Serializable
 
     public Strata()
     {
-        this(new ArrayListStorage(), null, new BasicResolver(), new BasicCriteriaServer(), 5);
+        this(new ArrayListStorage(), null, new BasicCriteriaServer(), 5);
     }
 
-    public Strata(Storage storage, Object txn, Resolver resolver, CriteriaServer criterion, int size)
+    public Strata(Storage storage, Object txn, CriteriaServer criterion, int size)
     {
-        Structure structure = new Structure(storage, resolver, criterion, size);
+        Structure structure = new Structure(storage, criterion, size);
         InnerTier root = structure.getStorage().newInnerTier(structure, txn, Tier.LEAF);
         LeafTier leaf = structure.getStorage().newLeafTier(structure, txn);
         leaf.write(structure, txn);
@@ -58,25 +58,18 @@ implements Serializable
     {
         private CriteriaServer criterion = new BasicCriteriaServer();
 
-        private Resolver resolver = new BasicResolver();
-
         private Storage storage = new ArrayListStorage();
 
         private int size = 5;
 
         public Strata create(Object txn)
         {
-            return new Strata(storage, txn, resolver, criterion, size);
+            return new Strata(storage, txn, criterion, size);
         }
 
         public void setStorage(Storage storage)
         {
             this.storage = storage;
-        }
-
-        public void setResolver(Resolver resolver)
-        {
-            this.resolver = resolver;
         }
 
         public void setCriteriaServer(CriteriaServer criterion)
@@ -91,22 +84,19 @@ implements Serializable
     }
 
     public static class Structure
-    implements Comparator, Serializable
+    implements Serializable
     {
         private static final long serialVersionUID = 20070208L;
 
         private final Storage storage;
 
-        private final Resolver resolver;
-
         private final CriteriaServer criterion;
 
         private final int size;
 
-        public Structure(Storage storage, Resolver resolver, CriteriaServer criterion, int size)
+        public Structure(Storage storage, CriteriaServer criterion, int size)
         {
             this.storage = storage;
-            this.resolver = resolver;
             this.criterion = criterion;
             this.size = size;
         }
@@ -114,11 +104,6 @@ implements Serializable
         public Storage getStorage()
         {
             return storage;
-        }
-
-        public Resolver getResolver()
-        {
-            return resolver;
         }
 
         public CriteriaServer getCriterion()
@@ -131,9 +116,28 @@ implements Serializable
             return size;
         }
 
+        public Comparator newComparator(Object txn)
+        {
+            return new CopaceticComparator(criterion, txn);
+        }
+    }
+
+    private final static class CopaceticComparator
+    implements Comparator
+    {
+        private final CriteriaServer criterion;
+
+        private final Object txn;
+
+        public CopaceticComparator(CriteriaServer criterion, Object txn)
+        {
+            this.criterion = criterion;
+            this.txn = txn;
+        }
+
         public int compare(Object left, Object right)
         {
-            return getCriterion().newCriteria(left).partialMatch(right);
+            return criterion.newCriteria(txn, left).partialMatch(right);
         }
     }
 
@@ -164,7 +168,7 @@ implements Serializable
 
     public interface CriteriaServer
     {
-        public Criteria newCriteria(Object object);
+        public Criteria newCriteria(Object txn, Object object);
     }
 
     public interface Comparison
@@ -176,34 +180,43 @@ implements Serializable
         public Object getObject(Object criteria);
     }
 
-    public static class ComparisonCriteria
+    public static class ComplexCriteria
     implements Criteria, Serializable
     {
         private static final long serialVersionUID = 20070208L;
 
+        private final Resolver resolver;
+
         private final Comparison comparison;
+
+        private final Object txn;
+
+        private final Object object;
 
         private final Object criteria;
 
-        public ComparisonCriteria(Comparison comparison, Object criteria)
+        public ComplexCriteria(Resolver resolver, Comparison comparison, Object txn, Object object)
         {
+            this.resolver = resolver;
             this.comparison = comparison;
-            this.criteria = criteria;
+            this.txn = txn;
+            this.object = object;
+            this.criteria = resolver.resolve(txn, object);
         }
 
         public int partialMatch(Object object)
         {
-            return comparison.partialMatch(criteria, object);
+            return comparison.partialMatch(criteria, resolver.resolve(txn, object));
         }
 
         public boolean exactMatch(Object object)
         {
-            return comparison.exactMatch(criteria, object);
+            return comparison.exactMatch(criteria, resolver.resolve(txn, object));
         }
 
         public Object getObject()
         {
-            return comparison.getObject(criteria);
+            return object;
         }
     }
 
@@ -302,21 +315,24 @@ implements Serializable
         }
     };
 
-    public static class ComparisonCriteriaServer
+    public static class ComplexCriteriaServer
     implements CriteriaServer, Serializable
     {
         private static final long serialVersionUID = 20070208L;
 
+        private final Resolver resolver;
+
         private final Comparison comparison;
 
-        public ComparisonCriteriaServer(Comparison comparison)
+        public ComplexCriteriaServer(Resolver resolver, Comparison comparison)
         {
+            this.resolver = resolver;
             this.comparison = comparison;
         }
 
-        public Criteria newCriteria(Object object)
+        public Criteria newCriteria(Object txn, Object object)
         {
-            return new ComparisonCriteria(comparison, object);
+            return new ComplexCriteria(resolver, comparison, txn, object);
         }
     }
 
@@ -353,7 +369,7 @@ implements Serializable
     {
         private static final long serialVersionUID = 20070208L;
 
-        public Criteria newCriteria(Object object)
+        public Criteria newCriteria(Object txn, Object object)
         {
             return new BasicCriteria((Comparable) object);
         }
@@ -393,8 +409,7 @@ implements Serializable
 
         public void insert(Object object)
         {
-            Object resolved = structure.getResolver().resolve(txn, object);
-            Criteria criteria = structure.getCriterion().newCriteria(resolved);
+            Criteria criteria = structure.getCriterion().newCriteria(txn, object);
 
             // Maintaining a list of tiers to split.
             //
@@ -496,7 +511,7 @@ implements Serializable
 
         public Cursor find(Object object)
         {
-            return find(structure.getCriterion().newCriteria(object));
+            return find(structure.getCriterion().newCriteria(txn, object));
         }
 
         public Cursor find(Strata.Criteria criteria)
@@ -516,7 +531,7 @@ implements Serializable
 
         public Collection remove(Object object)
         {
-            Criteria criteria = structure.getCriterion().newCriteria(object);
+            Criteria criteria = structure.getCriterion().newCriteria(txn, object);
             TierSet setOfDirty = new TierSet(mapOfDirtyTiers);
             LinkedList listOfAncestors = new LinkedList();
             InnerTier inner = null;
@@ -552,7 +567,7 @@ implements Serializable
                             {
                                 Branch newPivot = parent.get(index - 1);
                                 parent.removeLeafTier(leaf, setOfDirty);
-                                parent.replacePivot(structure.getCriterion().newCriteria(newPivot.getObject()), Branch.TERMINAL, setOfDirty);
+                                parent.replacePivot(structure.getCriterion().newCriteria(txn, newPivot.getObject()), Branch.TERMINAL, setOfDirty);
                                 inner.replacePivot(criteria, newPivot.getObject(), setOfDirty);
                             }
                         }
@@ -610,10 +625,11 @@ implements Serializable
 
         public void copacetic()
         {
-            getRoot().copacetic(txn, new Copacetic(structure));
+            getRoot().copacetic(txn, new Copacetic(structure.newComparator(txn)));
             Iterator iterator = values();
             if (getSize() != 0)
             {
+                Comparator comparator = structure.newComparator(txn);
                 Object previous = iterator.next();
                 for (int i = 1; i < size; i++)
                 {
@@ -622,7 +638,7 @@ implements Serializable
                         throw new IllegalStateException();
                     }
                     Object next = iterator.next();
-                    if (structure.getCriterion().newCriteria(previous).partialMatch(next) > 0)
+                    if (comparator.compare(previous, next) > 0)
                     {
                         throw new IllegalStateException();
                     }

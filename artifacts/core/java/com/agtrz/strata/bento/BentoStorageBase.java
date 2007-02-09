@@ -1,5 +1,5 @@
 /* Copyright Alan Gutierrez 2006 */
-package com.agtrz.strata;
+package com.agtrz.strata.bento;
 
 import java.lang.ref.ReferenceQueue;
 import java.util.HashMap;

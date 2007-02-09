@@ -1,5 +1,5 @@
 /* Copyright Alan Gutierrez 2006 */
-package com.agtrz.strata;
+package com.agtrz.strata.bento;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.ListIterator;
 
 import com.agtrz.bento.Bento;
+import com.agtrz.strata.Branch;
+import com.agtrz.strata.InnerTier;
+import com.agtrz.strata.Strata;
+import com.agtrz.strata.Tier;
 import com.agtrz.swag.io.ByteReader;
 import com.agtrz.swag.io.SizeOf;
 
@@ -22,7 +26,7 @@ extends InnerTier
     public BentoInnerTier(Strata.Structure structure, Bento.Mutator mutator, short childType, int childSize)
     {
         super(structure);
-        int blockSize = SizeOf.SHORT + (Bento.ADDRESS_SIZE + childSize + SizeOf.INTEGER) * (structure.getSize() + 1);
+        int blockSize = SizeOf.SHORT + SizeOf.INTEGER + (SizeOf.INTEGER + Bento.ADDRESS_SIZE + childSize) * (structure.getSize() + 1);
         this.address = mutator.allocate(blockSize).getAddress();
         this.listOfBranches = new ArrayList(structure.getSize() + 1);
         this.childType = childType;

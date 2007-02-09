@@ -1,10 +1,17 @@
 /* Copyright Alan Gutierrez 2006 */
-package com.agtrz.strata;
+package com.agtrz.strata.bento;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 
 import com.agtrz.bento.Bento;
+import com.agtrz.strata.Branch;
+import com.agtrz.strata.InnerTier;
+import com.agtrz.strata.LeafTier;
+import com.agtrz.strata.Storage;
+import com.agtrz.strata.Strata;
+import com.agtrz.strata.Tier;
+import com.agtrz.strata.TierLoader;
 import com.agtrz.strata.Strata.Structure;
 import com.agtrz.swag.io.ByteReader;
 import com.agtrz.swag.io.ByteWriter;
@@ -126,6 +133,7 @@ implements Storage, Serializable
         for (int i = 0; i < inner.getSize() + 1; i++)
         {
             Branch branch = inner.get(i);
+            out.putInt(branch.getSize());
 
             Bento.Address addressOfChild = (Bento.Address) branch.getLeftKey();
             out.putLong(addressOfChild.getPosition());

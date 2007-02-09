@@ -1,5 +1,5 @@
 /* Copyright Alan Gutierrez 2006 */
-package com.agtrz.strata;
+package com.agtrz.strata.bento;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.ListIterator;
 
 import com.agtrz.bento.Bento;
+import com.agtrz.strata.LeafTier;
+import com.agtrz.strata.Strata;
 import com.agtrz.swag.io.ByteReader;
 import com.agtrz.swag.io.ObjectWriteBuffer;
 import com.agtrz.swag.io.SizeOf;
@@ -43,6 +45,11 @@ extends LeafTier
         List listOfObjects = new ArrayList(structure.getSize());
         for (int i = 0; i < structure.getSize(); i++)
         {
+            Object object = reader.read(in);
+            if (object == null)
+            {
+                break;
+            }
             listOfObjects.add(reader.read(in));
         }
         this.address = address;

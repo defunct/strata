@@ -2,6 +2,7 @@ package com.agtrz.strata;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -53,7 +54,7 @@ implements Tier
 
         int partition = -1;
 
-        Strata.Criteria candidate = structure.getCriterion().newCriteria(get(middle));
+        Strata.Criteria candidate = structure.getCriterion().newCriteria(txn, get(middle));
         for (int i = 0; partition == -1 && i < middle; i++)
         {
             if (candidate.partialMatch(get(lesser)) != 0)
@@ -257,16 +258,17 @@ implements Tier
         }
         Object previous = null;
         Iterator objects = listIterator();
+        Comparator comparator = structure.newComparator(txn);
         while (objects.hasNext())
         {
             Object object = objects.next();
-            if (previous != null && structure.compare(previous, object) > 0)
+            if (previous != null && comparator.compare(previous, object) > 0)
             {
                 throw new IllegalStateException();
             }
             previous = object;
         }
-        if (!structure.getStorage().isKeyNull(getNextLeafKey()) && structure.getCriterion().newCriteria(get(getSize() - 1)).partialMatch(getNext(txn).get(0)) == 0 && structure.getSize() != getSize() && structure.getCriterion().newCriteria(get(0)).partialMatch(get(getSize() - 1)) != 0)
+        if (!structure.getStorage().isKeyNull(getNextLeafKey()) && comparator.compare(get(getSize() - 1), getNext(txn).get(0)) == 0 && structure.getSize() != getSize() && comparator.compare(get(0), get(getSize() - 1)) != 0)
         {
             throw new IllegalStateException();
         }
@@ -284,7 +286,7 @@ implements Tier
 
     private boolean endOfList(Object txn, Object object, LeafTier last)
     {
-        return structure.getStorage().isKeyNull(last.getNextLeafKey()) || structure.getCriterion().newCriteria(last.getNext(txn).get(0)).partialMatch(object) != 0;
+        return structure.getStorage().isKeyNull(last.getNextLeafKey()) || structure.newComparator(txn).compare(last.getNext(txn).get(0), object) != 0;
     }
 
     private void ensureNextLeafTier(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty)
