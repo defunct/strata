@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.ListIterator;
 
 import com.agtrz.bento.Bento;
-import com.agtrz.swag.io.ObjectReadBuffer;
+import com.agtrz.swag.io.ByteReader;
 import com.agtrz.swag.io.ObjectWriteBuffer;
 import com.agtrz.swag.io.SizeOf;
 import com.agtrz.swag.util.Pair;
@@ -23,32 +23,27 @@ extends LeafTier
 
     private Bento.Address addressOfNext;
 
-    public BentoLeafTier(Strata.Structure structure, Bento.Mutator mutator)
+    public BentoLeafTier(Strata.Structure structure, Bento.Mutator mutator, int objectSize)
     {
         super(structure);
-        int blockSize = SizeOf.INTEGER + (Bento.ADDRESS_SIZE * 2) + (Bento.ADDRESS_SIZE * structure.getSize());
+        int blockSize = SizeOf.INTEGER + (Bento.ADDRESS_SIZE * 2) + (objectSize * structure.getSize());
         this.address = mutator.allocate(blockSize).getAddress();
         this.listOfObjects = new ArrayList(structure.getSize());
         this.addressOfPrevious = Bento.NULL_ADDRESS;
         this.addressOfNext = Bento.NULL_ADDRESS;
     }
 
-    public BentoLeafTier(Strata.Structure structure, Bento.Mutator mutator, Bento.Address address, BentoStorage.ObjectLoader blockLoader)
+    public BentoLeafTier(Strata.Structure structure, Bento.Mutator mutator, Bento.Address address, ByteReader reader)
     {
         super(structure);
         Bento.Block block = mutator.load(address);
-        ByteBuffer bytes = block.toByteBuffer();
-        Bento.Address addressOfPrevious = new Bento.Address(new ObjectReadBuffer(bytes));
-        Bento.Address addressOfNext = new Bento.Address(new ObjectReadBuffer(bytes));
+        ByteBuffer in = block.toByteBuffer();
+        Bento.Address addressOfPrevious = new Bento.Address(in.getLong(), in.getInt());
+        Bento.Address addressOfNext = new Bento.Address(in.getLong(), in.getInt());
         List listOfObjects = new ArrayList(structure.getSize());
         for (int i = 0; i < structure.getSize(); i++)
         {
-            Bento.Address addressOfObject = new Bento.Address(new ObjectReadBuffer(bytes));
-            if (addressOfObject.getPosition() == 0)
-            {
-                break;
-            }
-            listOfObjects.add(blockLoader.load(mutator, addressOfObject));
+            listOfObjects.add(reader.read(in));
         }
         this.address = address;
         this.addressOfPrevious = addressOfPrevious;

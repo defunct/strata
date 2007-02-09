@@ -7,6 +7,8 @@ import com.agtrz.swag.util.IdentityObject;
 public class ArrayListStorage
 implements Storage
 {
+    private static final long serialVersionUID = 20070208L;
+
     private final TierLoader innerTierLoader = new TierLoader()
     {
         public Tier load(Strata.Structure structure, Object storage, Object key)
@@ -57,6 +59,14 @@ implements Storage
     }
 
     public void write(Structure structure, Object txn, LeafTier leaf)
+    {
+    }
+
+    public void free(Structure structure, Object txn, InnerTier inner)
+    {
+    }
+
+    public void free(Structure structure, Object txn, LeafTier leaf)
     {
     }
 

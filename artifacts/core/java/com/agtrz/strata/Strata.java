@@ -1,5 +1,6 @@
 package com.agtrz.strata;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -12,25 +13,35 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class Strata
+implements Serializable
 {
+    private static final long serialVersionUID = 20070207L;
+
     public final static Cursor EMPTY_CURSOR = new EmptyCursor(true);
 
     private final Structure structure;
 
-    private final InnerTier root;
+    private final Object rootKey;
 
     private int size;
 
     public Strata()
     {
-        this(new ArrayListStorage(), null, new BasicCriteriaServer(), 5);
+        this(new ArrayListStorage(), null, new BasicResolver(), new BasicCriteriaServer(), 5);
     }
 
-    public Strata(Storage storage, Object txn, CriteriaServer criterion, int size)
+    public Strata(Storage storage, Object txn, Resolver resolver, CriteriaServer criterion, int size)
     {
-        this.structure = new Structure(storage, criterion, size);
-        this.root = structure.getStorage().newInnerTier(structure, txn, Tier.LEAF);
-        this.root.add(new Branch(structure.getStorage().newLeafTier(structure, txn).getKey(), Branch.TERMINAL, 0));
+        Structure structure = new Structure(storage, resolver, criterion, size);
+        InnerTier root = structure.getStorage().newInnerTier(structure, txn, Tier.LEAF);
+        LeafTier leaf = structure.getStorage().newLeafTier(structure, txn);
+        leaf.write(structure, txn);
+
+        root.add(new Branch(leaf.getKey(), Branch.TERMINAL, 0));
+        root.write(structure, txn);
+
+        this.structure = structure;
+        this.rootKey = root.getKey();
     }
 
     public int getSize()
@@ -47,23 +58,30 @@ public class Strata
     {
         private CriteriaServer criterion = new BasicCriteriaServer();
 
+        private Resolver resolver = new BasicResolver();
+
         private Storage storage = new ArrayListStorage();
 
         private int size = 5;
 
         public Strata create(Object txn)
         {
-            return new Strata(storage, txn, criterion, size);
-        }
-
-        public void setCriteriaServer(CriteriaServer criterion)
-        {
-            this.criterion = criterion;
+            return new Strata(storage, txn, resolver, criterion, size);
         }
 
         public void setStorage(Storage storage)
         {
             this.storage = storage;
+        }
+
+        public void setResolver(Resolver resolver)
+        {
+            this.resolver = resolver;
+        }
+
+        public void setCriteriaServer(CriteriaServer criterion)
+        {
+            this.criterion = criterion;
         }
 
         public void setSize(int size)
@@ -73,17 +91,22 @@ public class Strata
     }
 
     public static class Structure
-    implements Comparator
+    implements Comparator, Serializable
     {
+        private static final long serialVersionUID = 20070208L;
+
         private final Storage storage;
+
+        private final Resolver resolver;
 
         private final CriteriaServer criterion;
 
         private final int size;
 
-        public Structure(Storage storage, CriteriaServer criterion, int size)
+        public Structure(Storage storage, Resolver resolver, CriteriaServer criterion, int size)
         {
             this.storage = storage;
+            this.resolver = resolver;
             this.criterion = criterion;
             this.size = size;
         }
@@ -91,6 +114,11 @@ public class Strata
         public Storage getStorage()
         {
             return storage;
+        }
+
+        public Resolver getResolver()
+        {
+            return resolver;
         }
 
         public CriteriaServer getCriterion()
@@ -109,6 +137,22 @@ public class Strata
         }
     }
 
+    public interface Resolver
+    {
+        public Object resolve(Object txn, Object object);
+    }
+
+    public final static class BasicResolver
+    implements Resolver, Serializable
+    {
+        private static final long serialVersionUID = 20070208L;
+
+        public Object resolve(Object txn, Object object)
+        {
+            return object;
+        }
+    }
+
     public interface Criteria
     {
         public Object getObject();
@@ -123,9 +167,164 @@ public class Strata
         public Criteria newCriteria(Object object);
     }
 
-    public static class BasicCriteria
-    implements Criteria
+    public interface Comparison
     {
+        public int partialMatch(Object criteria, Object stored);
+
+        public boolean exactMatch(Object criteria, Object stored);
+
+        public Object getObject(Object criteria);
+    }
+
+    public static class ComparisonCriteria
+    implements Criteria, Serializable
+    {
+        private static final long serialVersionUID = 20070208L;
+
+        private final Comparison comparison;
+
+        private final Object criteria;
+
+        public ComparisonCriteria(Comparison comparison, Object criteria)
+        {
+            this.comparison = comparison;
+            this.criteria = criteria;
+        }
+
+        public int partialMatch(Object object)
+        {
+            return comparison.partialMatch(criteria, object);
+        }
+
+        public boolean exactMatch(Object object)
+        {
+            return comparison.exactMatch(criteria, object);
+        }
+
+        public Object getObject()
+        {
+            return comparison.getObject(criteria);
+        }
+    }
+
+    public static class BasicComparison
+    implements Comparison, Serializable
+    {
+        private static final long serialVersionUID = 20070208L;
+
+        protected int partialMatch(Comparable[] left, Comparable[] right)
+        {
+            for (int i = 0; i < left.length && i < right.length; i++)
+            {
+                int compare = left[i].compareTo(right[i]);
+                if (compare != 0)
+                {
+                    return compare;
+                }
+            }
+            return left.length - right.length;
+        }
+
+        public int partialMatch(Object criteria, Object stored)
+        {
+            return ((Comparable) criteria).compareTo(stored);
+        }
+
+        public boolean exactMatch(Object criteria, Object stored)
+        {
+            return criteria.equals(stored);
+        }
+
+        public Object getObject(Object criteria)
+        {
+            return criteria;
+        }
+    };
+
+    public interface FieldExtractor
+    {
+        public Object[] getFields(Object object);
+    }
+
+    public static class FieldComparison
+    implements Comparison, Serializable
+    {
+        private static final long serialVersionUID = 20070208L;
+
+        private final FieldExtractor storedFields;
+
+        private final FieldExtractor soughtFields;
+
+        public FieldComparison(FieldExtractor soughtFields, FieldExtractor storedFields)
+        {
+            this.soughtFields = soughtFields;
+            this.storedFields = storedFields;
+        }
+
+        public int partialMatch(Object criteria, Object stored)
+        {
+            return partialMatch(soughtFields.getFields(criteria), storedFields.getFields(stored));
+        }
+
+        public boolean exactMatch(Object criteria, Object stored)
+        {
+            return exactMatch(soughtFields.getFields(criteria), storedFields.getFields(stored));
+        }
+
+        public Object getObject(Object criteria)
+        {
+            return criteria;
+        }
+
+        protected int partialMatch(Object[] left, Object[] right)
+        {
+            for (int i = 0; i < left.length && i < right.length; i++)
+            {
+                int compare = ((Comparable) left[i]).compareTo(right[i]);
+                if (compare != 0)
+                {
+                    return compare;
+                }
+            }
+            return left.length - right.length;
+        }
+
+        protected boolean exactMatch(Object[] left, Object[] right)
+        {
+            for (int i = 0; i < left.length && i < right.length; i++)
+            {
+                if (left[i].equals(right[i]))
+                {
+                    return false;
+                }
+            }
+            return left.length == right.length;
+        }
+    };
+
+    public static class ComparisonCriteriaServer
+    implements CriteriaServer, Serializable
+    {
+        private static final long serialVersionUID = 20070208L;
+
+        private final Comparison comparison;
+
+        public ComparisonCriteriaServer(Comparison comparison)
+        {
+            this.comparison = comparison;
+        }
+
+        public Criteria newCriteria(Object object)
+        {
+            return new ComparisonCriteria(comparison, object);
+        }
+    }
+
+    public static class BasicCriteria
+    implements Criteria, Serializable
+    {
+        private static final long serialVersionUID = 20070208L;
+
         private final Comparable comparable;
 
         public BasicCriteria(Comparable comparable)
@@ -150,36 +349,41 @@ public class Strata
     }
 
     public static class BasicCriteriaServer
-    implements CriteriaServer
+    implements CriteriaServer, Serializable
     {
+        private static final long serialVersionUID = 20070208L;
+
         public Criteria newCriteria(Object object)
         {
             return new BasicCriteria((Comparable) object);
         }
     }
 
-    public final class TierCollection
-    implements Collection
+    public final class TierSet
     {
-        private final Map mapOfWrittenTiers;
+        private final Map mapOfTiers;
 
-        public boolean add(Object object)
+        public TierSet(Map mapOfTiers)
         {
-            Tier tier = (Tier) object;
-            mapOfWrittenTiers.put(tier.getKey(), tier)
-            return true;
+            this.mapOfTiers = mapOfTiers;
+        }
+
+        public void add(Tier tier)
+        {
+            mapOfTiers.put(tier.getKey(), tier);
         }
     }
+
     public final class Query
     {
         private final Object txn;
-        
-        private final Map mapOfWrittenTiers;
+
+        private final Map mapOfDirtyTiers;
 
         public Query(Object txn)
         {
             this.txn = txn;
-            this.mapOfWrittenTiers = new HashMap();
+            this.mapOfDirtyTiers = new HashMap();
         }
 
         public int getSize()
@@ -189,7 +393,8 @@ public class Strata
 
         public void insert(Object object)
         {
-            Criteria criteria = structure.getCriterion().newCriteria(object);
+            Object resolved = structure.getResolver().resolve(txn, object);
+            Criteria criteria = structure.getCriterion().newCriteria(resolved);
 
             // Maintaining a list of tiers to split.
             //
@@ -205,7 +410,7 @@ public class Strata
             List listOfFullTiers = new ArrayList();
             InnerTier grandParent = null;
             InnerTier parent = null;
-            InnerTier inner = root;
+            InnerTier inner = getRoot();
 
             if (inner.isFull())
             {
@@ -213,11 +418,12 @@ public class Strata
                 listOfFullTiers.add(parent);
             }
 
+            TierSet setOfDirty = new TierSet(mapOfDirtyTiers);
             for (;;)
             {
                 grandParent = parent;
                 parent = inner;
-                Branch branch = inner.find(criteria);
+                Branch branch = parent.find(criteria);
                 Tier tier = parent.load(txn, branch.getLeftKey());
 
                 if (tier.isFull())
@@ -247,7 +453,7 @@ public class Strata
                             parent = reciever;
                             reciever = (InnerTier) tier;
                             Tier full = (Tier) ancestors.next();
-                            Split split = full.split(txn, criteria);
+                            Split split = full.split(txn, criteria, setOfDirty);
                             if (split == null)
                             {
                                 tier = full;
@@ -257,14 +463,15 @@ public class Strata
                                 if (reciever == null)
                                 {
                                     reciever = (InnerTier) full;
-                                    reciever.splitRootTier(txn, split);
+                                    reciever.splitRootTier(txn, split, setOfDirty);
                                 }
                                 else
                                 {
-                                    reciever.replace(full, split);
+                                    reciever.replace(full, split, setOfDirty);
                                     if (parent != null)
                                     {
                                         parent.find(criteria).setSize(reciever.getSize());
+                                        setOfDirty.add(parent);
                                     }
                                 }
                                 branch = reciever.find(criteria);
@@ -276,7 +483,8 @@ public class Strata
 
                     LeafTier leaf = (LeafTier) tier;
                     branch.setSize(branch.getSize() + 1);
-                    leaf.insert(txn, criteria);
+                    setOfDirty.add(parent);
+                    leaf.insert(txn, criteria, setOfDirty);
                     break;
                 }
 
@@ -293,7 +501,7 @@ public class Strata
 
         public Cursor find(Strata.Criteria criteria)
         {
-            InnerTier tier = root;
+            InnerTier tier = getRoot();
             for (;;)
             {
                 Branch branch = tier.find(criteria);
@@ -309,15 +517,16 @@ public class Strata
         public Collection remove(Object object)
         {
             Criteria criteria = structure.getCriterion().newCriteria(object);
+            TierSet setOfDirty = new TierSet(mapOfDirtyTiers);
             LinkedList listOfAncestors = new LinkedList();
             InnerTier inner = null;
             InnerTier parent = null;
-            InnerTier tier = root;
+            InnerTier tier = getRoot();
             for (;;)
             {
                 listOfAncestors.addLast(tier);
                 parent = tier;
-                Branch branch = tier.find(criteria);
+                Branch branch = parent.find(criteria);
                 if (branch.getObject() != Branch.TERMINAL && criteria.exactMatch(branch.getObject()))
                 {
                     inner = tier;
@@ -327,6 +536,7 @@ public class Strata
                     LeafTier leaf = (LeafTier) tier.load(txn, branch.getLeftKey());
                     Collection collection = leaf.remove(txn, criteria);
                     branch.setSize(leaf.getSize());
+                    setOfDirty.add(parent);
 
                     if (inner != null)
                     {
@@ -336,20 +546,20 @@ public class Strata
                             int index = parent.getIndexOfTier(leaf);
                             if (inner.getChildType() == Tier.LEAF)
                             {
-                                parent.removeLeafTier(leaf);
+                                parent.removeLeafTier(leaf, setOfDirty);
                             }
                             else
                             {
                                 Branch newPivot = parent.get(index - 1);
-                                parent.removeLeafTier(leaf);
-                                parent.replacePivot(structure.getCriterion().newCriteria(newPivot.getObject()), Branch.TERMINAL);
-                                inner.replacePivot(criteria, newPivot.getObject());
+                                parent.removeLeafTier(leaf, setOfDirty);
+                                parent.replacePivot(structure.getCriterion().newCriteria(newPivot.getObject()), Branch.TERMINAL, setOfDirty);
+                                inner.replacePivot(criteria, newPivot.getObject(), setOfDirty);
                             }
                         }
                         else
                         {
                             Object newPivot = leaf.get(objectCount - 1);
-                            inner.replacePivot(criteria, newPivot);
+                            inner.replacePivot(criteria, newPivot, setOfDirty);
                         }
                     }
 
@@ -358,7 +568,7 @@ public class Strata
                     while (ancestors.hasNext())
                     {
                         InnerTier merge = (InnerTier) ancestors.next();
-                        merge.merge(txn, child);
+                        merge.merge(txn, child, setOfDirty);
                     }
 
                     size -= collection.size();
@@ -371,7 +581,7 @@ public class Strata
         public Cursor values()
         {
             Branch branch = null;
-            InnerTier tier = root;
+            InnerTier tier = getRoot();
             for (;;)
             {
                 branch = tier.get(0);
@@ -384,9 +594,23 @@ public class Strata
             return new ForwardCursor(structure, txn, (LeafTier) tier.load(txn, branch.getLeftKey()), 0);
         }
 
+        public void write()
+        {
+            if (mapOfDirtyTiers.size() != 0)
+            {
+                Iterator tiers = mapOfDirtyTiers.values().iterator();
+                while (tiers.hasNext())
+                {
+                    Tier tier = (Tier) tiers.next();
+                    tier.write(structure, txn);
+                }
+                mapOfDirtyTiers.clear();
+            }
+        }
+
         public void copacetic()
         {
-            root.copacetic(txn, new Copacetic(structure));
+            getRoot().copacetic(txn, new Copacetic(structure));
             Iterator iterator = values();
             if (getSize() != 0)
             {
@@ -413,6 +637,11 @@ public class Strata
             {
                 throw new IllegalStateException();
             }
+        }
+
+        private InnerTier getRoot()
+        {
+            return (InnerTier) structure.getStorage().getInnerTierLoader().load(structure, txn, rootKey);
         }
     }
 

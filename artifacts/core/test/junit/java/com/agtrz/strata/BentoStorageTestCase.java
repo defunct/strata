@@ -64,11 +64,6 @@ extends TestCase
 
             return ((Pair) object).getValue().equals(pair.getValue());
         }
-
-        public int hashCode()
-        {
-            return super.hashCode();
-        }
     }
 
     public final static class PairQuery
@@ -111,17 +106,9 @@ extends TestCase
                 return ((Pair) object).getKey();
             }
         };
-        BentoStorage.ObjectLoader getInt = new BentoStorage.ObjectLoader()
-        {
-            public Object load(Object txn, Object key)
-            {
-                Bento.Mutator mutator = (Bento.Mutator) txn;
-                Bento.Address address = (Bento.Address) key;
-                return new Integer(mutator.load(address).toByteBuffer().getInt());
-            }
-        };
+
         BentoStorage.Creator newBentoStorage = new BentoStorage.Creator();
-        newBentoStorage.setBlockLoader(getInt);
+
         newBentoStorage.setAddressConverter(getAddress);
 
         Strata.Creator newStrata = new Strata.Creator();
@@ -146,7 +133,14 @@ extends TestCase
             System.out.println(((Pair) found.next()).getValue());
         }
 
+        query.write();
+
         mutator.getJournal().commit();
+        bento.close();
+
+        Bento.Opener opener = new Bento.Opener();
+        bento = opener.open(file);
+        
         bento.close();
     }
 

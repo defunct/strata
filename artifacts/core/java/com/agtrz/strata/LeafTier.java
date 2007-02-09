@@ -39,7 +39,7 @@ implements Tier
         return getSize() == structure.getSize();
     }
 
-    public Split split(Object txn, Strata.Criteria criteria)
+    public Split split(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty)
     {
         if (!isFull())
         {
@@ -82,7 +82,7 @@ implements Tier
                     right.add(remove(0));
                 }
 
-                link(txn, this, right);
+                link(txn, this, right, setOfDirty);
 
                 split = new Split(criteria.getObject(), right);
             }
@@ -95,7 +95,7 @@ implements Tier
                 }
 
                 LeafTier right = storage.newLeafTier(structure, txn);
-                link(txn, last, right);
+                link(txn, last, right, setOfDirty);
 
                 split = new Split(repeated, right);
             }
@@ -109,7 +109,7 @@ implements Tier
                 right.add(remove(partition));
             }
 
-            link(txn, this, right);
+            link(txn, this, right, setOfDirty);
 
             split = new Split(get(getSize() - 1), right);
         }
@@ -117,25 +117,25 @@ implements Tier
         return split;
     }
 
-    public void append(Object txn, Strata.Criteria criteria)
+    public void append(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty)
     {
         if (getSize() == structure.getSize())
         {
-            ensureNextLeafTier(txn, criteria);
-            getNext(txn).append(txn, criteria);
+            ensureNextLeafTier(txn, criteria, setOfDirty);
+            getNext(txn).append(txn, criteria, setOfDirty);
         }
         else
         {
             add(criteria.getObject());
+            setOfDirty.add(this);
         }
     }
 
-    public void insert(Object txn, Strata.Criteria criteria)
+    public void insert(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty)
     {
         if (getSize() == structure.getSize())
         {
-            ensureNextLeafTier(txn, criteria);
-            getNext(txn).append(txn, criteria);
+            getNext(txn).append(txn, criteria, setOfDirty);
         }
         else
         {
@@ -155,6 +155,8 @@ implements Tier
             {
                 add(criteria.getObject());
             }
+
+            setOfDirty.add(this);
         }
     }
 
@@ -222,7 +224,7 @@ implements Tier
         return listOfRemoved;
     }
 
-    public void consume(Object txn, Tier left)
+    public void consume(Object txn, Tier left, Strata.TierSet setOfDirty)
     {
         LeafTier leaf = (LeafTier) left;
 
@@ -236,6 +238,15 @@ implements Tier
         {
             shift(leaf.remove(leaf.getSize() - 1));
         }
+
+        setOfDirty.add(this);
+
+        structure.getStorage().free(structure, txn, leaf);
+    }
+
+    public void write(Strata.Structure structure, Object txn)
+    {
+        structure.getStorage().write(structure, txn, this);
     }
 
     public void copacetic(Object txn, Strata.Copacetic copacetic)
@@ -276,24 +287,28 @@ implements Tier
         return structure.getStorage().isKeyNull(last.getNextLeafKey()) || structure.getCriterion().newCriteria(last.getNext(txn).get(0)).partialMatch(object) != 0;
     }
 
-    private void ensureNextLeafTier(Object txn, Strata.Criteria criteria)
+    private void ensureNextLeafTier(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty)
     {
         Storage storage = structure.getStorage();
         if (storage.isKeyNull(getNextLeafKey()) || criteria.partialMatch(getNext(txn).get(0)) != 0)
         {
             LeafTier nextLeaf = storage.newLeafTier(structure, txn);
-            link(txn, this, nextLeaf);
+            link(txn, this, nextLeaf, setOfDirty);
         }
     }
 
-    private void link(Object txn, LeafTier leaf, LeafTier nextLeaf)
+    private void link(Object txn, LeafTier leaf, LeafTier nextLeaf, Strata.TierSet setOfDirty)
     {
+        setOfDirty.add(leaf);
+        setOfDirty.add(nextLeaf);
         Object nextLeafKey = leaf.getNextLeafKey();
         leaf.setNextLeafKey(nextLeaf.getKey());
         nextLeaf.setNextLeafKey(nextLeafKey);
         if (!structure.getStorage().isKeyNull(nextLeafKey))
         {
-            nextLeaf.getNext(txn).setPreviousLeafKey(nextLeaf.getKey());
+            LeafTier next = nextLeaf.getNext(txn);
+            setOfDirty.add(next);
+            next.setPreviousLeafKey(nextLeaf.getKey());
         }
         nextLeaf.setPreviousLeafKey(leaf.getKey());
     }

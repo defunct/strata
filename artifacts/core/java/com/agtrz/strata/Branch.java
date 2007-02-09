@@ -45,7 +45,7 @@ public class Branch
 
     public boolean isTerminal()
     {
-        return TERMINAL == object;
+        return object == TERMINAL;
     }
 
     public String toString()

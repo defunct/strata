@@ -1,7 +1,9 @@
 /* Copyright Alan Gutierrez 2006 */
 package com.agtrz.strata;
 
-public interface Storage
+import java.io.Serializable;
+
+public interface Storage extends Serializable
 {
     public TierLoader getInnerTierLoader();
 
@@ -14,6 +16,10 @@ public interface Storage
     public void write(Strata.Structure structure, Object txn, InnerTier inner);
 
     public void write(Strata.Structure structure, Object txn, LeafTier leaf);
+    
+    public void free(Strata.Structure structure, Object txn, InnerTier inner);
+    
+    public void free(Strata.Structure structure, Object txn, LeafTier leaf);
 
     public Object getNullKey();
 

@@ -21,7 +21,7 @@ public interface Tier
      */
     public boolean isFull();
 
-    public Split split(Object txn, Strata.Criteria criteria);
+    public Split split(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty);
 
     public void copacetic(Object txn, Strata.Copacetic copacetic);
 
@@ -42,7 +42,10 @@ public interface Tier
      * @param left
      *            The tier to the left of this tier.
      */
-    public void consume(Object txn, Tier left);
+    public void consume(Object txn, Tier left, Strata.TierSet setOfDirty);
+    
+        
+    public void write(Strata.Structure structure, Object txn);
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

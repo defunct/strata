@@ -35,12 +35,14 @@ public class StrataStressor
 
     private interface Operation
     {
-        public void operate(Strata.Query  query);
+        public void operate(Strata.Query query);
     }
 
     public final static class Add
     implements Operation, Serializable
     {
+        private static final long serialVersionUID = 20070208L;
+
         private final Compound compound;
 
         public Add(Compound compound)
@@ -57,6 +59,8 @@ public class StrataStressor
     public final static class Remove
     implements Operation, Serializable
     {
+        private static final long serialVersionUID = 20070208L;
+
         private final Compound compound;
 
         public Remove(Compound compound)
@@ -73,6 +77,8 @@ public class StrataStressor
     public final static class Compound
     implements Serializable
     {
+        private static final long serialVersionUID = 20070208L;
+
         private final String one;
 
         private final String two;
@@ -142,7 +148,7 @@ public class StrataStressor
             }
             else
             {
-                double probablity = ((double) strata.getSize())/ max;
+                double probablity = ((double) strata.getSize()) / max;
                 int add = random.nextInt((int) (probablity * max));
                 if (add < (max / 2))
                 {
@@ -234,7 +240,7 @@ public class StrataStressor
         else
         {
             file = (File) commandLine.getArgumentValue("output");
-            
+
             if (file == null)
             {
                 System.exit(1);
