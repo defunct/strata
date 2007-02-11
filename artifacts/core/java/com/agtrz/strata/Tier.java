@@ -46,6 +46,8 @@ public interface Tier
     
         
     public void write(Strata.Structure structure, Object txn);
+    
+    public void revert(Strata.Structure structure, Object txn);
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

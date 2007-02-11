@@ -11,6 +11,7 @@ import com.agtrz.strata.Branch;
 import com.agtrz.strata.InnerTier;
 import com.agtrz.strata.Strata;
 import com.agtrz.strata.Tier;
+import com.agtrz.strata.Strata.Structure;
 import com.agtrz.swag.io.ByteReader;
 import com.agtrz.swag.io.SizeOf;
 
@@ -58,6 +59,13 @@ extends InnerTier
         this.address = address;
         this.childType = typeOfChildren;
         this.listOfBranches = listOfBranches;
+    }
+    
+    public void revert(Structure structure, Object txn)
+    {
+        BentoStorage storage = (BentoStorage) structure.getStorage()
+        ;
+        storage.revert(address);
     }
 
     public Object getKey()

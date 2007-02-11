@@ -15,8 +15,6 @@ import com.agtrz.strata.TierLoader;
 import com.agtrz.strata.Strata.Structure;
 import com.agtrz.swag.io.ByteReader;
 import com.agtrz.swag.io.ByteWriter;
-import com.agtrz.swag.util.Converter;
-import com.agtrz.swag.util.NullConverter;
 import com.agtrz.swag.util.WeakMapValueReference;
 
 public class BentoStorage
@@ -28,6 +26,10 @@ implements Storage, Serializable
     private final ByteReader reader;
 
     private final ByteWriter writer;
+    
+    private final TierLoader innerLoader = new InnerTierLoader();
+    
+    private final TierLoader leafLoader = new LeafTierLoader();
 
     public BentoStorage()
     {
@@ -35,7 +37,7 @@ implements Storage, Serializable
         this.writer = new Bento.AddressWriter();
     }
 
-    public BentoStorage(Converter mutatorConverter, Converter addressConverter, ByteReader reader, ByteWriter writer)
+    public BentoStorage(ByteReader reader, ByteWriter writer)
     {
         this.reader = reader;
         this.writer = writer;
@@ -43,63 +45,12 @@ implements Storage, Serializable
 
     public TierLoader getInnerTierLoader()
     {
-        return new TierLoader()
-        {
-            public Tier load(Strata.Structure structure, Object txn, Object key)
-            {
-                collect();
-
-                Bento.Address address = (Bento.Address) key;
-
-                if (address.getPosition() == 0L)
-                {
-                    return null;
-                }
-
-                Object box = address.toKey();
-                InnerTier inner = (InnerTier) getCached(box);
-
-                if (inner == null)
-                {
-                    Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
-                    inner = new BentoInnerTier(structure, mutator, address, reader);
-                    mapOfTiers.put(box, new WeakMapValueReference(box, inner, queue));
-                }
-
-                return inner;
-            }
-        };
+        return innerLoader;
     }
 
     public TierLoader getLeafTierLoader()
     {
-        return new TierLoader()
-        {
-            public Tier load(Strata.Structure structure, Object txn, Object key)
-            {
-                collect();
-
-                Bento.Address address = (Bento.Address) key;
-
-                if (address.getPosition() == 0L)
-                {
-                    return null;
-                }
-
-                Object box = address.toKey();
-                LeafTier leaf = (LeafTier) getCached(box);
-
-                if (leaf == null)
-                {
-                    Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
-                    leaf = new BentoLeafTier(structure, mutator, address, reader);
-                    mapOfTiers.put(box, new WeakMapValueReference(box, leaf, queue));
-                }
-
-                return leaf;
-            }
-        };
-
+        return leafLoader;
     }
 
     public InnerTier newInnerTier(Strata.Structure structure, Object txn, short typeOfChildren)
@@ -188,6 +139,11 @@ implements Storage, Serializable
         block.write();
     }
 
+    public void revert(Bento.Address address)
+    {
+        mapOfTiers.remove(address.toKey());
+    }
+
     public void free(Structure structure, Object txn, InnerTier inner)
     {
         Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
@@ -230,26 +186,72 @@ implements Storage, Serializable
         }
         return null;
     }
+  private final class InnerTierLoader
+    implements TierLoader, Serializable
+    {
+        private static final long serialVersionUID = 20070208L;
 
+        public Tier load(Strata.Structure structure, Object txn, Object key)
+        {
+            collect();
+
+            Bento.Address address = (Bento.Address) key;
+
+            if (address.getPosition() == 0L)
+            {
+                return null;
+            }
+
+            Object box = address.toKey();
+            InnerTier inner = (InnerTier) getCached(box);
+
+            if (inner == null)
+            {
+                Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
+                inner = new BentoInnerTier(structure, mutator, address, reader);
+                mapOfTiers.put(box, new WeakMapValueReference(box, inner, queue));
+            }
+
+            return inner;
+        }
+    };
+
+    private final class LeafTierLoader
+    implements TierLoader, Serializable
+    {
+        private static final long serialVersionUID = 20070208L;
+
+        public Tier load(Strata.Structure structure, Object txn, Object key)
+        {
+            collect();
+
+            Bento.Address address = (Bento.Address) key;
+
+            if (address.getPosition() == 0L)
+            {
+                return null;
+            }
+
+            Object box = address.toKey();
+            LeafTier leaf = (LeafTier) getCached(box);
+
+            if (leaf == null)
+            {
+                Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
+                leaf = new BentoLeafTier(structure, mutator, address, reader);
+                mapOfTiers.put(box, new WeakMapValueReference(box, leaf, queue));
+            }
+
+            return leaf;
+        }
+    };
+
+  
     public final static class Creator
     {
-        private Converter mutatorConverter = NullConverter.INSTANCE;
-
-        private Converter addressConverter = NullConverter.INSTANCE;
-
         private ByteReader reader = new Bento.AddressReader();
 
         private ByteWriter writer = new Bento.AddressWriter();
-
-        public void setMutatorConverter(Converter mutatorConverter)
-        {
-            this.mutatorConverter = mutatorConverter;
-        }
-
-        public void setAddressConverter(Converter addressConverter)
-        {
-            this.addressConverter = addressConverter;
-        }
 
         public void setReader(ByteReader reader)
         {
@@ -263,10 +265,10 @@ implements Storage, Serializable
 
         public BentoStorage create()
         {
-            return new BentoStorage(mutatorConverter, addressConverter, reader, writer);
+            return new BentoStorage(reader, writer);
         }
     }
-    
+
     public static MutatorServer txn(Bento.Mutator mutator)
     {
         return new BasicMutatorServer(mutator);

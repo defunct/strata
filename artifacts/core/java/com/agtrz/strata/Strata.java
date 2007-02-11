@@ -176,8 +176,6 @@ implements Serializable
         public int partialMatch(Object criteria, Object stored);
 
         public boolean exactMatch(Object criteria, Object stored);
-
-        public Object getObject(Object criteria);
     }
 
     public static class ComplexCriteria
@@ -247,11 +245,6 @@ implements Serializable
         {
             return criteria.equals(stored);
         }
-
-        public Object getObject(Object criteria)
-        {
-            return criteria;
-        }
     };
 
     public interface FieldExtractor
@@ -282,11 +275,6 @@ implements Serializable
         public boolean exactMatch(Object criteria, Object stored)
         {
             return exactMatch(soughtFields.getFields(criteria), storedFields.getFields(stored));
-        }
-
-        public Object getObject(Object criteria)
-        {
-            return criteria;
         }
 
         protected int partialMatch(Object[] left, Object[] right)
@@ -618,6 +606,20 @@ implements Serializable
                 {
                     Tier tier = (Tier) tiers.next();
                     tier.write(structure, txn);
+                }
+                mapOfDirtyTiers.clear();
+            }
+        }
+
+        public void revert()
+        {
+            if (mapOfDirtyTiers.size() != 0)
+            {
+                Iterator tiers = mapOfDirtyTiers.values().iterator();
+                while (tiers.hasNext())
+                {
+                    Tier tier = (Tier) tiers.next();
+                    tier.revert(structure, txn);
                 }
                 mapOfDirtyTiers.clear();
             }

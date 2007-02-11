@@ -9,8 +9,8 @@ import junit.framework.TestCase;
 
 import com.agtrz.bento.Bento;
 import com.agtrz.strata.Strata.Criteria;
+import com.agtrz.strata.bento.BentoStorage;
 import com.agtrz.swag.io.SizeOf;
-import com.agtrz.swag.util.Converter;
 import com.agtrz.swag.util.Pair;
 
 public class BentoStorageTestCase
@@ -33,7 +33,7 @@ extends TestCase
     private final static class PairCriteriaServer
     implements Strata.CriteriaServer
     {
-        public Criteria newCriteria(Object object)
+        public Criteria newCriteria(Object txn, Object object)
         {
             return new PairCriteria((Pair) object);
         }
@@ -99,17 +99,7 @@ extends TestCase
         Bento bento = creator.create(file);
         Bento.Mutator mutator = bento.mutate();
 
-        Converter getAddress = new Converter()
-        {
-            public Object convert(Object object)
-            {
-                return ((Pair) object).getKey();
-            }
-        };
-
         BentoStorage.Creator newBentoStorage = new BentoStorage.Creator();
-
-        newBentoStorage.setAddressConverter(getAddress);
 
         Strata.Creator newStrata = new Strata.Creator();
 
@@ -140,7 +130,7 @@ extends TestCase
 
         Bento.Opener opener = new Bento.Opener();
         bento = opener.open(file);
-        
+
         bento.close();
     }
 

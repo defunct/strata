@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 
+import com.agtrz.strata.Strata.Structure;
 import com.agtrz.swag.util.IdentityObject;
 
 public class ArrayListInnerTier
@@ -64,6 +65,10 @@ extends InnerTier
     public ListIterator listIterator()
     {
         return listOfBranches.listIterator();
+    }
+
+    public void revert(Structure structure, Object txn)
+    {
     }
 
     public String toString()

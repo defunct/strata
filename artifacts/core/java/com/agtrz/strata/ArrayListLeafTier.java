@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 
+import com.agtrz.strata.Strata.Structure;
 import com.agtrz.swag.util.IdentityObject;
 
 public class ArrayListLeafTier
@@ -21,7 +22,7 @@ extends LeafTier
         super(structure);
         this.listOfObjects = new ArrayList(structure.getSize());
     }
-    
+
     public Object getKey()
     {
         return new IdentityObject(this);
@@ -81,11 +82,16 @@ extends LeafTier
     {
         this.nextLeafKey = nextLeafKey;
     }
-    
+
+    public void revert(Structure structure, Object txn)
+    {
+    }
+
     public String toString()
     {
         return listOfObjects.toString();
     }
+
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */
