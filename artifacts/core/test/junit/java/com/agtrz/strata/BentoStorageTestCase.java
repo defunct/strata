@@ -35,34 +35,30 @@ extends TestCase
     {
         public Criteria newCriteria(Object txn, Object object)
         {
-            return new PairCriteria((Pair) object);
+            return newCriteria(new PairComparison(), txn, object);
+        }
+
+        public Criteria newCriteria(Strata.Comparison comparison, Object txn, Object object)
+        {
+            return new Strata.ComplexCriteria(new Strata.BasicResolver(), comparison, txn, object);
         }
     }
 
-    private final static class PairCriteria
-    implements Strata.Criteria
+    private final static class PairComparison
+    implements Strata.Comparison
     {
-        private final Pair pair;
-
-        public PairCriteria(Pair pair)
+        public int partialMatch(Object criteria, Object stored)
         {
-            this.pair = pair;
+            Comparable left = (Comparable) ((Pair) criteria).getValue();
+            Comparable right = (Comparable) ((Pair) stored).getValue();
+            return left.compareTo(right);
         }
 
-        public int partialMatch(Object object)
+        public boolean exactMatch(Object criteria, Object stored)
         {
-            return ((Comparable) pair.getValue()).compareTo((Integer) object);
-        }
-
-        public Object getObject()
-        {
-            return pair;
-        }
-
-        public boolean exactMatch(Object object)
-        {
-
-            return ((Pair) object).getValue().equals(pair.getValue());
+            Comparable left = (Comparable) ((Pair) criteria).getValue();
+            Comparable right = (Comparable) ((Pair) stored).getValue();
+            return left.equals(right);
         }
     }
 

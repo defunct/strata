@@ -169,12 +169,17 @@ implements Serializable
     public interface CriteriaServer
     {
         public Criteria newCriteria(Object txn, Object object);
+
+        public Criteria newCriteria(Comparison comparison, Object txn, Object object);
     }
 
     public interface Comparison
     {
         public int partialMatch(Object criteria, Object stored);
 
+        // FIXME This is not actually used in a query, only in insert and delete.        
+        // FIXME getObject is only used in insert.
+        // FIXME Does insert use exactMatch?
         public boolean exactMatch(Object criteria, Object stored);
     }
 
@@ -214,7 +219,7 @@ implements Serializable
 
         public Object getObject()
         {
-            return object;
+            return object; // FIXME Broken. Why is it not used?
         }
     }
 
@@ -322,8 +327,14 @@ implements Serializable
         {
             return new ComplexCriteria(resolver, comparison, txn, object);
         }
+
+        public Criteria newCriteria(Comparison comparison, Object txn, Object object)
+        {
+            return new ComplexCriteria(resolver, comparison, txn, object);
+        }
     }
 
+    // FIXME When is this used and how? Becomming moot? New find abstracts, hides enough.
     public static class BasicCriteria
     implements Criteria, Serializable
     {
@@ -360,6 +371,11 @@ implements Serializable
         public Criteria newCriteria(Object txn, Object object)
         {
             return new BasicCriteria((Comparable) object);
+        }
+
+        public Criteria newCriteria(Comparison comparison, Object txn, Object object)
+        {
+            return new ComplexCriteria(new Strata.BasicResolver(), comparison, null, object);
         }
     }
 
@@ -500,6 +516,11 @@ implements Serializable
         public Cursor find(Object object)
         {
             return find(structure.getCriterion().newCriteria(txn, object));
+        }
+
+        public Cursor find(Comparison comparison, Object object)
+        {
+            return find(structure.getCriterion().newCriteria(comparison, txn, object));
         }
 
         public Cursor find(Strata.Criteria criteria)
