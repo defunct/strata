@@ -15,7 +15,7 @@ import com.agtrz.strata.TierLoader;
 import com.agtrz.strata.Strata.Structure;
 import com.agtrz.swag.io.ByteReader;
 import com.agtrz.swag.io.ByteWriter;
-import com.agtrz.swag.util.WeakMapValueReference;
+import com.agtrz.swag.util.WeakMapValue;
 
 public class BentoStorage
 extends BentoStorageBase
@@ -58,7 +58,7 @@ implements Storage, Serializable
         Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
         InnerTier inner = new BentoInnerTier(structure, mutator, typeOfChildren, writer.getSize(null));
         Object box = ((Bento.Address) inner.getKey()).toKey();
-        mapOfTiers.put(box, new WeakMapValueReference(box, inner, queue));
+        mapOfTiers.put(box, new WeakMapValue(box, inner, queue));
         return inner;
     }
 
@@ -67,7 +67,7 @@ implements Storage, Serializable
         Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
         LeafTier leaf = new BentoLeafTier(structure, mutator, writer.getSize(null));
         Object box = ((Bento.Address) leaf.getKey()).toKey();
-        mapOfTiers.put(box, new WeakMapValueReference(box, leaf, queue));
+        mapOfTiers.put(box, new WeakMapValue(box, leaf, queue));
         return leaf;
     }
 
@@ -170,8 +170,8 @@ implements Storage, Serializable
 
     private void collect()
     {
-        WeakMapValueReference reference = null;
-        while ((reference = (WeakMapValueReference) queue.poll()) != null)
+        WeakMapValue reference = null;
+        while ((reference = (WeakMapValue) queue.poll()) != null)
         {
             mapOfTiers.remove(reference.getKey());
         }
@@ -179,7 +179,7 @@ implements Storage, Serializable
 
     private Object getCached(Object key)
     {
-        WeakMapValueReference reference = (WeakMapValueReference) mapOfTiers.get(key);
+        WeakMapValue reference = (WeakMapValue) mapOfTiers.get(key);
         if (reference != null)
         {
             return reference.get();
@@ -209,7 +209,7 @@ implements Storage, Serializable
             {
                 Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
                 inner = new BentoInnerTier(structure, mutator, address, reader);
-                mapOfTiers.put(box, new WeakMapValueReference(box, inner, queue));
+                mapOfTiers.put(box, new WeakMapValue(box, inner, queue));
             }
 
             return inner;
@@ -239,7 +239,7 @@ implements Storage, Serializable
             {
                 Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
                 leaf = new BentoLeafTier(structure, mutator, address, reader);
-                mapOfTiers.put(box, new WeakMapValueReference(box, leaf, queue));
+                mapOfTiers.put(box, new WeakMapValue(box, leaf, queue));
             }
 
             return leaf;
