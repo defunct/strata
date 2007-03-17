@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry excluding="**/.svn|**/.svn/**" output="artifacts/core/target/classes" kind="src" path="artifacts/core/java"/>
-	<classpathentry excluding="**/.svn|**/.svn/**" output="artifacts/core/target/classes/" kind="src" path="artifacts/core/resource"/>
-	<classpathentry excluding="**/.svn|**/.svn/**" output="artifacts/core/test/junit/target/classes" kind="src" path="artifacts/core/test/junit/resource"/>
-	<classpathentry excluding="**/.svn|**/.svn/**" output="artifacts/core/test/junit/target/classes" kind="src" path="artifacts/core/test/junit/java"/>
+	<classpathentry excluding="**/.svn|**/.svn/**" kind="src" output="artifacts/core/target/classes" path="artifacts/core/java"/>
+	<classpathentry excluding="**/.svn|**/.svn/**" kind="src" output="artifacts/core/target/classes/" path="artifacts/core/resource"/>
+	<classpathentry excluding="**/.svn|**/.svn/**" kind="src" output="artifacts/core/test/junit/target/classes" path="artifacts/core/test/junit/resource"/>
+	<classpathentry excluding="**/.svn|**/.svn/**" kind="src" output="artifacts/core/test/junit/target/classes" path="artifacts/core/test/junit/java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="src" path="/swag"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/sheaf"/>
 	<classpathentry kind="lib" path="/mix/lib/junit/junit.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/bento"/>
 	<classpathentry kind="lib" path="/mix/lib/concurrent/concurrent.jar"/>
