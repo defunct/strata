@@ -467,12 +467,12 @@ implements Serializable
                         listOfFullTiers.add(tier);
 
                         Iterator ancestors = listOfFullTiers.iterator();
-                        InnerTier reciever = (InnerTier) ancestors.next();
+                        parent = (InnerTier) ancestors.next();
                         tier = (Tier) ancestors.next();
                         do
                         {
-                            parent = reciever;
-                            reciever = (InnerTier) tier;
+                            grandParent = parent;
+                            parent = (InnerTier) tier;
                             Tier full = (Tier) ancestors.next();
                             Split split = full.split(txn, criteria, setOfDirty);
                             if (split == null)
@@ -481,22 +481,22 @@ implements Serializable
                             }
                             else
                             {
-                                if (reciever == null)
+                                if (parent == null)
                                 {
-                                    reciever = (InnerTier) full;
-                                    reciever.splitRootTier(txn, split, setOfDirty);
+                                    parent = (InnerTier) full;
+                                    parent.splitRootTier(txn, split, setOfDirty);
                                 }
                                 else
                                 {
-                                    reciever.replace(full, split, setOfDirty);
-                                    if (parent != null)
+                                    parent.replace(full, split, setOfDirty);
+                                    if (grandParent != null)
                                     {
-                                        parent.find(criteria).setSize(reciever.getSize());
-                                        setOfDirty.add(parent);
+                                        grandParent.find(criteria).setSize(parent.getSize());
+                                        setOfDirty.add(grandParent);
                                     }
                                 }
-                                branch = reciever.find(criteria);
-                                tier = reciever.getTier(txn, branch.getLeftKey());
+                                branch = parent.find(criteria);
+                                tier = parent.getTier(txn, branch.getLeftKey());
                             }
                         }
                         while (ancestors.hasNext());
@@ -504,7 +504,7 @@ implements Serializable
 
                     LeafTier leaf = (LeafTier) tier;
                     branch.setSize(branch.getSize() + 1);
-//                    setOfDirty.add(parent);
+                    setOfDirty.add(parent);
                     leaf.insert(txn, criteria, setOfDirty);
                     break;
                 }
