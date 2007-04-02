@@ -14,16 +14,14 @@ public interface Tier
 
     public Object getKey();
 
+    public Object getStorageData();
+
     /**
      * Return true if this tier is full.
      * 
      * @return True if the tier is full.
      */
     public boolean isFull();
-
-    public Split split(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty);
-
-    public void copacetic(Object txn, Strata.Copacetic copacetic);
 
     /**
      * Return the number of objects or objects used to pivot in this tier. For
@@ -33,6 +31,8 @@ public interface Tier
      * @return The size of the tier.
      */
     public int getSize();
+
+    public Split split(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty);
 
     /**
      * Merge the contents of a tier to the left of this tier into this tier.
@@ -44,10 +44,11 @@ public interface Tier
      */
     public void consume(Object txn, Tier left, Strata.TierSet setOfDirty);
     
-        
-    public void write(Strata.Structure structure, Object txn);
+    public void revert(Object txn);
     
-    public void revert(Strata.Structure structure, Object txn);
+    public void write(Object txn);
+
+    public void copacetic(Object txn, Strata.Copacetic copacetic);
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

@@ -5,13 +5,13 @@ import java.io.Serializable;
 
 public interface Storage extends Serializable
 {
-    public TierLoader getInnerTierLoader();
-
-    public TierLoader getLeafTierLoader();
-
     public InnerTier newInnerTier(Strata.Structure structure, Object txn, short typeOfChildren);
 
     public LeafTier newLeafTier(Strata.Structure structure, Object txn);
+
+    public LeafTier getLeafTier(Strata.Structure structure, Object txn, Object key);
+
+    public InnerTier getInnerTier(Strata.Structure structure, Object txn, Object key);
 
     public void write(Strata.Structure structure, Object txn, InnerTier inner);
 
@@ -20,6 +20,12 @@ public interface Storage extends Serializable
     public void free(Strata.Structure structure, Object txn, InnerTier inner);
     
     public void free(Strata.Structure structure, Object txn, LeafTier leaf);
+
+    public void revert(Strata.Structure structure, Object txn, InnerTier inner);
+    
+    public void revert(Strata.Structure structure, Object txn, LeafTier leaf);
+    
+    public Object getKey(Tier leaf);
 
     public Object getNullKey();
 

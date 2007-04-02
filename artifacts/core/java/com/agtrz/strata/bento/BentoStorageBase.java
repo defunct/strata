@@ -5,6 +5,12 @@ import java.lang.ref.ReferenceQueue;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * FIXME Explain that you need this class so that it's properties are created
+ * for the sake of it's decendents during serialization.
+ * 
+ * @author Alan Gutierrez
+ */
 class BentoStorageBase
 {
     protected final transient ReferenceQueue queue = new ReferenceQueue();

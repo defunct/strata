@@ -35,10 +35,10 @@ implements Serializable
         Structure structure = new Structure(storage, criterion, size);
         InnerTier root = structure.getStorage().newInnerTier(structure, txn, Tier.LEAF);
         LeafTier leaf = structure.getStorage().newLeafTier(structure, txn);
-        leaf.write(structure, txn);
+        leaf.write(txn);
 
         root.add(new Branch(leaf.getKey(), Branch.TERMINAL, 0));
-        root.write(structure, txn);
+        root.write(txn);
 
         this.structure = structure;
         this.rootKey = root.getKey();
@@ -177,7 +177,8 @@ implements Serializable
     {
         public int partialMatch(Object criteria, Object stored);
 
-        // FIXME This is not actually used in a query, only in insert and delete.        
+        // FIXME This is not actually used in a query, only in insert and
+        // delete.
         // FIXME getObject is only used in insert.
         // FIXME Does insert use exactMatch?
         public boolean exactMatch(Object criteria, Object stored);
@@ -334,7 +335,8 @@ implements Serializable
         }
     }
 
-    // FIXME When is this used and how? Becomming moot? New find abstracts, hides enough.
+    // FIXME When is this used and how? Becomming moot? New find abstracts,
+    // hides enough.
     public static class BasicCriteria
     implements Criteria, Serializable
     {
@@ -443,7 +445,7 @@ implements Serializable
                 grandParent = parent;
                 parent = inner;
                 Branch branch = parent.find(criteria);
-                Tier tier = parent.load(txn, branch.getLeftKey());
+                Tier tier = parent.getTier(txn, branch.getLeftKey());
 
                 if (tier.isFull())
                 {
@@ -494,7 +496,7 @@ implements Serializable
                                     }
                                 }
                                 branch = reciever.find(criteria);
-                                tier = reciever.load(txn, branch.getLeftKey());
+                                tier = reciever.getTier(txn, branch.getLeftKey());
                             }
                         }
                         while (ancestors.hasNext());
@@ -502,7 +504,7 @@ implements Serializable
 
                     LeafTier leaf = (LeafTier) tier;
                     branch.setSize(branch.getSize() + 1);
-                    setOfDirty.add(parent);
+//                    setOfDirty.add(parent);
                     leaf.insert(txn, criteria, setOfDirty);
                     break;
                 }
@@ -531,10 +533,10 @@ implements Serializable
                 Branch branch = tier.find(criteria);
                 if (tier.getChildType() == Tier.LEAF)
                 {
-                    LeafTier leaf = (LeafTier) tier.load(txn, branch.getLeftKey());
+                    LeafTier leaf = (LeafTier) tier.getTier(txn, branch.getLeftKey());
                     return leaf.find(txn, criteria);
                 }
-                tier = (InnerTier) tier.load(txn, branch.getLeftKey());
+                tier = (InnerTier) tier.getTier(txn, branch.getLeftKey());
             }
         }
 
@@ -557,7 +559,7 @@ implements Serializable
                 }
                 if (tier.getChildType() == Tier.LEAF)
                 {
-                    LeafTier leaf = (LeafTier) tier.load(txn, branch.getLeftKey());
+                    LeafTier leaf = (LeafTier) tier.getTier(txn, branch.getLeftKey());
                     Collection collection = leaf.remove(txn, criteria);
                     branch.setSize(leaf.getSize());
                     setOfDirty.add(parent);
@@ -598,7 +600,7 @@ implements Serializable
                     size -= collection.size();
                     return collection;
                 }
-                tier = (InnerTier) parent.load(txn, branch.getLeftKey());
+                tier = (InnerTier) parent.getTier(txn, branch.getLeftKey());
             }
         }
 
@@ -613,9 +615,9 @@ implements Serializable
                 {
                     break;
                 }
-                tier = (InnerTier) tier.load(txn, branch.getLeftKey());
+                tier = (InnerTier) tier.getTier(txn, branch.getLeftKey());
             }
-            return new ForwardCursor(structure, txn, (LeafTier) tier.load(txn, branch.getLeftKey()), 0);
+            return new ForwardCursor(structure, txn, (LeafTier) tier.getTier(txn, branch.getLeftKey()), 0);
         }
 
         public void write()
@@ -626,7 +628,7 @@ implements Serializable
                 while (tiers.hasNext())
                 {
                     Tier tier = (Tier) tiers.next();
-                    tier.write(structure, txn);
+                    tier.write(txn);
                 }
                 mapOfDirtyTiers.clear();
             }
@@ -640,7 +642,7 @@ implements Serializable
                 while (tiers.hasNext())
                 {
                     Tier tier = (Tier) tiers.next();
-                    tier.revert(structure, txn);
+                    tier.revert(txn);
                 }
                 mapOfDirtyTiers.clear();
             }
@@ -680,7 +682,7 @@ implements Serializable
 
         private InnerTier getRoot()
         {
-            return (InnerTier) structure.getStorage().getInnerTierLoader().load(structure, txn, rootKey);
+            return structure.getStorage().getInnerTier(structure, txn, rootKey);
         }
     }
 
@@ -749,7 +751,7 @@ implements Serializable
                 {
                     throw new IllegalStateException();
                 }
-                leaf = (LeafTier) structure.getStorage().getLeafTierLoader().load(structure, txn, leaf.getNextLeafKey());
+                leaf = structure.getStorage().getLeafTier(structure, txn, leaf.getNextLeafKey());
                 index = 0;
             }
             return leaf.get(index++);
@@ -814,7 +816,7 @@ implements Serializable
                 {
                     throw new IllegalStateException();
                 }
-                leaf = (LeafTier) structure.getStorage().getLeafTierLoader().load(structure, txn, leaf.getPreviousLeafKey());
+                leaf = structure.getStorage().getLeafTier(structure, txn, leaf.getPreviousLeafKey());
                 index = leaf.getSize();
             }
             return leaf.get(--index);

@@ -7,33 +7,30 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
-public abstract class LeafTier
+public class LeafTier
 implements Tier
 {
+    private Object addressOfNext;
+
+    private Object addressOfPrevious;
+
+    private final Object storageData;
+
+    private final List listOfObjects;
+
     protected final Strata.Structure structure;
 
-    public LeafTier(Strata.Structure structure)
+    public LeafTier(Strata.Structure structure, Object storageData)
     {
         this.structure = structure;
+        this.storageData = storageData;
+        this.listOfObjects = new ArrayList(structure.getSize());
     }
 
-    public abstract Object get(int index);
-
-    public abstract Object remove(int index);
-
-    public abstract void add(Object object);
-
-    public abstract void shift(Object object);
-
-    public abstract ListIterator listIterator();
-
-    public abstract Object getPreviousLeafKey();
-
-    public abstract void setPreviousLeafKey(Object previousLeafKey);
-
-    public abstract Object getNextLeafKey();
-
-    public abstract void setNextLeafKey(Object nextLeafKey);
+    public Object getKey()
+    {
+        return structure.getStorage().getKey(this);
+    }
 
     public boolean isFull()
     {
@@ -136,6 +133,7 @@ implements Tier
     {
         if (getSize() == structure.getSize())
         {
+            ensureNextLeafTier(txn, criteria, setOfDirty);
             getNext(txn).append(txn, criteria, setOfDirty);
         }
         else
@@ -245,7 +243,12 @@ implements Tier
         structure.getStorage().free(structure, txn, leaf);
     }
 
-    public void write(Strata.Structure structure, Object txn)
+    public void revert(Object txn)
+    {
+        structure.getStorage().revert(structure, txn, this);
+    }
+
+    public void write(Object txn)
     {
         structure.getStorage().write(structure, txn, this);
     }
@@ -276,12 +279,12 @@ implements Tier
 
     private LeafTier getPrevious(Object txn)
     {
-        return (LeafTier) structure.getStorage().getLeafTierLoader().load(structure, txn, getPreviousLeafKey());
+        return (LeafTier) structure.getStorage().getLeafTier(structure, txn, getPreviousLeafKey());
     }
 
     private LeafTier getNext(Object txn)
     {
-        return (LeafTier) structure.getStorage().getLeafTierLoader().load(structure, txn, getNextLeafKey());
+        return (LeafTier) structure.getStorage().getLeafTier(structure, txn, getNextLeafKey());
     }
 
     private boolean endOfList(Object txn, Object object, LeafTier last)
@@ -314,6 +317,67 @@ implements Tier
         }
         nextLeaf.setPreviousLeafKey(leaf.getKey());
     }
+
+    public Object getStorageData()
+    {
+        return storageData;
+    }
+
+    public int getSize()
+    {
+        return listOfObjects.size();
+    }
+
+    public Object get(int index)
+    {
+        return listOfObjects.get(index);
+    }
+
+    public String toString()
+    {
+        return listOfObjects.toString();
+    }
+
+    public Object remove(int index)
+    {
+        return listOfObjects.remove(index);
+    }
+
+    public void add(Object object)
+    {
+        listOfObjects.add(object);
+    }
+
+    public void shift(Object object)
+    {
+        listOfObjects.add(0, object);
+    }
+
+    public ListIterator listIterator()
+    {
+        return listOfObjects.listIterator();
+    }
+
+    public Object getPreviousLeafKey()
+    {
+        return addressOfPrevious;
+    }
+
+    public void setPreviousLeafKey(Object previousLeafKey)
+    {
+        this.addressOfPrevious = previousLeafKey;
+    }
+
+    public Object getNextLeafKey()
+    {
+        return addressOfNext;
+    }
+
+    public void setNextLeafKey(Object nextLeafKey)
+    {
+        this.addressOfNext = nextLeafKey;
+    }
+
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

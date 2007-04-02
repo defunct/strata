@@ -1,32 +1,83 @@
 package com.agtrz.strata;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.ListIterator;
 
-public abstract class InnerTier
+public class InnerTier
 implements Tier
 {
     protected final Strata.Structure structure;
 
-    public InnerTier(Strata.Structure structure)
+    private final Object key;
+
+    private short childType;
+
+    private final List listOfBranches;
+
+    public InnerTier(Strata.Structure structure, Object key)
     {
         this.structure = structure;
+        this.key = key;
+        this.listOfBranches = new ArrayList(structure.getSize() + 1);
     }
 
-    public abstract short getChildType();
+    public Object getKey()
+    {
+        return structure.getStorage().getKey(this);
+    }
 
-    public abstract void setChildType(short childType);
+    public Object getStorageData()
+    {
+        return key;
+    }
 
-    public abstract void add(Branch branch);
+    public short getChildType()
+    {
+        return childType;
+    }
 
-    public abstract Branch remove(int index);
+    public int getSize()
+    {
+        return listOfBranches.size() - 1;
+    }
 
-    public abstract ListIterator listIterator();
+    public void setChildType(short childType)
+    {
+        this.childType = childType;
+    }
 
-    public abstract Branch get(int index);
+    public void add(Branch branch)
+    {
+        listOfBranches.add(branch);
+    }
 
-    public abstract void shift(Branch branch);
+    public void shift(Branch branch)
+    {
+        listOfBranches.add(0, branch);
+    }
+
+    public Branch remove(int index)
+    {
+        return (Branch) listOfBranches.remove(index);
+    }
+
+    public ListIterator listIterator()
+    {
+        return listOfBranches.listIterator();
+    }
+
+    public int getType()
+    {
+        return Tier.INNER;
+    }
+
+    public Branch get(int index)
+    {
+        return (Branch) listOfBranches.get(index);
+    }
 
     public Split split(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty)
     {
@@ -204,12 +255,12 @@ implements Tier
         structure.getStorage().free(structure, txn, inner);
     }
 
-    public Tier load(Object txn, Object keyOfTier)
+    public void revert(Object txn)
     {
-        return getLoader().load(structure, txn, keyOfTier);
+        structure.getStorage().revert(structure, txn, this);
     }
-    
-    public void write(Strata.Structure structure, Object txn)
+
+    public void write(Object txn)
     {
         structure.getStorage().write(structure, txn, this);
     }
@@ -234,7 +285,7 @@ implements Tier
                 throw new IllegalStateException();
             }
 
-            Tier left = load(txn, branch.getLeftKey());
+            Tier left = getTier(txn, branch.getLeftKey());
             left.copacetic(txn, copacetic);
 
             if (branch.getSize() < left.getSize())
@@ -273,7 +324,7 @@ implements Tier
         {
             InnerTier inner = (InnerTier) tier;
             childType = inner.getChildType();
-            tier = inner.load(txn, inner.get(0).getLeftKey());
+            tier = inner.getTier(txn, inner.get(0).getLeftKey());
         }
         LeafTier leaf = (LeafTier) tier;
         return leaf.get(0);
@@ -284,22 +335,29 @@ implements Tier
         return indexOfLeft >= 0 && indexOfRight <= getSize() && get(indexOfLeft).getSize() + get(indexOfRight).getSize() < structure.getSize() + 1;
     }
 
-    private TierLoader getLoader()
+    public Tier getTier(Object txn, Object key)
     {
-        return getChildType() == Tier.INNER ? structure.getStorage().getInnerTierLoader() : structure.getStorage().getLeafTierLoader();
+        if (getChildType() == Tier.INNER)
+            return structure.getStorage().getInnerTier(structure, txn, key);
+        return structure.getStorage().getLeafTier(structure, txn, key);
     }
 
     private void merge(Object txn, int indexOfLeft, int indexOfRight, Strata.TierSet setOfDirty)
     {
-        Tier left = getLoader().load(structure, txn, get(indexOfLeft).getLeftKey());
-        Tier right = getLoader().load(structure, txn, get(indexOfRight).getLeftKey());
+        Tier left = getTier(txn, get(indexOfLeft).getLeftKey());
+        Tier right = getTier(txn, get(indexOfRight).getLeftKey());
 
         right.consume(txn, left, setOfDirty);
 
         get(indexOfRight).setSize(right.getSize());
         remove(indexOfLeft);
-        
+
         setOfDirty.add(this);
+    }
+    
+    public String toString()
+    {
+        return listOfBranches.toString();
     }
 }
 
