@@ -50,18 +50,18 @@ extends TestCase
         query.copacetic();
     }
 
-    private static void assertOneEquals(Object object, Iterator iterator)
+    private static void assertOneEquals(Object object, Strata.Cursor cursor)
     {
-        assertTrue(iterator.hasNext());
-        assertEquals(object.toString(), iterator.next().toString());
+        assertTrue(cursor.hasNext());
+        assertEquals(object.toString(), cursor.next().toString());
     }
 
-    private static void assertEquals(int count, Object object, Iterator iterator)
+    private static void assertEquals(int count, Object object, Strata.Cursor cursor)
     {
         for (int i = 0; i < count; i++)
         {
-            assertTrue(iterator.hasNext());
-            assertEquals(object.toString(), iterator.next().toString());
+            assertTrue(cursor.hasNext());
+            assertEquals(object.toString(), cursor.next().toString());
         }
     }
 
@@ -311,14 +311,14 @@ extends TestCase
         int[] insert = new int[] { 1, 2, 3, 4, 5, 6, 7, 7, 7, 8, 9 };
         assertInsert(query, insert);
 
-        Iterator iterator = query.values();
+        Strata.Cursor cursor = query.values();
         for (int i = 0; i < insert.length; i++)
         {
-            assertTrue(iterator.hasNext());
-            Integer integer = (Integer) iterator.next();
+            assertTrue(cursor.hasNext());
+            Integer integer = (Integer) cursor.next();
             assertEquals(insert[i], integer.intValue());
         }
-        assertFalse(iterator.hasNext());
+        assertFalse(cursor.hasNext());
     }
 
     public void testRemove()

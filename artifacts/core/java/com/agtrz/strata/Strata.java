@@ -22,8 +22,6 @@ implements Serializable
 
     private static final long serialVersionUID = 20070207L;
 
-    public final static Cursor EMPTY_CURSOR = new EmptyCursor(true);
-
     private final Structure structure;
 
     private final Object rootKey;
@@ -32,17 +30,18 @@ implements Serializable
 
     public Strata()
     {
-        this(new ArrayListStorage(), null, new BasicCriteriaServer(), 5);
+        this(new ArrayListStorage(), null, new ComparableExtractor(), false, 5);
     }
 
-    public Strata(Storage storage, Object txn, CriteriaServer criterion, int size)
+    public Strata(Storage storage, Object txn, FieldExtractor fieldExtractor, boolean cacheFields, int size)
     {
-        Structure structure = new Structure(storage, criterion, size);
+        Cooper cooper = cacheFields ? (Cooper) new BucketCooper() : (Cooper) new LookupCooper();
+        Structure structure = new Structure(storage, fieldExtractor, cooper, size);
         InnerTier root = structure.getStorage().newInnerTier(structure, txn, Strata.LEAF);
         LeafTier leaf = structure.getStorage().newLeafTier(structure, txn);
         leaf.write(txn);
 
-        root.add(new Branch(leaf.getKey(), Strata.TERMINAL, 0));
+        root.add(new Branch(leaf.getKey(), null, 0));
         root.write(txn);
 
         this.structure = structure;
@@ -61,15 +60,17 @@ implements Serializable
 
     public final static class Creator
     {
-        private CriteriaServer criterion = new BasicCriteriaServer();
+        private FieldExtractor fieldExtractor = new ComparableExtractor();
 
         private Storage storage = new ArrayListStorage();
 
         private int size = 5;
 
+        private boolean cacheFields = false;
+
         public Strata create(Object txn)
         {
-            return new Strata(storage, txn, criterion, size);
+            return new Strata(storage, txn, fieldExtractor, cacheFields, size);
         }
 
         public void setStorage(Storage storage)
@@ -77,9 +78,14 @@ implements Serializable
             this.storage = storage;
         }
 
-        public void setCriteriaServer(CriteriaServer criterion)
+        public void setFieldExtractor(FieldExtractor fieldExtractor)
         {
-            this.criterion = criterion;
+            this.fieldExtractor = fieldExtractor;
+        }
+
+        public void setCacheFields(boolean cacheFields)
+        {
+            this.cacheFields = cacheFields;
         }
 
         public void setSize(int size)
@@ -95,14 +101,17 @@ implements Serializable
 
         private final Storage storage;
 
-        private final CriteriaServer criterion;
-
         private final int size;
 
-        public Structure(Storage storage, CriteriaServer criterion, int size)
+        private final FieldExtractor extractor;
+
+        private final Cooper cooper;
+
+        public Structure(Storage storage, FieldExtractor extractor, Cooper cooper, int size)
         {
             this.storage = storage;
-            this.criterion = criterion;
+            this.extractor = extractor;
+            this.cooper = cooper;
             this.size = size;
         }
 
@@ -111,38 +120,39 @@ implements Serializable
             return storage;
         }
 
-        public CriteriaServer getCriterion()
-        {
-            return criterion;
-        }
-
         public int getSize()
         {
             return size;
         }
 
-        public Comparator newComparator(Object txn)
+        public FieldExtractor getFieldExtractor()
         {
-            return new CopaceticComparator(criterion, txn);
-        }
-    }
-
-    private final static class CopaceticComparator
-    implements Comparator
-    {
-        private final CriteriaServer criterion;
-
-        private final Object txn;
-
-        public CopaceticComparator(CriteriaServer criterion, Object txn)
-        {
-            this.criterion = criterion;
-            this.txn = txn;
+            return extractor;
         }
 
-        public int compare(Object left, Object right)
+        public Cooper getCooper()
         {
-            return criterion.newCriteria(txn, left).partialMatch(right);
+            return cooper;
+        }
+
+        public Comparable[] getFields(Object object)
+        {
+            return cooper.getFields(extractor, object);
+        }
+
+        public Object newBucket(Comparable[] fields, Object keyOfObject)
+        {
+            return cooper.newBucket(fields, keyOfObject);
+        }
+
+        public Object newBucket(Object keyOfObject)
+        {
+            return cooper.newBucket(extractor, keyOfObject);
+        }
+
+        public Object getObjectKey(Object object)
+        {
+            return cooper.getObjectKey(object);
         }
     }
 
@@ -162,227 +172,111 @@ implements Serializable
         }
     }
 
-    public interface Criteria
-    {
-        public Object getObject();
-
-        public int partialMatch(Object object);
-
-        public boolean exactMatch(Object object);
-    }
-
-    public interface CriteriaServer
-    {
-        public Criteria newCriteria(Object txn, Object object);
-
-        public Criteria newCriteria(Comparison comparison, Object txn, Object object);
-    }
-
-    public interface Comparison
-    {
-        public int partialMatch(Object criteria, Object stored);
-
-        // FIXME This is not actually used in a query, only in insert and
-        // delete.
-        // FIXME getObject is only used in insert.
-        // FIXME Does insert use exactMatch?
-        public boolean exactMatch(Object criteria, Object stored);
-    }
-
-    public static class ComplexCriteria
-    implements Criteria, Serializable
-    {
-        private static final long serialVersionUID = 20070208L;
-
-        private final Resolver resolver;
-
-        private final Comparison comparison;
-
-        private final Object txn;
-
-        private final Object object;
-
-        private final Object criteria;
-
-        public ComplexCriteria(Resolver resolver, Comparison comparison, Object txn, Object object)
-        {
-            this.resolver = resolver;
-            this.comparison = comparison;
-            this.txn = txn;
-            this.object = object;
-            this.criteria = resolver.resolve(txn, object);
-        }
-
-        public int partialMatch(Object object)
-        {
-            return comparison.partialMatch(criteria, resolver.resolve(txn, object));
-        }
-
-        public boolean exactMatch(Object object)
-        {
-            return comparison.exactMatch(criteria, resolver.resolve(txn, object));
-        }
-
-        public Object getObject()
-        {
-            return object; // FIXME Broken. Why is it not used?
-        }
-    }
-
-    public static class BasicComparison
-    implements Comparison, Serializable
-    {
-        private static final long serialVersionUID = 20070208L;
-
-        protected int partialMatch(Comparable[] left, Comparable[] right)
-        {
-            for (int i = 0; i < left.length && i < right.length; i++)
-            {
-                int compare = left[i].compareTo(right[i]);
-                if (compare != 0)
-                {
-                    return compare;
-                }
-            }
-            return left.length - right.length;
-        }
-
-        public int partialMatch(Object criteria, Object stored)
-        {
-            return ((Comparable) criteria).compareTo(stored);
-        }
-
-        public boolean exactMatch(Object criteria, Object stored)
-        {
-            return criteria.equals(stored);
-        }
-    };
-
     public interface FieldExtractor
     {
-        public Object[] getFields(Object object);
+        public Comparable[] getFields(Object object);
     }
 
-    public static class FieldComparison
-    implements Comparison, Serializable
+    public final static class ComparableExtractor
+    implements FieldExtractor, Serializable
     {
-        private static final long serialVersionUID = 20070208L;
+        private final static long serialVersionUID = 20070402L;
 
-        private final FieldExtractor storedFields;
-
-        private final FieldExtractor soughtFields;
-
-        public FieldComparison(FieldExtractor soughtFields, FieldExtractor storedFields)
+        public Comparable[] getFields(Object object)
         {
-            this.soughtFields = soughtFields;
-            this.storedFields = storedFields;
-        }
-
-        public int partialMatch(Object criteria, Object stored)
-        {
-            return partialMatch(soughtFields.getFields(criteria), storedFields.getFields(stored));
-        }
-
-        public boolean exactMatch(Object criteria, Object stored)
-        {
-            return exactMatch(soughtFields.getFields(criteria), storedFields.getFields(stored));
-        }
-
-        protected int partialMatch(Object[] left, Object[] right)
-        {
-            for (int i = 0; i < left.length && i < right.length; i++)
-            {
-                int compare = ((Comparable) left[i]).compareTo(right[i]);
-                if (compare != 0)
-                {
-                    return compare;
-                }
-            }
-            return left.length - right.length;
-        }
-
-        protected boolean exactMatch(Object[] left, Object[] right)
-        {
-            for (int i = 0; i < left.length && i < right.length; i++)
-            {
-                if (left[i].equals(right[i]))
-                {
-                    return false;
-                }
-            }
-            return left.length == right.length;
-        }
-    };
-
-    public static class ComplexCriteriaServer
-    implements CriteriaServer, Serializable
-    {
-        private static final long serialVersionUID = 20070208L;
-
-        private final Resolver resolver;
-
-        private final Comparison comparison;
-
-        public ComplexCriteriaServer(Resolver resolver, Comparison comparison)
-        {
-            this.resolver = resolver;
-            this.comparison = comparison;
-        }
-
-        public Criteria newCriteria(Object txn, Object object)
-        {
-            return new ComplexCriteria(resolver, comparison, txn, object);
-        }
-
-        public Criteria newCriteria(Comparison comparison, Object txn, Object object)
-        {
-            return new ComplexCriteria(resolver, comparison, txn, object);
+            return new Comparable[] { (Comparable) object };
         }
     }
 
-    // FIXME When is this used and how? Becomming moot? New find abstracts,
-    // hides enough.
-    public static class BasicCriteria
-    implements Criteria, Serializable
+    public final static class CopaceticComparator
+    implements Comparator
     {
-        private static final long serialVersionUID = 20070208L;
+        private Structure structure;
 
-        private final Comparable comparable;
-
-        public BasicCriteria(Comparable comparable)
+        public CopaceticComparator(Structure structure)
         {
-            this.comparable = comparable;
+            this.structure = structure;
         }
 
-        public int partialMatch(Object object)
+        public int compare(Object left, Object right)
         {
-            return comparable.compareTo(object);
-        }
-
-        public boolean exactMatch(Object object)
-        {
-            return comparable.equals(object);
-        }
-
-        public Object getObject()
-        {
-            return comparable;
+            return Strata.compare(structure.getFields(left), structure.getFields(right));
         }
     }
 
-    public static class BasicCriteriaServer
-    implements CriteriaServer, Serializable
+    private interface Cooper
     {
-        private static final long serialVersionUID = 20070208L;
+        public Object newBucket(FieldExtractor fields, Object keyOfObject);
 
-        public Criteria newCriteria(Object txn, Object object)
+        public Object newBucket(Comparable[] sortableFields, Object keyOfObject);
+
+        public Object getObjectKey(Object object);
+
+        public Comparable[] getFields(FieldExtractor extractor, Object object);
+    }
+
+    private final class Bucket
+    {
+        public final Comparable[] sortedFields;
+
+        public final Object objectKey;
+
+        public Bucket(Comparable[] sortedFields, Object objectKey)
         {
-            return new BasicCriteria((Comparable) object);
+            this.sortedFields = sortedFields;
+            this.objectKey = objectKey;
+        }
+    }
+
+    public class BucketCooper
+    implements Cooper, Serializable
+    {
+        private final static long serialVersionUID = 20070402L;
+
+        public Object newBucket(FieldExtractor extractor, Object keyOfObject)
+        {
+            return new Bucket(extractor.getFields(keyOfObject), keyOfObject);
         }
 
-        public Criteria newCriteria(Comparison comparison, Object txn, Object object)
+        public Object newBucket(Comparable[] fields, Object keyOfObject)
         {
-            return new ComplexCriteria(new Strata.BasicResolver(), comparison, null, object);
+            return new Bucket(fields, keyOfObject);
+        }
+
+        public Comparable[] getFields(FieldExtractor extractor, Object object)
+        {
+            return ((Bucket) object).sortedFields;
+        }
+
+        public Object getObjectKey(Object object)
+        {
+            return ((Bucket) object).objectKey;
+        }
+    }
+
+    public final class LookupCooper
+    implements Cooper, Serializable
+    {
+        private final static long serialVersionUID = 20070402L;
+
+        public Object newBucket(FieldExtractor extractor, Object object)
+        {
+            return object;
+        }
+
+        public Object newBucket(Comparable[] comparables, Object object)
+        {
+            return object;
+        }
+
+        public Comparable[] getFields(FieldExtractor extractor, Object object)
+        {
+            return extractor.getFields(object);
+        }
+
+        public Object getObjectKey(Object object)
+        {
+            return object;
         }
     }
 
@@ -435,7 +329,7 @@ implements Serializable
          */
         public int getSize();
 
-        public Strata.Split split(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty);
+        public Strata.Split split(Object txn, Comparable[] sortableFields, Object keyOfObject, Strata.TierSet setOfDirty);
 
         /**
          * Merge the contents of a tier to the left of this tier into this
@@ -481,7 +375,7 @@ implements Serializable
 
         private final List listOfObjects;
 
-        protected final Strata.Structure structure;
+        private final Strata.Structure structure;
 
         public LeafTier(Strata.Structure structure, Object storageData)
         {
@@ -500,7 +394,19 @@ implements Serializable
             return getSize() == structure.getSize();
         }
 
-        public Strata.Split split(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty)
+        public Object getObjectKey(int index)
+        {
+            return structure.getCooper().getObjectKey(get(index));
+        }
+
+        // public Comparable[] getSortableFields(int index)
+        // {
+        // return
+        // structure.getCooper().getSortableFields(structure.getFieldExtractor(),
+        // get(index));
+        // }
+
+        public Split split(Object txn, Comparable[] fields, Object keyOfObject, Strata.TierSet setOfDirty)
         {
             if (!isFull())
             {
@@ -514,14 +420,14 @@ implements Serializable
 
             int partition = -1;
 
-            Strata.Criteria candidate = structure.getCriterion().newCriteria(txn, get(middle));
+            Comparable[] candidate = structure.getFields(get(middle));
             for (int i = 0; partition == -1 && i < middle; i++)
             {
-                if (candidate.partialMatch(get(lesser)) != 0)
+                if (compare(candidate, structure.getFields(get(lesser))) != 0)
                 {
                     partition = lesser + 1;
                 }
-                else if (candidate.partialMatch(get(greater)) != 0)
+                else if (compare(candidate, structure.getFields(get(greater))) != 0)
                 {
                     partition = greater;
                 }
@@ -529,12 +435,12 @@ implements Serializable
                 greater++;
             }
 
-            Strata.Storage storage = structure.getStorage();
-            Strata.Split split = null;
+            Storage storage = structure.getStorage();
+            Split split = null;
             if (partition == -1)
             {
-                Object repeated = get(0);
-                int compare = criteria.partialMatch(repeated);
+                Comparable[] repeated = structure.getFields(get(0));
+                int compare = compare(fields, repeated);
                 if (compare < 0)
                 {
                     LeafTier right = storage.newLeafTier(structure, txn);
@@ -545,7 +451,7 @@ implements Serializable
 
                     link(txn, this, right, setOfDirty);
 
-                    split = new Strata.Split(criteria.getObject(), right);
+                    split = new Split(structure.newBucket(fields, keyOfObject), right);
                 }
                 else if (compare > 0)
                 {
@@ -558,7 +464,7 @@ implements Serializable
                     LeafTier right = storage.newLeafTier(structure, txn);
                     link(txn, last, right, setOfDirty);
 
-                    split = new Strata.Split(repeated, right);
+                    split = new Split(get(0), right);
                 }
             }
             else
@@ -572,67 +478,69 @@ implements Serializable
 
                 link(txn, this, right, setOfDirty);
 
-                split = new Strata.Split(get(getSize() - 1), right);
+                split = new Split(get(getSize() - 1), right);
             }
 
             return split;
         }
 
-        public void append(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty)
+        public void append(Object txn, Comparable[] sortableFields, Object keyOfObject, Strata.TierSet setOfDirty)
         {
             if (getSize() == structure.getSize())
             {
-                ensureNextLeafTier(txn, criteria, setOfDirty);
-                getNext(txn).append(txn, criteria, setOfDirty);
+                ensureNextLeafTier(txn, sortableFields, setOfDirty);
+                getNext(txn).append(txn, sortableFields, keyOfObject, setOfDirty);
             }
             else
             {
-                add(criteria.getObject());
+                add(structure.getCooper().newBucket(sortableFields, keyOfObject));
                 setOfDirty.add(this);
             }
         }
 
-        public void insert(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty)
+        public void insert(Object txn, Comparable[] fields, Object keyOfObject, Strata.TierSet setOfDirty)
         {
             if (getSize() == structure.getSize())
             {
-                ensureNextLeafTier(txn, criteria, setOfDirty);
-                getNext(txn).append(txn, criteria, setOfDirty);
+                ensureNextLeafTier(txn, fields, setOfDirty);
+                getNext(txn).append(txn, fields, keyOfObject, setOfDirty);
             }
             else
             {
+                Object bucket = structure.newBucket(fields, keyOfObject);
+
                 ListIterator objects = listIterator();
                 while (objects.hasNext())
                 {
                     Object before = objects.next();
-                    if (criteria.partialMatch(before) <= 0)
+                    if (compare(fields, structure.getFields(before)) <= 0)
                     {
                         objects.previous();
-                        objects.add(criteria.getObject());
+                        objects.add(bucket);
                         break;
                     }
                 }
 
                 if (!objects.hasNext())
                 {
-                    add(criteria.getObject());
+                    add(bucket);
                 }
 
                 setOfDirty.add(this);
             }
         }
 
-        public Strata.Cursor find(Object txn, Strata.Criteria criteria)
+        public Strata.Cursor find(Object txn, Comparable[] fields)
         {
             for (int i = 0; i < getSize(); i++)
             {
-                Object before = get(i);
-                if (criteria.partialMatch(before) == 0)
+                int compare = compare(fields, structure.getFields(get(i)));
+                if (compare <= 0)
                 {
-                    return new Strata.ForwardCursor(structure, txn, this, i);
+                    return new Cursor(structure, txn, this, i);
                 }
             }
-            return Strata.EMPTY_CURSOR;
+            return new Cursor(structure, txn, this, getSize());
         }
 
         /**
@@ -648,14 +556,14 @@ implements Serializable
          *            the leaf is equal to the specified object.
          * @return A colletion of the objects removed from the tree.
          */
-        public Collection remove(Object txn, Strata.Criteria criteria)
+        public Collection remove(Object txn, Object keyOfObject)
         {
             List listOfRemoved = new ArrayList();
             Iterator objects = listIterator();
             while (objects.hasNext())
             {
                 Object candidate = objects.next();
-                if (criteria.exactMatch(candidate))
+                if (keyOfObject.equals(structure.getObjectKey(candidate)))
                 {
                     listOfRemoved.add(candidate);
                     objects.remove();
@@ -664,13 +572,13 @@ implements Serializable
             Strata.Storage storage = structure.getStorage();
             LeafTier lastLeaf = this;
             LeafTier leaf = null;
-            while (!storage.isKeyNull(lastLeaf.getNextLeafKey()) && criteria.exactMatch((leaf = lastLeaf.getNext(txn)).get(0)))
+            while (!storage.isKeyNull(lastLeaf.getNextLeafKey()) && keyOfObject.equals(structure.getObjectKey((leaf = lastLeaf.getNext(txn)).get(0))))
             {
                 objects = leaf.listIterator();
                 while (objects.hasNext())
                 {
-                    Object candidate = objects.next();
-                    if (criteria.equals(candidate))
+                    Object candidate = structure.getObjectKey(objects.next());
+                    if (keyOfObject.equals(candidate))
                     {
                         listOfRemoved.add(candidate);
                         objects.remove();
@@ -724,7 +632,7 @@ implements Serializable
             }
             Object previous = null;
             Iterator objects = listIterator();
-            Comparator comparator = structure.newComparator(txn);
+            Comparator comparator = new CopaceticComparator(structure);
             while (objects.hasNext())
             {
                 Object object = objects.next();
@@ -750,15 +658,15 @@ implements Serializable
             return (LeafTier) structure.getStorage().getLeafTier(structure, txn, getNextLeafKey());
         }
 
-        private boolean endOfList(Object txn, Object object, LeafTier last)
+        private boolean endOfList(Object txn, Comparable[] fields, LeafTier last)
         {
-            return structure.getStorage().isKeyNull(last.getNextLeafKey()) || structure.newComparator(txn).compare(last.getNext(txn).get(0), object) != 0;
+            return structure.getStorage().isKeyNull(last.getNextLeafKey()) || compare(structure.getFields(last.getNext(txn).get(0)), fields) != 0;
         }
 
-        private void ensureNextLeafTier(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty)
+        private void ensureNextLeafTier(Object txn, Comparable[] fields, Strata.TierSet setOfDirty)
         {
             Strata.Storage storage = structure.getStorage();
-            if (storage.isKeyNull(getNextLeafKey()) || criteria.partialMatch(getNext(txn).get(0)) != 0)
+            if (storage.isKeyNull(getNextLeafKey()) || compare(fields, structure.getFields(getNext(txn).get(0))) != 0)
             {
                 LeafTier nextLeaf = storage.newLeafTier(structure, txn);
                 link(txn, this, nextLeaf, setOfDirty);
@@ -843,14 +751,6 @@ implements Serializable
 
     }
 
-    public final static Object TERMINAL = new Object()
-    {
-        public String toString()
-        {
-            return "TERMINAL";
-        }
-    };
-
     public final static class Branch
     {
         private final Object leftKey;
@@ -859,10 +759,10 @@ implements Serializable
 
         private int size;
 
-        public Branch(Object keyOfLeft, Object object, int size)
+        public Branch(Object keyOfLeft, Object bucket, int size)
         {
             this.leftKey = keyOfLeft;
-            this.object = object;
+            this.object = bucket;
             this.size = size;
         }
 
@@ -888,17 +788,17 @@ implements Serializable
 
         public boolean isTerminal()
         {
-            return object == TERMINAL;
+            return object == null;
         }
 
         public String toString()
         {
-            return object.toString();
+            return object == null ? "TERMINAL" : object.toString();
         }
     }
 
     public final static class InnerTier
-    implements Strata.Tier
+    implements Tier
     {
         protected final Strata.Structure structure;
 
@@ -908,10 +808,11 @@ implements Serializable
 
         private final List listOfBranches;
 
-        public InnerTier(Strata.Structure structure, Object key)
+        public InnerTier(Strata.Structure structure, Object key, short typeOfChildren)
         {
             this.structure = structure;
             this.key = key;
+            this.childType = typeOfChildren;
             this.listOfBranches = new ArrayList(structure.getSize() + 1);
         }
 
@@ -938,6 +839,16 @@ implements Serializable
         public void setChildType(short childType)
         {
             this.childType = childType;
+        }
+
+        public void add(Object txn, Object keyOfLeft, Object keyOfObject, int sizeOfTier)
+        {
+            Object bucket = null;
+            if (keyOfObject != null)
+            {
+                bucket = structure.newBucket(keyOfObject);
+            }
+            listOfBranches.add(new Branch(keyOfLeft, bucket, sizeOfTier));
         }
 
         public void add(Branch branch)
@@ -970,11 +881,11 @@ implements Serializable
             return (Branch) listOfBranches.get(index);
         }
 
-        public Strata.Split split(Object txn, Strata.Criteria criteria, Strata.TierSet setOfDirty)
+        public Split split(Object txn, Comparable[] sortableFields, Object keyOfObject, TierSet setOfDirty)
         {
             int partition = (structure.getSize() + 1) / 2;
 
-            Strata.Storage storage = structure.getStorage();
+            Storage storage = structure.getStorage();
             InnerTier right = storage.newInnerTier(structure, txn, getChildType());
             for (int i = partition; i < structure.getSize() + 1; i++)
             {
@@ -983,7 +894,7 @@ implements Serializable
 
             Branch branch = remove(getSize());
             Object pivot = branch.getObject();
-            add(new Branch(branch.getLeftKey(), Strata.TERMINAL, branch.getSize()));
+            add(new Branch(branch.getLeftKey(), null, branch.getSize()));
 
             setOfDirty.add(this);
             setOfDirty.add(right);
@@ -996,13 +907,13 @@ implements Serializable
             return getSize() == structure.getSize();
         }
 
-        public Branch find(Strata.Criteria criteria)
+        public Branch find(Comparable[] fields)
         {
             Iterator branches = listIterator();
             while (branches.hasNext())
             {
                 Branch branch = (Branch) branches.next();
-                if (branch.isTerminal() || criteria.partialMatch(branch.getObject()) <= 0)
+                if (branch.isTerminal() || compare(fields, structure.getFields(branch.getObject())) <= 0)
                 {
                     return branch;
                 }
@@ -1044,13 +955,13 @@ implements Serializable
             return previous.getObject();
         }
 
-        public void replacePivot(Strata.Criteria oldPivot, Object newPivot, Strata.TierSet setOfDirty)
+        public void replacePivot(Comparable[] oldPivot, Object newPivot, Strata.TierSet setOfDirty)
         {
             ListIterator branches = listIterator();
             while (branches.hasNext())
             {
                 Branch branch = (Branch) branches.next();
-                if (oldPivot.partialMatch(branch.getObject()) == 0)
+                if (compare(oldPivot, structure.getFields(branch.getObject())) == 0)
                 {
                     branches.set(new Branch(branch.getLeftKey(), newPivot, branch.getSize()));
                     setOfDirty.add(this);
@@ -1071,7 +982,7 @@ implements Serializable
             setOfDirty.add(left);
 
             add(new Branch(left.getKey(), split.getPivot(), left.getSize()));
-            add(new Branch(split.getRight().getKey(), Strata.TERMINAL, split.getRight().getSize()));
+            add(new Branch(split.getRight().getKey(), null, split.getRight().getSize()));
             setChildType(Strata.INNER);
 
             setOfDirty.add(this);
@@ -1114,6 +1025,7 @@ implements Serializable
             return false;
         }
 
+        // FIXME Make void.
         public boolean merge(Object txn, Strata.Tier tier, Strata.TierSet setOfDirty)
         {
             int index = getIndexOfTier(tier.getKey());
@@ -1166,7 +1078,7 @@ implements Serializable
             Object previous = null;
             Object lastLeftmost = null;
 
-            Comparator comparator = structure.newComparator(txn);
+            Comparator comparator = new CopaceticComparator(structure);
             Iterator branches = listIterator();
             while (branches.hasNext())
             {
@@ -1299,9 +1211,9 @@ implements Serializable
             return size;
         }
 
-        public void insert(Object object)
+        public void insert(Object keyOfObject)
         {
-            Criteria criteria = structure.getCriterion().newCriteria(txn, object);
+            Comparable[] fields = structure.getFields(keyOfObject);
 
             // Maintaining a list of tiers to split.
             //
@@ -1330,7 +1242,7 @@ implements Serializable
             {
                 grandParent = parent;
                 parent = inner;
-                Branch branch = parent.find(criteria);
+                Branch branch = parent.find(fields);
                 Tier tier = parent.getTier(txn, branch.getLeftKey());
 
                 if (tier.isFull())
@@ -1360,7 +1272,7 @@ implements Serializable
                             grandParent = parent;
                             parent = (InnerTier) tier;
                             Tier full = (Tier) ancestors.next();
-                            Split split = full.split(txn, criteria, setOfDirty);
+                            Split split = full.split(txn, fields, keyOfObject, setOfDirty);
                             if (split == null)
                             {
                                 tier = full;
@@ -1377,11 +1289,11 @@ implements Serializable
                                     parent.replace(full, split, setOfDirty);
                                     if (grandParent != null)
                                     {
-                                        grandParent.find(criteria).setSize(parent.getSize());
+                                        grandParent.find(fields).setSize(parent.getSize());
                                         setOfDirty.add(grandParent);
                                     }
                                 }
-                                branch = parent.find(criteria);
+                                branch = parent.find(fields);
                                 tier = parent.getTier(txn, branch.getLeftKey());
                             }
                         }
@@ -1391,7 +1303,7 @@ implements Serializable
                     LeafTier leaf = (LeafTier) tier;
                     branch.setSize(branch.getSize() + 1);
                     setOfDirty.add(parent);
-                    leaf.insert(txn, criteria, setOfDirty);
+                    leaf.insert(txn, fields, keyOfObject, setOfDirty);
                     break;
                 }
 
@@ -1401,34 +1313,29 @@ implements Serializable
             size++;
         }
 
-        public Cursor find(Object object)
+        public Cursor find(Object keyOfObject)
         {
-            return find(structure.getCriterion().newCriteria(txn, object));
+            return find(structure.getFields(keyOfObject));
         }
 
-        public Cursor find(Comparison comparison, Object object)
-        {
-            return find(structure.getCriterion().newCriteria(comparison, txn, object));
-        }
-
-        public Cursor find(Strata.Criteria criteria)
+        public Cursor find(Comparable[] fields)
         {
             InnerTier tier = getRoot();
             for (;;)
             {
-                Branch branch = tier.find(criteria);
+                Branch branch = tier.find(fields);
                 if (tier.getChildType() == Strata.LEAF)
                 {
-                    LeafTier leaf = (LeafTier) tier.getTier(txn, branch.getLeftKey());
-                    return leaf.find(txn, criteria);
+                    LeafTier leaf = structure.getStorage().getLeafTier(structure, txn, branch.getLeftKey());
+                    return leaf.find(txn, fields);
                 }
                 tier = (InnerTier) tier.getTier(txn, branch.getLeftKey());
             }
         }
 
-        public Collection remove(Object object)
+        public Collection remove(Object keyOfObject)
         {
-            Criteria criteria = structure.getCriterion().newCriteria(txn, object);
+            Comparable[] fields = structure.getFields(keyOfObject);
             TierSet setOfDirty = new TierSet(mapOfDirtyTiers);
             LinkedList listOfAncestors = new LinkedList();
             InnerTier inner = null;
@@ -1438,15 +1345,15 @@ implements Serializable
             {
                 listOfAncestors.addLast(tier);
                 parent = tier;
-                Branch branch = parent.find(criteria);
-                if (branch.getObject() != Strata.TERMINAL && criteria.exactMatch(branch.getObject()))
+                Branch branch = parent.find(fields);
+                if (branch.getObject() != null && keyOfObject.equals(structure.getObjectKey(branch.getObject())))
                 {
                     inner = tier;
                 }
                 if (tier.getChildType() == Strata.LEAF)
-                {
+                {// FIXME Call getLeafTier.
                     LeafTier leaf = (LeafTier) tier.getTier(txn, branch.getLeftKey());
-                    Collection collection = leaf.remove(txn, criteria);
+                    Collection collection = leaf.remove(txn, keyOfObject);
                     branch.setSize(leaf.getSize());
                     setOfDirty.add(parent);
 
@@ -1464,14 +1371,14 @@ implements Serializable
                             {
                                 Branch newPivot = parent.get(index - 1);
                                 parent.removeLeafTier(leaf, setOfDirty);
-                                parent.replacePivot(structure.getCriterion().newCriteria(txn, newPivot.getObject()), Strata.TERMINAL, setOfDirty);
-                                inner.replacePivot(criteria, newPivot.getObject(), setOfDirty);
+                                parent.replacePivot(structure.getFields(newPivot.getObject()), null, setOfDirty);
+                                inner.replacePivot(fields, newPivot.getObject(), setOfDirty);
                             }
                         }
                         else
                         {
                             Object newPivot = leaf.get(objectCount - 1);
-                            inner.replacePivot(criteria, newPivot, setOfDirty);
+                            inner.replacePivot(fields, newPivot, setOfDirty);
                         }
                     }
 
@@ -1503,7 +1410,7 @@ implements Serializable
                 }
                 tier = (InnerTier) tier.getTier(txn, branch.getLeftKey());
             }
-            return new ForwardCursor(structure, txn, (LeafTier) tier.getTier(txn, branch.getLeftKey()), 0);
+            return new Cursor(structure, txn, (LeafTier) tier.getTier(txn, branch.getLeftKey()), 0);
         }
 
         public void write()
@@ -1536,31 +1443,31 @@ implements Serializable
 
         public void copacetic()
         {
-            getRoot().copacetic(txn, new Copacetic(structure.newComparator(txn)));
-            Iterator iterator = values();
+            Comparator comparator = new CopaceticComparator(structure);
+            getRoot().copacetic(txn, new Copacetic(comparator));
+            Strata.Cursor cursor = values();
             if (getSize() != 0)
             {
-                Comparator comparator = structure.newComparator(txn);
-                Object previous = iterator.next();
+                Object previous = cursor.next();
                 for (int i = 1; i < size; i++)
                 {
-                    if (!iterator.hasNext())
+                    if (!cursor.hasNext())
                     {
                         throw new IllegalStateException();
                     }
-                    Object next = iterator.next();
+                    Object next = cursor.next();
                     if (comparator.compare(previous, next) > 0)
                     {
                         throw new IllegalStateException();
                     }
                     previous = next;
                 }
-                if (iterator.hasNext())
+                if (cursor.hasNext())
                 {
                     throw new IllegalStateException();
                 }
             }
-            else if (iterator.hasNext())
+            else if (cursor.hasNext())
             {
                 throw new IllegalStateException();
             }
@@ -1572,20 +1479,7 @@ implements Serializable
         }
     }
 
-    public interface Cursor
-    extends Iterator
-    {
-        public boolean isEmpty();
-
-        public boolean isForward();
-
-        public Cursor reverse();
-
-        public Cursor newCursor();
-    }
-
-    public final static class ForwardCursor
-    implements Cursor
+    public final static class Cursor
     {
         private final Strata.Structure structure;
 
@@ -1595,17 +1489,12 @@ implements Serializable
 
         private LeafTier leaf;
 
-        public ForwardCursor(Strata.Structure structure, Object txn, LeafTier leaf, int index)
+        public Cursor(Strata.Structure structure, Object txn, LeafTier leaf, int index)
         {
             this.structure = structure;
             this.txn = txn;
             this.leaf = leaf;
             this.index = index;
-        }
-
-        public boolean isEmpty()
-        {
-            return false;
         }
 
         public boolean isForward()
@@ -1615,12 +1504,7 @@ implements Serializable
 
         public Cursor newCursor()
         {
-            return new ForwardCursor(structure, txn, leaf, index);
-        }
-
-        public Cursor reverse()
-        {
-            return new ReverseCursor(structure, txn, leaf, index);
+            return new Cursor(structure, txn, leaf, index);
         }
 
         public boolean hasNext()
@@ -1640,60 +1524,15 @@ implements Serializable
                 leaf = structure.getStorage().getLeafTier(structure, txn, leaf.getNextLeafKey());
                 index = 0;
             }
-            return leaf.get(index++);
+            return structure.getObjectKey(leaf.get(index++));
         }
 
-        public void remove()
-        {
-            throw new UnsupportedOperationException();
-        }
-    }
-
-    public final static class ReverseCursor
-    implements Cursor
-    {
-        private final Strata.Structure structure;
-
-        private final Object txn;
-
-        private int index;
-
-        private LeafTier leaf;
-
-        public ReverseCursor(Strata.Structure structure, Object txn, LeafTier leaf, int index)
-        {
-            this.structure = structure;
-            this.txn = txn;
-            this.leaf = leaf;
-            this.index = index;
-        }
-
-        public boolean isEmpty()
-        {
-            return false;
-        }
-
-        public boolean isForward()
-        {
-            return false;
-        }
-
-        public Cursor newCursor()
-        {
-            return new ReverseCursor(structure, txn, leaf, index);
-        }
-
-        public Cursor reverse()
-        {
-            return new ForwardCursor(structure, txn, leaf, index);
-        }
-
-        public boolean hasNext()
+        public boolean hasPrevious()
         {
             return index > 0 || !structure.getStorage().isKeyNull(leaf.getPreviousLeafKey());
         }
 
-        public Object next()
+        public Object previous()
         {
             if (index == 0)
             {
@@ -1707,59 +1546,8 @@ implements Serializable
             }
             return leaf.get(--index);
         }
-
-        public void remove()
-        {
-            throw new UnsupportedOperationException();
-        }
     }
-
-    private final static class EmptyCursor
-    implements Cursor
-    {
-        public final boolean forward;
-
-        public EmptyCursor(boolean forward)
-        {
-            this.forward = forward;
-        }
-
-        public boolean isEmpty()
-        {
-            return true;
-        }
-
-        public boolean isForward()
-        {
-            return forward;
-        }
-
-        public Cursor newCursor()
-        {
-            return new EmptyCursor(forward);
-        }
-
-        public Cursor reverse()
-        {
-            return new EmptyCursor(!forward);
-        }
-
-        public boolean hasNext()
-        {
-            return false;
-        }
-
-        public Object next()
-        {
-            return new IllegalStateException();
-        }
-
-        public void remove()
-        {
-            throw new UnsupportedOperationException();
-        }
-    }
-
+   
     public static class Copacetic
     {
         private final Set seen;
@@ -1778,6 +1566,36 @@ implements Serializable
             seen.add(object);
             return true;
         }
+    }
+
+    private final static int compare(Comparable[] left, Comparable[] right)
+    {
+        if (left == null && right == null)
+        {
+            throw new IllegalStateException();
+        }
+
+        if (left == null)
+        {
+            return 1;
+        }
+
+        if (right == null)
+        {
+            return -1;
+        }
+
+        int count = Math.min(left.length, right.length);
+        for (int i = 0; i < count; i++)
+        {
+            int compare = left[i].compareTo(right[i]);
+            if (compare != 0)
+            {
+                return compare;
+            }
+        }
+
+        return left.length - right.length;
     }
 }
 

@@ -12,7 +12,6 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -120,7 +119,7 @@ public class StrataStressor
 
     public void dump(Strata strata, ObjectOutputStream out) throws IOException
     {
-        Iterator values = strata.query(null).values();
+        Strata.Cursor values = strata.query(null).values();
         while (values.hasNext())
         {
             Compound compound = (Compound) values.next();
@@ -157,7 +156,7 @@ public class StrataStressor
                 else
                 {
                     Compound compound = null;
-                    Iterator collection = null;
+                    Strata.Cursor collection = null;
                     do
                     {
                         compound = newCompound();

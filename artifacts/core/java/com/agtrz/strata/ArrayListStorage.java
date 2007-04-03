@@ -20,14 +20,12 @@ implements Strata.Storage
 
     public Strata.InnerTier newInnerTier(Strata.Structure structure, Object storage, short typeOfChildren)
     {
-        Strata.InnerTier inner = new Strata.InnerTier(structure, null);
-        inner.setChildType(typeOfChildren);
-        return inner;
+        return new Strata.InnerTier(structure, null, typeOfChildren);
     }
 
     public Strata.LeafTier newLeafTier(Strata.Structure structure, Object storage)
     {
-        return new Strata. LeafTier(structure, null);
+        return new Strata.LeafTier(structure, null);
     }
 
     public void write(Structure structure, Object txn, Strata.InnerTier inner)
