@@ -4,57 +4,57 @@ package com.agtrz.strata;
 import com.agtrz.strata.Strata.Structure;
 
 public class ArrayListStorage
-implements Storage
+implements Strata.Storage
 {
     private static final long serialVersionUID = 20070208L;
 
-    public InnerTier getInnerTier(Structure structure, Object txn, Object key)
+    public Strata.InnerTier getInnerTier(Structure structure, Object txn, Object key)
     {
-        return (InnerTier) key;
+        return (Strata.InnerTier) key;
     }
 
-    public LeafTier getLeafTier(Structure structure, Object txn, Object key)
+    public Strata.LeafTier getLeafTier(Structure structure, Object txn, Object key)
     {
-        return (LeafTier) key;
+        return (Strata.LeafTier) key;
     }
 
-    public InnerTier newInnerTier(Strata.Structure structure, Object storage, short typeOfChildren)
+    public Strata.InnerTier newInnerTier(Strata.Structure structure, Object storage, short typeOfChildren)
     {
-        InnerTier inner = new InnerTier(structure, null);
+        Strata.InnerTier inner = new Strata.InnerTier(structure, null);
         inner.setChildType(typeOfChildren);
         return inner;
     }
 
-    public LeafTier newLeafTier(Strata.Structure structure, Object storage)
+    public Strata.LeafTier newLeafTier(Strata.Structure structure, Object storage)
     {
-        return new LeafTier(structure, null);
+        return new Strata. LeafTier(structure, null);
     }
 
-    public void write(Structure structure, Object txn, InnerTier inner)
-    {
-    }
-
-    public void write(Structure structure, Object txn, LeafTier leaf)
+    public void write(Structure structure, Object txn, Strata.InnerTier inner)
     {
     }
 
-    public void free(Structure structure, Object txn, InnerTier inner)
+    public void write(Structure structure, Object txn, Strata.LeafTier leaf)
     {
     }
 
-    public void free(Structure structure, Object txn, LeafTier leaf)
+    public void free(Structure structure, Object txn, Strata.InnerTier inner)
     {
     }
 
-    public void revert(Structure structure, Object txn, InnerTier inner)
+    public void free(Structure structure, Object txn, Strata.LeafTier leaf)
     {
     }
 
-    public void revert(Structure structure, Object txn, LeafTier leaf)
+    public void revert(Structure structure, Object txn, Strata.InnerTier inner)
     {
     }
 
-    public Object getKey(Tier leaf)
+    public void revert(Structure structure, Object txn, Strata.LeafTier leaf)
+    {
+    }
+
+    public Object getKey(Strata.Tier leaf)
     {
         return leaf;
     }
