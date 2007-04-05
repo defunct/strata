@@ -156,21 +156,21 @@ implements Serializable
         }
     }
 
-    public interface Resolver
-    {
-        public Object resolve(Object txn, Object object);
-    }
-
-    public final static class BasicResolver
-    implements Resolver, Serializable
-    {
-        private static final long serialVersionUID = 20070208L;
-
-        public Object resolve(Object txn, Object object)
-        {
-            return object;
-        }
-    }
+//    public interface Resolver
+//    {
+//        public Object resolve(Object txn, Object object);
+//    }
+//
+//    public final static class BasicResolver
+//    implements Resolver, Serializable
+//    {
+//        private static final long serialVersionUID = 20070208L;
+//
+//        public Object resolve(Object txn, Object object)
+//        {
+//            return object;
+//        }
+//    }
 
     public interface FieldExtractor
     {
