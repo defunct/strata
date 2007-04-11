@@ -98,6 +98,7 @@ implements Strata.Storage, Serializable
         return inner;
     }
 
+    // FIXME Shouldn't something be syncrhonized?
     public Strata.LeafTier getLeafTier(Strata.Structure structure, Object txn, Object key)
     {
         collect();
