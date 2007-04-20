@@ -247,7 +247,7 @@ implements Strata.Storage, Serializable
         return ((Bento.Address) object).getPosition() == 0L;
     }
 
-    private void collect()
+    private synchronized void collect()
     {
         WeakMapValue reference = null;
         while ((reference = (WeakMapValue) queue.poll()) != null)

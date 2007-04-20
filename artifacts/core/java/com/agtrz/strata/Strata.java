@@ -130,11 +130,6 @@ implements Serializable
             return extractor;
         }
 
-        public Cooper getCooper()
-        {
-            return cooper;
-        }
-
         public Comparable[] getFields(Object object)
         {
             return cooper.getFields(extractor, object);
@@ -552,7 +547,7 @@ implements Serializable
             }
             else
             {
-                add(structure.getCooper().newBucket(fields, keyOfObject));
+                add(structure.newBucket(fields, keyOfObject));
                 setOfDirty.add(this);
             }
         }
@@ -1174,7 +1169,7 @@ implements Serializable
 
         public void insert(Object keyOfObject)
         {
-            Comparable[] fields = structure.getFields(keyOfObject);
+            Comparable[] fields = structure.getFieldExtractor().getFields(keyOfObject);
 
             // Maintaining a list of tiers to split.
             //
@@ -1277,7 +1272,7 @@ implements Serializable
 
         public Cursor find(Object keyOfObject)
         {
-            return find(structure.getFields(keyOfObject));
+            return find(structure.getFieldExtractor().getFields(keyOfObject));
         }
 
         public Cursor find(Comparable[] fields)
@@ -1297,7 +1292,7 @@ implements Serializable
 
         public Collection remove(Object keyOfObject)
         {
-            Comparable[] fields = structure.getFields(keyOfObject);
+            Comparable[] fields = structure.getFieldExtractor().getFields(keyOfObject);
             TierSet setOfDirty = new TierSet(mapOfDirtyTiers);
             LinkedList listOfAncestors = new LinkedList();
             InnerTier inner = null;
@@ -1359,7 +1354,7 @@ implements Serializable
             }
         }
 
-        public Cursor values()
+        public Cursor first()
         {
             Branch branch = null;
             InnerTier tier = getRoot();
@@ -1373,6 +1368,23 @@ implements Serializable
                 tier = (InnerTier) tier.getTier(txn, branch.getLeftKey());
             }
             return new Cursor(structure, txn, (LeafTier) tier.getTier(txn, branch.getLeftKey()), 0);
+        }
+        
+        public Cursor last()
+        {
+            Branch branch = null;
+            InnerTier tier = getRoot();
+            for (;;)
+            {
+                branch = tier.get(tier.getSize());
+                if (tier.getChildType() == LEAF)
+                {
+                    break;
+                }
+                tier = (InnerTier) tier.getTier(txn, branch.getLeftKey());
+            }
+            LeafTier leaf = structure.getStorage().getLeafTier(structure, txn, branch.getLeftKey());
+            return new Cursor(structure, txn, leaf, leaf.getSize());
         }
 
         public void write()
@@ -1407,7 +1419,7 @@ implements Serializable
         {
             Comparator comparator = new CopaceticComparator(structure);
             getRoot().copacetic(txn, new Copacetic(comparator));
-            Strata.Cursor cursor = values();
+            Strata.Cursor cursor = first();
             if (getSize() != 0)
             {
                 Object previous = cursor.next();

@@ -119,7 +119,7 @@ public class StrataStressor
 
     public void dump(Strata strata, ObjectOutputStream out) throws IOException
     {
-        Strata.Cursor values = strata.query(null).values();
+        Strata.Cursor values = strata.query(null).first();
         while (values.hasNext())
         {
             Compound compound = (Compound) values.next();
