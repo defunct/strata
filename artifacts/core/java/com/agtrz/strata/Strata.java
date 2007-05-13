@@ -130,9 +130,9 @@ implements Serializable
             return extractor;
         }
 
-        public Comparable[] getFields(Object object)
+        public Comparable[] getFields(Object txn, Object object)
         {
-            return cooper.getFields(extractor, object);
+            return cooper.getFields(txn, extractor, object);
         }
 
         public Object newBucket(Comparable[] fields, Object keyOfObject)
@@ -140,9 +140,9 @@ implements Serializable
             return cooper.newBucket(fields, keyOfObject);
         }
 
-        public Object newBucket(Object keyOfObject)
+        public Object newBucket(Object txn, Object keyOfObject)
         {
-            return cooper.newBucket(extractor, keyOfObject);
+            return cooper.newBucket(txn,extractor, keyOfObject);
         }
 
         public Object getObjectKey(Object object)
@@ -153,15 +153,15 @@ implements Serializable
 
     public interface FieldExtractor
     {
-        public Comparable[] getFields(Object object);
+        public Comparable[] getFields(Object txn, Object object);
     }
 
     public final static class ComparableExtractor
     implements FieldExtractor, Serializable
-    {
+    { 
         private final static long serialVersionUID = 20070402L;
 
-        public Comparable[] getFields(Object object)
+        public Comparable[] getFields(Object txn, Object object)
         {
             return new Comparable[] { (Comparable) object };
         }
@@ -170,28 +170,29 @@ implements Serializable
     public final static class CopaceticComparator
     implements Comparator
     {
-        private Structure structure;
+        private final Object txn;
+        private final Structure structure;
 
-        public CopaceticComparator(Structure structure)
-        {
+        public CopaceticComparator(Object txn,Structure structure)
+        {this.txn = txn;
             this.structure = structure;
         }
 
         public int compare(Object left, Object right)
         {
-            return Strata.compare(structure.getFields(left), structure.getFields(right));
+            return Strata.compare(structure.getFields(txn, left), structure.getFields(txn, right));
         }
     }
 
     private interface Cooper
     {
-        public Object newBucket(FieldExtractor fields, Object keyOfObject);
+        public Object newBucket(Object txn,FieldExtractor fields, Object keyOfObject);
 
         public Object newBucket(Comparable[] fields, Object keyOfObject);
 
         public Object getObjectKey(Object object);
 
-        public Comparable[] getFields(FieldExtractor extractor, Object object);
+        public Comparable[] getFields(Object txn, FieldExtractor extractor, Object object);
     }
 
     private final class Bucket
@@ -212,9 +213,9 @@ implements Serializable
     {
         private final static long serialVersionUID = 20070402L;
 
-        public Object newBucket(FieldExtractor extractor, Object keyOfObject)
+        public Object newBucket(Object txn, FieldExtractor extractor, Object keyOfObject)
         {
-            return new Bucket(extractor.getFields(keyOfObject), keyOfObject);
+            return new Bucket(extractor.getFields(txn, keyOfObject), keyOfObject);
         }
 
         public Object newBucket(Comparable[] fields, Object keyOfObject)
@@ -222,7 +223,7 @@ implements Serializable
             return new Bucket(fields, keyOfObject);
         }
 
-        public Comparable[] getFields(FieldExtractor extractor, Object object)
+        public Comparable[] getFields(Object txn, FieldExtractor extractor, Object object)
         {
             return ((Bucket) object).fields;
         }
@@ -238,7 +239,7 @@ implements Serializable
     {
         private final static long serialVersionUID = 20070402L;
 
-        public Object newBucket(FieldExtractor extractor, Object keyOfObject)
+        public Object newBucket(Object txn,FieldExtractor extractor, Object keyOfObject)
         {
             return keyOfObject;
         }
@@ -248,9 +249,9 @@ implements Serializable
             return keyOfObject;
         }
 
-        public Comparable[] getFields(FieldExtractor extractor, Object object)
+        public Comparable[] getFields(Object txn, FieldExtractor extractor, Object object)
         {
-            return extractor.getFields(object);
+            return extractor.getFields(txn, object);
         }
 
         public Object getObjectKey(Object object)
@@ -431,7 +432,7 @@ implements Serializable
 
         private boolean endOfList(Object txn, Comparable[] fields, LeafTier last)
         {
-            return structure.getStorage().isKeyNull(last.getNextLeafKey()) || compare(structure.getFields(last.getNext(txn).get(0)), fields) != 0;
+            return structure.getStorage().isKeyNull(last.getNextLeafKey()) || compare(structure.getFields(txn, last.getNext(txn).get(0)), fields) != 0;
         }
 
         private void link(Object txn, LeafTier leaf, LeafTier nextLeaf, Strata.TierSet setOfDirty)
@@ -464,14 +465,14 @@ implements Serializable
 
             int partition = -1;
 
-            Comparable[] candidate = structure.getFields(get(middle));
+            Comparable[] candidate = structure.getFields(txn, get(middle));
             for (int i = 0; partition == -1 && i < middle; i++)
             {
-                if (compare(candidate, structure.getFields(get(lesser))) != 0)
+                if (compare(candidate, structure.getFields(txn,get(lesser))) != 0)
                 {
                     partition = lesser + 1;
                 }
-                else if (compare(candidate, structure.getFields(get(greater))) != 0)
+                else if (compare(candidate, structure.getFields(txn,get(greater))) != 0)
                 {
                     partition = greater;
                 }
@@ -483,7 +484,7 @@ implements Serializable
             Split split = null;
             if (partition == -1)
             {
-                Comparable[] repeated = structure.getFields(get(0));
+                Comparable[] repeated = structure.getFields(txn,get(0));
                 int compare = compare(fields, repeated);
                 if (compare < 0)
                 {
@@ -531,7 +532,7 @@ implements Serializable
         private void ensureNextLeafTier(Object txn, Comparable[] fields, Strata.TierSet setOfDirty)
         {
             Strata.Storage storage = structure.getStorage();
-            if (storage.isKeyNull(getNextLeafKey()) || compare(fields, structure.getFields(getNext(txn).get(0))) != 0)
+            if (storage.isKeyNull(getNextLeafKey()) || compare(fields, structure.getFields(txn,getNext(txn).get(0))) != 0)
             {
                 LeafTier nextLeaf = storage.newLeafTier(structure, txn);
                 link(txn, this, nextLeaf, setOfDirty);
@@ -567,7 +568,7 @@ implements Serializable
                 while (objects.hasNext())
                 {
                     Object before = objects.next();
-                    if (compare(structure.getFields(before), fields) > 0)
+                    if (compare(structure.getFields(txn,before), fields) > 0)
                     {
                         objects.previous();
                         objects.add(bucket);
@@ -588,7 +589,7 @@ implements Serializable
         {
             for (int i = 0; i < getSize(); i++)
             {
-                int compare = compare(structure.getFields(get(i)), fields);
+                int compare = compare(structure.getFields(txn,get(i)), fields);
                 if (compare >= 0)
                 {
                     return new Cursor(structure, txn, this, i);
@@ -696,7 +697,7 @@ implements Serializable
             }
             Object previous = null;
             Iterator objects = listIterator();
-            Comparator comparator = new CopaceticComparator(structure);
+            Comparator comparator = new CopaceticComparator(txn,structure);
             while (objects.hasNext())
             {
                 Object object = objects.next();
@@ -809,7 +810,7 @@ implements Serializable
             Object bucket = null;
             if (keyOfObject != null)
             {
-                bucket = structure.newBucket(keyOfObject);
+                bucket = structure.newBucket(txn, keyOfObject);
             }
             listOfBranches.add(new Branch(keyOfLeft, bucket, sizeOfTier));
         }
@@ -865,13 +866,13 @@ implements Serializable
             return getSize() == structure.getSize();
         }
 
-        public Branch find(Comparable[] fields)
+        public Branch find(Object txn, Comparable[] fields)
         {
             Iterator branches = listIterator();
             while (branches.hasNext())
             {
                 Branch branch = (Branch) branches.next();
-                if (branch.isTerminal() || compare(fields, structure.getFields(branch.getObject())) <= 0)
+                if (branch.isTerminal() || compare(fields, structure.getFields(txn,branch.getObject())) <= 0)
                 {
                     return branch;
                 }
@@ -913,13 +914,13 @@ implements Serializable
             return previous.getObject();
         }
 
-        public void replacePivot(Comparable[] oldPivot, Object newPivot, TierSet setOfDirty)
+        public void replacePivot(Object txn, Comparable[] oldPivot, Object newPivot, TierSet setOfDirty)
         {
             ListIterator branches = listIterator();
             while (branches.hasNext())
             {
                 Branch branch = (Branch) branches.next();
-                if (compare(oldPivot, structure.getFields(branch.getObject())) == 0)
+                if (compare(oldPivot, structure.getFields(txn,branch.getObject())) == 0)
                 {
                     branches.set(new Branch(branch.getLeftKey(), newPivot, branch.getSize()));
                     setOfDirty.add(this);
@@ -1032,7 +1033,7 @@ implements Serializable
             Object previous = null;
             Object lastLeftmost = null;
 
-            Comparator comparator = new CopaceticComparator(structure);
+            Comparator comparator = new CopaceticComparator(txn, structure);
             Iterator branches = listIterator();
             while (branches.hasNext())
             {
@@ -1169,7 +1170,7 @@ implements Serializable
 
         public void insert(Object keyOfObject)
         {
-            Comparable[] fields = structure.getFieldExtractor().getFields(keyOfObject);
+            Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfObject);
 
             // Maintaining a list of tiers to split.
             //
@@ -1198,7 +1199,7 @@ implements Serializable
             {
                 grandParent = parent;
                 parent = inner;
-                Branch branch = parent.find(fields);
+                Branch branch = parent.find(txn, fields);
                 Tier tier = parent.getTier(txn, branch.getLeftKey());
 
                 if (tier.isFull())
@@ -1245,11 +1246,11 @@ implements Serializable
                                     parent.replace(full, split, setOfDirty);
                                     if (grandParent != null)
                                     {
-                                        grandParent.find(fields).setSize(parent.getSize());
+                                        grandParent.find(txn, fields).setSize(parent.getSize());
                                         setOfDirty.add(grandParent);
                                     }
                                 }
-                                branch = parent.find(fields);
+                                branch = parent.find(txn, fields);
                                 tier = parent.getTier(txn, branch.getLeftKey());
                             }
                         }
@@ -1272,7 +1273,7 @@ implements Serializable
 
         public Cursor find(Object keyOfObject)
         {
-            return find(structure.getFieldExtractor().getFields(keyOfObject));
+            return find(structure.getFieldExtractor().getFields(txn, keyOfObject));
         }
 
         public Cursor find(Comparable[] fields)
@@ -1280,7 +1281,7 @@ implements Serializable
             InnerTier tier = getRoot();
             for (;;)
             {
-                Branch branch = tier.find(fields);
+                Branch branch = tier.find(txn, fields);
                 if (tier.getChildType() == LEAF)
                 {
                     LeafTier leaf = structure.getStorage().getLeafTier(structure, txn, branch.getLeftKey());
@@ -1292,7 +1293,7 @@ implements Serializable
 
         public Collection remove(Object keyOfObject)
         {
-            Comparable[] fields = structure.getFieldExtractor().getFields(keyOfObject);
+            Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfObject);
             TierSet setOfDirty = new TierSet(mapOfDirtyTiers);
             LinkedList listOfAncestors = new LinkedList();
             InnerTier inner = null;
@@ -1302,7 +1303,7 @@ implements Serializable
             {
                 listOfAncestors.addLast(tier);
                 parent = tier;
-                Branch branch = parent.find(fields);
+                Branch branch = parent.find(txn, fields);
                 if (branch.getObject() != null && keyOfObject.equals(structure.getObjectKey(branch.getObject())))
                 {
                     inner = tier;
@@ -1328,14 +1329,14 @@ implements Serializable
                             {
                                 Branch newPivot = parent.get(index - 1);
                                 parent.removeLeafTier(leaf, setOfDirty);
-                                parent.replacePivot(structure.getFields(newPivot.getObject()), null, setOfDirty);
-                                inner.replacePivot(fields, newPivot.getObject(), setOfDirty);
+                                parent.replacePivot(txn, structure.getFields(txn, newPivot.getObject()), null, setOfDirty);
+                                inner.replacePivot(txn, fields, newPivot.getObject(), setOfDirty);
                             }
                         }
                         else
                         {
                             Object newPivot = leaf.get(objectCount - 1);
-                            inner.replacePivot(fields, newPivot, setOfDirty);
+                            inner.replacePivot(txn, fields, newPivot, setOfDirty);
                         }
                     }
 
@@ -1417,7 +1418,7 @@ implements Serializable
 
         public void copacetic()
         {
-            Comparator comparator = new CopaceticComparator(structure);
+            Comparator comparator = new CopaceticComparator(txn, structure);
             getRoot().copacetic(txn, new Copacetic(comparator));
             Strata.Cursor cursor = first();
             if (getSize() != 0)
