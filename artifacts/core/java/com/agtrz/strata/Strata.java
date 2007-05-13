@@ -142,7 +142,7 @@ implements Serializable
 
         public Object newBucket(Object txn, Object keyOfObject)
         {
-            return cooper.newBucket(txn,extractor, keyOfObject);
+            return cooper.newBucket(txn, extractor, keyOfObject);
         }
 
         public Object getObjectKey(Object object)
@@ -158,7 +158,7 @@ implements Serializable
 
     public final static class ComparableExtractor
     implements FieldExtractor, Serializable
-    { 
+    {
         private final static long serialVersionUID = 20070402L;
 
         public Comparable[] getFields(Object txn, Object object)
@@ -171,10 +171,12 @@ implements Serializable
     implements Comparator
     {
         private final Object txn;
+
         private final Structure structure;
 
-        public CopaceticComparator(Object txn,Structure structure)
-        {this.txn = txn;
+        public CopaceticComparator(Object txn, Structure structure)
+        {
+            this.txn = txn;
             this.structure = structure;
         }
 
@@ -186,7 +188,7 @@ implements Serializable
 
     private interface Cooper
     {
-        public Object newBucket(Object txn,FieldExtractor fields, Object keyOfObject);
+        public Object newBucket(Object txn, FieldExtractor fields, Object keyOfObject);
 
         public Object newBucket(Comparable[] fields, Object keyOfObject);
 
@@ -239,7 +241,7 @@ implements Serializable
     {
         private final static long serialVersionUID = 20070402L;
 
-        public Object newBucket(Object txn,FieldExtractor extractor, Object keyOfObject)
+        public Object newBucket(Object txn, FieldExtractor extractor, Object keyOfObject)
         {
             return keyOfObject;
         }
@@ -332,8 +334,6 @@ implements Serializable
          *            The tier to the left of this tier.
          */
         public void consume(Object txn, Tier left, TierSet setOfDirty);
-
-        public void revert(Object txn);
 
         public void write(Object txn);
 
@@ -468,11 +468,11 @@ implements Serializable
             Comparable[] candidate = structure.getFields(txn, get(middle));
             for (int i = 0; partition == -1 && i < middle; i++)
             {
-                if (compare(candidate, structure.getFields(txn,get(lesser))) != 0)
+                if (compare(candidate, structure.getFields(txn, get(lesser))) != 0)
                 {
                     partition = lesser + 1;
                 }
-                else if (compare(candidate, structure.getFields(txn,get(greater))) != 0)
+                else if (compare(candidate, structure.getFields(txn, get(greater))) != 0)
                 {
                     partition = greater;
                 }
@@ -484,7 +484,7 @@ implements Serializable
             Split split = null;
             if (partition == -1)
             {
-                Comparable[] repeated = structure.getFields(txn,get(0));
+                Comparable[] repeated = structure.getFields(txn, get(0));
                 int compare = compare(fields, repeated);
                 if (compare < 0)
                 {
@@ -532,7 +532,7 @@ implements Serializable
         private void ensureNextLeafTier(Object txn, Comparable[] fields, Strata.TierSet setOfDirty)
         {
             Strata.Storage storage = structure.getStorage();
-            if (storage.isKeyNull(getNextLeafKey()) || compare(fields, structure.getFields(txn,getNext(txn).get(0))) != 0)
+            if (storage.isKeyNull(getNextLeafKey()) || compare(fields, structure.getFields(txn, getNext(txn).get(0))) != 0)
             {
                 LeafTier nextLeaf = storage.newLeafTier(structure, txn);
                 link(txn, this, nextLeaf, setOfDirty);
@@ -568,7 +568,7 @@ implements Serializable
                 while (objects.hasNext())
                 {
                     Object before = objects.next();
-                    if (compare(structure.getFields(txn,before), fields) > 0)
+                    if (compare(structure.getFields(txn, before), fields) > 0)
                     {
                         objects.previous();
                         objects.add(bucket);
@@ -589,7 +589,7 @@ implements Serializable
         {
             for (int i = 0; i < getSize(); i++)
             {
-                int compare = compare(structure.getFields(txn,get(i)), fields);
+                int compare = compare(structure.getFields(txn, get(i)), fields);
                 if (compare >= 0)
                 {
                     return new Cursor(structure, txn, this, i);
@@ -674,11 +674,6 @@ implements Serializable
             structure.getStorage().free(structure, txn, leaf);
         }
 
-        public void revert(Object txn)
-        {
-            structure.getStorage().revert(structure, txn, this);
-        }
-
         public void write(Object txn)
         {
             structure.getStorage().write(structure, txn, this);
@@ -697,7 +692,7 @@ implements Serializable
             }
             Object previous = null;
             Iterator objects = listIterator();
-            Comparator comparator = new CopaceticComparator(txn,structure);
+            Comparator comparator = new CopaceticComparator(txn, structure);
             while (objects.hasNext())
             {
                 Object object = objects.next();
@@ -872,7 +867,7 @@ implements Serializable
             while (branches.hasNext())
             {
                 Branch branch = (Branch) branches.next();
-                if (branch.isTerminal() || compare(fields, structure.getFields(txn,branch.getObject())) <= 0)
+                if (branch.isTerminal() || compare(fields, structure.getFields(txn, branch.getObject())) <= 0)
                 {
                     return branch;
                 }
@@ -920,7 +915,7 @@ implements Serializable
             while (branches.hasNext())
             {
                 Branch branch = (Branch) branches.next();
-                if (compare(oldPivot, structure.getFields(txn,branch.getObject())) == 0)
+                if (compare(oldPivot, structure.getFields(txn, branch.getObject())) == 0)
                 {
                     branches.set(new Branch(branch.getLeftKey(), newPivot, branch.getSize()));
                     setOfDirty.add(this);
@@ -1011,11 +1006,6 @@ implements Serializable
 
             setOfDirty.add(this);
             structure.getStorage().free(structure, txn, inner);
-        }
-
-        public void revert(Object txn)
-        {
-            structure.getStorage().revert(structure, txn, this);
         }
 
         public void write(Object txn)
@@ -1140,15 +1130,16 @@ implements Serializable
 
         public void free(Structure structure, Object txn, LeafTier leaf);
 
-        public void revert(Structure structure, Object txn, InnerTier inner);
-
-        public void revert(Structure structure, Object txn, LeafTier leaf);
-
         public Object getKey(Strata.Tier leaf);
 
         public Object getNullKey();
 
         public boolean isKeyNull(Object object);
+    }
+    
+    private interface Operation
+    {
+        public void operate();
     }
 
     public final class Query
@@ -1291,7 +1282,7 @@ implements Serializable
             }
         }
 
-        public Collection remove(Object keyOfObject)
+        public Object remove(Object keyOfObject)
         {
             Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfObject);
             TierSet setOfDirty = new TierSet(mapOfDirtyTiers);
@@ -1370,7 +1361,7 @@ implements Serializable
             }
             return new Cursor(structure, txn, (LeafTier) tier.getTier(txn, branch.getLeftKey()), 0);
         }
-        
+
         public Cursor last()
         {
             Branch branch = null;
@@ -1397,20 +1388,6 @@ implements Serializable
                 {
                     Tier tier = (Tier) tiers.next();
                     tier.write(txn);
-                }
-                mapOfDirtyTiers.clear();
-            }
-        }
-
-        public void revert()
-        {
-            if (mapOfDirtyTiers.size() != 0)
-            {
-                Iterator tiers = mapOfDirtyTiers.values().iterator();
-                while (tiers.hasNext())
-                {
-                    Tier tier = (Tier) tiers.next();
-                    tier.revert(txn);
                 }
                 mapOfDirtyTiers.clear();
             }

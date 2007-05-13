@@ -206,18 +206,6 @@ implements Strata.Storage, Serializable
 
     }
 
-    public void revert(Strata.Structure structure, Object txn, Strata.LeafTier leaf)
-    {
-        Bento.Address address = (Bento.Address) leaf.getKey();
-        mapOfTiers.remove(address.toKey());
-    }
-
-    public void revert(Strata.Structure structure, Object txn, Strata.InnerTier inner)
-    {
-        Bento.Address address = (Bento.Address) inner.getKey();
-        mapOfTiers.remove(address.toKey());
-    }
-
     public void free(Strata.Structure structure, Object txn, Strata.InnerTier inner)
     {
         Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
