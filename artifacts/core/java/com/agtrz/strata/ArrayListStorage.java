@@ -42,6 +42,14 @@ implements Strata.Storage
     {
     }
 
+    public void revert(Strata.Structure structure, Object txn, Strata.InnerTier inner)
+    {
+    }
+
+    public void revert(Strata.Structure structure, Object txn, Strata.LeafTier leaf)
+    {
+    }
+
     public Object getKey(Strata.Tier leaf)
     {
         return leaf;

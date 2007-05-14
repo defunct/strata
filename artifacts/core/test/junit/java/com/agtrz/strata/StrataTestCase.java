@@ -1,5 +1,7 @@
 package com.agtrz.strata;
 
+import java.util.Iterator;
+
 import junit.framework.TestCase;
 
 public class StrataTestCase
@@ -372,14 +374,14 @@ extends TestCase
 
     private void assertRemove(Strata.Query query, int value, int count)
     {
+        Iterator iterator = query.remove(new Integer(value)).iterator();
         for (int i = 0; i < count; i++)
         {
-            Object object = query.remove(new Integer(value));
-            assertNotNull(object);
-            Integer integer = (Integer) object;
+            assertTrue(iterator.hasNext());
+            Integer integer = (Integer) iterator.next();
             assertEquals(value, integer.intValue());
         }
-        assertNull(query.remove(new Integer(value)));
+        assertFalse(iterator.hasNext());
     }
 }
 
