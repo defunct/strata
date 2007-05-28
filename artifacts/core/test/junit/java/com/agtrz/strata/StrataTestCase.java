@@ -1,7 +1,5 @@
 package com.agtrz.strata;
 
-import java.util.Iterator;
-
 import junit.framework.TestCase;
 
 public class StrataTestCase
@@ -31,6 +29,15 @@ extends TestCase
         Strata.Query query = strata.query(null);
         query.insert(ALPHABET[0]);
         assertOneEquals(ALPHABET[0], query.find(ALPHABET[0]));
+    }
+
+    public void testSingleRemove()
+    {
+        Strata strata = new Strata();
+        Strata.Query query = strata.query(null);
+        query.insert(ALPHABET[0]);
+        assertOneEquals(ALPHABET[0], query.find(ALPHABET[0]));
+        assertEquals(ALPHABET[0], query.remove(ALPHABET[0]));
     }
 
     public void testMultiple()
@@ -265,6 +272,7 @@ extends TestCase
         int[] insert = new int[] { 2, 2, 2, 2, 2 };
 
         assertInsert(query, insert);
+        query.copacetic();
 
         query.insert(new Integer(3));
         query.copacetic();
@@ -301,6 +309,24 @@ extends TestCase
 
         assertEquals(1, new Integer(1), query.find(new Integer(1)));
         assertEquals(5, new Integer(2), query.find(new Integer(2)));
+    }
+
+    public void testUnsplittableLeftNotFirstEntry()
+    {
+        Strata strata = new Strata();
+        Strata.Query query = strata.query(null);
+        int[] insert = new int[] { 5, 5, 5, 5, 5 };
+
+        assertInsert(query, insert);
+
+        query.insert(new Integer(1));
+        query.copacetic();
+
+        query.insert(new Integer(3));
+        query.copacetic();
+
+        assertEquals(1, new Integer(1), query.find(new Integer(1)));
+        assertEquals(5, new Integer(5), query.find(new Integer(5)));
     }
 
     public void testTraverse()
@@ -343,7 +369,6 @@ extends TestCase
 
         assertRemove(query, 3, 3);
         assertContains(query, new int[] { 1, 5 });
-
     }
 
     public void testRemoveSplit()
@@ -353,6 +378,7 @@ extends TestCase
 
         int[] insert = new int[] { 2, 3, 4, 5, 6, 1 };
         assertInsert(query, insert);
+        query.copacetic();
 
         assertRemove(query, 3, 1);
         query.copacetic();
@@ -372,16 +398,121 @@ extends TestCase
         assertContains(query, new int[] { 1, 2, 3, 4, 5 });
     }
 
+    public void testRemoveSwapKey()
+    {
+        Strata strata = new Strata();
+        Strata.Query query = strata.query(null);
+
+        for (int i = 1; i <= 100; i++)
+        {
+            query.insert(new Integer(i));
+            query.copacetic();
+        }
+
+        assertRemove(query, 43, 1);
+        query.copacetic();
+        assertContains(query, new int[] { 1, 2, 3, 5, 6, 7 });
+    }
+
+    public void testRemoveMergeRoot()
+    {
+        Strata strata = new Strata();
+        Strata.Query query = strata.query(null);
+
+        for (int i = 1; i <= 45; i++)
+        {
+            query.insert(new Integer(i));
+            query.copacetic();
+        }
+
+        Integer fortySix = new Integer(46);
+        query.insert(fortySix);
+        query.copacetic();
+
+        assertRemove(query, 46, 1);
+        query.copacetic();
+    }
+
+    public void testRemoveMergeRootAndSwap()
+    {
+        Strata strata = new Strata();
+        Strata.Query query = strata.query(null);
+
+        for (int i = 1; i <= 45; i++)
+        {
+            query.insert(new Integer(i));
+            query.copacetic();
+        }
+
+        Integer fortySix = new Integer(46);
+        query.insert(fortySix);
+        query.copacetic();
+
+        assertOneEquals(new Integer(19), query.find(new Integer(19)));
+        assertOneEquals(new Integer(20), query.find(new Integer(20)));
+        assertRemove(query, 19, 1);
+        assertOneEquals(new Integer(20), query.find(new Integer(20)));
+        assertRemove(query, 20, 1);
+        query.copacetic();
+    }
+
+    public void testRemoveLeftMostSwapNoMerge()
+    {
+        Strata strata = new Strata();
+        Strata.Query query = strata.query(null);
+
+        for (int i = 1; i <= 45; i++)
+        {
+            query.insert(new Integer(i));
+            query.copacetic();
+        }
+
+        Integer fortySix = new Integer(46);
+        query.insert(fortySix);
+        query.copacetic();
+
+        Integer twenty = new Integer(20);
+        for (int i = 0; i < 4; i++)
+        {
+            query.insert(twenty);
+            query.copacetic();
+        }
+
+        assertRemove(query, 19, 1);
+        query.copacetic();
+    }
+
+    public void testRemoveShift()
+    {
+        Strata strata = new Strata();
+        Strata.Query query = strata.query(null);
+
+        for (int i = 1; i <= 7; i++)
+        {
+            query.insert(new Integer(i));
+            query.copacetic();
+        }
+
+        for (int i = 0; i < 15; i++)
+        {
+            query.insert(new Integer(3));
+            query.copacetic();
+        }
+
+        assertRemove(query, 3, 16);
+        query.copacetic();
+    }
+
     private void assertRemove(Strata.Query query, int value, int count)
     {
-        Iterator iterator = query.remove(new Integer(value)).iterator();
         for (int i = 0; i < count; i++)
         {
-            assertTrue(iterator.hasNext());
-            Integer integer = (Integer) iterator.next();
+            Object object = query.remove(new Integer(value));
+            assertNotNull(object);
+            Integer integer = (Integer) object;
             assertEquals(value, integer.intValue());
         }
-        assertFalse(iterator.hasNext());
+        assertNull(query.remove(new Integer(value)));
     }
 }
 

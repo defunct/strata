@@ -2,16 +2,23 @@ package com.agtrz.strata;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+
+import EDU.oswego.cs.dl.util.concurrent.ReadWriteLock;
+import EDU.oswego.cs.dl.util.concurrent.ReentrantWriterPreferenceReadWriteLock;
+import EDU.oswego.cs.dl.util.concurrent.Sync;
+
+import com.agtrz.operators.True;
+import com.agtrz.operators.UrnaryOperator;
+import com.agtrz.swag.danger.Danger;
 
 public class Strata
 implements Serializable
@@ -41,7 +48,7 @@ implements Serializable
         LeafTier leaf = structure.getStorage().newLeafTier(structure, txn);
         leaf.write(txn);
 
-        root.add(new Branch(leaf.getKey(), null, 0));
+        root.add(new Branch(leaf.getKey(), null));
         root.write(txn);
 
         this.structure = structure;
@@ -56,6 +63,18 @@ implements Serializable
     public Query query(Object txn)
     {
         return new Query(txn);
+    }
+
+    public final static class Exception
+    extends Danger
+    {
+        private static final long serialVersionUID = 20070513L;
+
+        public Exception(Throwable cause, String message)
+        {
+            super(cause);
+            message(message);
+        }
     }
 
     public final static class Creator
@@ -142,7 +161,7 @@ implements Serializable
 
         public Object newBucket(Object txn, Object keyOfObject)
         {
-            return cooper.newBucket(txn,extractor, keyOfObject);
+            return cooper.newBucket(txn, extractor, keyOfObject);
         }
 
         public Object getObjectKey(Object object)
@@ -158,7 +177,7 @@ implements Serializable
 
     public final static class ComparableExtractor
     implements FieldExtractor, Serializable
-    { 
+    {
         private final static long serialVersionUID = 20070402L;
 
         public Comparable[] getFields(Object txn, Object object)
@@ -171,10 +190,12 @@ implements Serializable
     implements Comparator
     {
         private final Object txn;
+
         private final Structure structure;
 
-        public CopaceticComparator(Object txn,Structure structure)
-        {this.txn = txn;
+        public CopaceticComparator(Object txn, Structure structure)
+        {
+            this.txn = txn;
             this.structure = structure;
         }
 
@@ -186,7 +207,7 @@ implements Serializable
 
     private interface Cooper
     {
-        public Object newBucket(Object txn,FieldExtractor fields, Object keyOfObject);
+        public Object newBucket(Object txn, FieldExtractor fields, Object keyOfObject);
 
         public Object newBucket(Comparable[] fields, Object keyOfObject);
 
@@ -239,7 +260,7 @@ implements Serializable
     {
         private final static long serialVersionUID = 20070402L;
 
-        public Object newBucket(Object txn,FieldExtractor extractor, Object keyOfObject)
+        public Object newBucket(Object txn, FieldExtractor extractor, Object keyOfObject)
         {
             return keyOfObject;
         }
@@ -260,56 +281,13 @@ implements Serializable
         }
     }
 
-    public final static class Split
-    {
-        private final Object pivot;
-
-        private final Tier right;
-
-        public Split(Object pivot, Tier right)
-        {
-            this.pivot = pivot;
-            this.right = right;
-        }
-
-        public Object getPivot()
-        {
-            return pivot;
-        }
-
-        public Tier getRight()
-        {
-            return right;
-        }
-    }
-
-    public final class TierSet
-    {
-        private final Map mapOfTiers;
-
-        public TierSet(Map mapOfTiers)
-        {
-            this.mapOfTiers = mapOfTiers;
-        }
-
-        public void add(Tier tier)
-        {
-            mapOfTiers.put(tier.getKey(), tier);
-        }
-    }
-
     public interface Tier
     {
+        public ReadWriteLock getReadWriteLock();
+
         public Object getKey();
 
         public Object getStorageData();
-
-        /**
-         * Return true if this tier is full.
-         * 
-         * @return True if the tier is full.
-         */
-        public boolean isFull();
 
         /**
          * Return the number of objects or objects used to pivot in this tier.
@@ -319,21 +297,6 @@ implements Serializable
          * @return The size of the tier.
          */
         public int getSize();
-
-        public Split split(Object txn, Comparable[] fields, Object keyOfObject, TierSet setOfDirty);
-
-        /**
-         * Merge the contents of a tier to the left of this tier into this
-         * tier.
-         * 
-         * @param txn
-         *            The transaction of the query.
-         * @param left
-         *            The tier to the left of this tier.
-         */
-        public void consume(Object txn, Tier left, TierSet setOfDirty);
-
-        public void revert(Object txn);
 
         public void write(Object txn);
 
@@ -345,19 +308,24 @@ implements Serializable
     {
         private Object keyOfNext;
 
-        private Object keyOfPrevious;
-
         private final Object storageData;
 
         private final List listOfObjects;
 
         private final Strata.Structure structure;
 
+        private final ReadWriteLock readWriteLock = new ReentrantWriterPreferenceReadWriteLock();
+
         public LeafTier(Strata.Structure structure, Object storageData)
         {
             this.structure = structure;
             this.storageData = storageData;
             this.listOfObjects = new ArrayList(structure.getSize());
+        }
+
+        public ReadWriteLock getReadWriteLock()
+        {
+            return readWriteLock;
         }
 
         public Object getKey()
@@ -375,11 +343,6 @@ implements Serializable
             return storageData;
         }
 
-        public boolean isFull()
-        {
-            return getSize() == structure.getSize();
-        }
-
         public void setNextLeafKey(Object nextLeafKey)
         {
             this.keyOfNext = nextLeafKey;
@@ -390,24 +353,9 @@ implements Serializable
             return keyOfNext;
         }
 
-        public void setPreviousLeafKey(Object previousLeafKey)
-        {
-            this.keyOfPrevious = previousLeafKey;
-        }
-
-        public Object getPreviousLeafKey()
-        {
-            return keyOfPrevious;
-        }
-
         public ListIterator listIterator()
         {
             return listOfObjects.listIterator();
-        }
-
-        public void shift(Object object)
-        {
-            listOfObjects.add(0, object);
         }
 
         public void add(Object object)
@@ -425,163 +373,48 @@ implements Serializable
             return listOfObjects.get(index);
         }
 
+        public LeafTier getNextAndLock(Mutation mutation, Level levelOfLeaf)
+        {
+            if (!mutation.structure.getStorage().isKeyNull(getNextLeafKey()))
+            {
+                LeafTier leaf = structure.getStorage().getLeafTier(structure, mutation.txn, getNextLeafKey());
+                levelOfLeaf.lockAndAdd(leaf);
+                return leaf;
+            }
+            return null;
+        }
+
         private LeafTier getNext(Object txn)
         {
             return structure.getStorage().getLeafTier(structure, txn, getNextLeafKey());
         }
 
-        private boolean endOfList(Object txn, Comparable[] fields, LeafTier last)
+        public void link(Mutation mutation, LeafTier nextLeaf)
         {
-            return structure.getStorage().isKeyNull(last.getNextLeafKey()) || compare(structure.getFields(txn, last.getNext(txn).get(0)), fields) != 0;
-        }
-
-        private void link(Object txn, LeafTier leaf, LeafTier nextLeaf, Strata.TierSet setOfDirty)
-        {
-            setOfDirty.add(leaf);
-            setOfDirty.add(nextLeaf);
-            Object nextLeafKey = leaf.getNextLeafKey();
-            leaf.setNextLeafKey(nextLeaf.getKey());
+            mutation.mapOfDirtyTiers.put(getKey(), this);
+            mutation.mapOfDirtyTiers.put(nextLeaf.getKey(), nextLeaf);
+            Object nextLeafKey = getNextLeafKey();
+            setNextLeafKey(nextLeaf.getKey());
             nextLeaf.setNextLeafKey(nextLeafKey);
-            if (!structure.getStorage().isKeyNull(nextLeafKey))
-            {
-                LeafTier next = nextLeaf.getNext(txn);
-                setOfDirty.add(next);
-                next.setPreviousLeafKey(nextLeaf.getKey());
-            }
-            nextLeaf.setPreviousLeafKey(leaf.getKey());
         }
 
-        public Split split(Object txn, Comparable[] fields, Object keyOfObject, TierSet setOfDirty)
-        {
-            if (!isFull())
-            {
-                throw new IllegalStateException();
-            }
-
-            int middle = structure.getSize() >> 1;
-            boolean odd = (structure.getSize() & 1) == 1;
-            int lesser = middle - 1;
-            int greater = odd ? middle + 1 : middle;
-
-            int partition = -1;
-
-            Comparable[] candidate = structure.getFields(txn, get(middle));
-            for (int i = 0; partition == -1 && i < middle; i++)
-            {
-                if (compare(candidate, structure.getFields(txn,get(lesser))) != 0)
-                {
-                    partition = lesser + 1;
-                }
-                else if (compare(candidate, structure.getFields(txn,get(greater))) != 0)
-                {
-                    partition = greater;
-                }
-                lesser--;
-                greater++;
-            }
-
-            Storage storage = structure.getStorage();
-            Split split = null;
-            if (partition == -1)
-            {
-                Comparable[] repeated = structure.getFields(txn,get(0));
-                int compare = compare(fields, repeated);
-                if (compare < 0)
-                {
-                    LeafTier right = storage.newLeafTier(structure, txn);
-                    while (getSize() != 0)
-                    {
-                        right.add(remove(0));
-                    }
-
-                    link(txn, this, right, setOfDirty);
-
-                    split = new Split(structure.newBucket(fields, keyOfObject), right);
-                }
-                else if (compare > 0)
-                {
-                    LeafTier last = this;
-                    while (!endOfList(txn, repeated, last))
-                    {
-                        last = last.getNext(txn);
-                    }
-
-                    LeafTier right = storage.newLeafTier(structure, txn);
-                    link(txn, last, right, setOfDirty);
-
-                    split = new Split(get(0), right);
-                }
-            }
-            else
-            {
-                LeafTier right = storage.newLeafTier(structure, txn);
-
-                while (partition != getSize())
-                {
-                    right.add(remove(partition));
-                }
-
-                link(txn, this, right, setOfDirty);
-
-                split = new Split(get(getSize() - 1), right);
-            }
-
-            return split;
-        }
-
-        private void ensureNextLeafTier(Object txn, Comparable[] fields, Strata.TierSet setOfDirty)
-        {
-            Strata.Storage storage = structure.getStorage();
-            if (storage.isKeyNull(getNextLeafKey()) || compare(fields, structure.getFields(txn,getNext(txn).get(0))) != 0)
-            {
-                LeafTier nextLeaf = storage.newLeafTier(structure, txn);
-                link(txn, this, nextLeaf, setOfDirty);
-            }
-        }
-
-        public void append(Object txn, Comparable[] fields, Object keyOfObject, TierSet setOfDirty)
+        public void append(Mutation mutation, Level levelOfLeaf)
         {
             if (getSize() == structure.getSize())
             {
-                ensureNextLeafTier(txn, fields, setOfDirty);
-                getNext(txn).append(txn, fields, keyOfObject, setOfDirty);
+                Strata.Storage storage = structure.getStorage();
+                LeafTier nextLeaf = getNextAndLock(mutation, levelOfLeaf);
+                if (null == nextLeaf || compare(mutation.fields, structure.getFields(mutation.txn, nextLeaf.get(0))) != 0)
+                {
+                    nextLeaf = storage.newLeafTier(structure, mutation.txn);
+                    link(mutation, nextLeaf);
+                }
+                nextLeaf.append(mutation, levelOfLeaf);
             }
             else
             {
-                add(structure.newBucket(fields, keyOfObject));
-                setOfDirty.add(this);
-            }
-        }
-
-        public void insert(Object txn, Comparable[] fields, Object keyOfObject, TierSet setOfDirty)
-        {
-            if (getSize() == structure.getSize())
-            {
-                ensureNextLeafTier(txn, fields, setOfDirty);
-                getNext(txn).append(txn, fields, keyOfObject, setOfDirty);
-            }
-            else
-            {
-                Object bucket = structure.newBucket(fields, keyOfObject);
-
-                ListIterator objects = listIterator();
-                while (objects.hasNext())
-                {
-                    Object before = objects.next();
-                    if (compare(structure.getFields(txn,before), fields) > 0)
-                    {
-                        objects.previous();
-                        objects.add(bucket);
-                        break;
-                    }
-                }
-
-                if (!objects.hasNext())
-                {
-                    add(bucket);
-                }
-
-                setOfDirty.add(this);
+                add(mutation.bucket);
+                mutation.mapOfDirtyTiers.put(getKey(), this);
             }
         }
 
@@ -589,94 +422,13 @@ implements Serializable
         {
             for (int i = 0; i < getSize(); i++)
             {
-                int compare = compare(structure.getFields(txn,get(i)), fields);
+                int compare = compare(structure.getFields(txn, get(i)), fields);
                 if (compare >= 0)
                 {
                     return new Cursor(structure, txn, this, i);
                 }
             }
             return new Cursor(structure, txn, this, getSize());
-        }
-
-        /**
-         * Remove all objects that match the object according to the equator,
-         * while updating the inner tree if the object removed was used as a
-         * pivot in the inner tree.
-         * 
-         * @param criteria
-         *            An object that represents the objects that will be
-         *            removed from the B+Tree.
-         * @param equator
-         *            The comparison logic that will determine of an object in
-         *            the leaf is equal to the specified object.
-         * @return A colletion of the objects removed from the tree.
-         */
-        public Collection remove(Object txn, Object keyOfObject)
-        {
-            List listOfRemoved = new ArrayList();
-            Iterator objects = listIterator();
-            while (objects.hasNext())
-            {
-                Object candidate = objects.next();
-                if (keyOfObject.equals(structure.getObjectKey(candidate)))
-                {
-                    listOfRemoved.add(candidate);
-                    objects.remove();
-                }
-            }
-            Strata.Storage storage = structure.getStorage();
-            LeafTier lastLeaf = this;
-            LeafTier leaf = null;
-            while (!storage.isKeyNull(lastLeaf.getNextLeafKey()) && keyOfObject.equals(structure.getObjectKey((leaf = lastLeaf.getNext(txn)).get(0))))
-            {
-                objects = leaf.listIterator();
-                while (objects.hasNext())
-                {
-                    Object candidate = structure.getObjectKey(objects.next());
-                    if (keyOfObject.equals(candidate))
-                    {
-                        listOfRemoved.add(candidate);
-                        objects.remove();
-                    }
-                }
-                if (leaf.getSize() == 0)
-                {
-                    lastLeaf.setNextLeafKey(leaf.getNextLeafKey());
-                    leaf.getNext(txn).setPreviousLeafKey(lastLeaf.getKey());
-                }
-                lastLeaf = leaf;
-            }
-            return listOfRemoved;
-        }
-
-        private LeafTier getPrevious(Object txn)
-        {
-            return structure.getStorage().getLeafTier(structure, txn, getPreviousLeafKey());
-        }
-
-        public void consume(Object txn, Tier left, TierSet setOfDirty)
-        {
-            LeafTier leaf = (LeafTier) left;
-
-            setPreviousLeafKey(leaf.getPreviousLeafKey());
-            if (!structure.getStorage().isKeyNull(getPreviousLeafKey()))
-            {
-                getPrevious(txn).setNextLeafKey(getKey());
-            }
-
-            while (leaf.getSize() != 0)
-            {
-                shift(leaf.remove(leaf.getSize() - 1));
-            }
-
-            setOfDirty.add(this);
-
-            structure.getStorage().free(structure, txn, leaf);
-        }
-
-        public void revert(Object txn)
-        {
-            structure.getStorage().revert(structure, txn, this);
         }
 
         public void write(Object txn)
@@ -695,9 +447,15 @@ implements Serializable
             {
                 throw new IllegalStateException();
             }
+
+            if (getSize() > structure.getSize())
+            {
+                throw new IllegalStateException();
+            }
+
             Object previous = null;
             Iterator objects = listIterator();
-            Comparator comparator = new CopaceticComparator(txn,structure);
+            Comparator comparator = new CopaceticComparator(txn, structure);
             while (objects.hasNext())
             {
                 Object object = objects.next();
@@ -717,47 +475,39 @@ implements Serializable
 
     public final static class Branch
     {
-        private final Object leftKey;
+        private final Object rightKey;
 
-        private final Object object;
+        private Object pivot;
 
-        private int size;
-
-        public Branch(Object keyOfLeft, Object object, int size)
+        public Branch(Object keyOfRight, Object pivot)
         {
-            this.leftKey = keyOfLeft;
-            this.object = object;
-            this.size = size;
+            this.rightKey = keyOfRight;
+            this.pivot = pivot;
         }
 
-        public Object getLeftKey()
+        public Object getRightKey()
         {
-            return leftKey;
+            return rightKey;
         }
 
-        public Object getObject()
+        public Object getPivot()
         {
-            return object;
+            return pivot;
         }
 
-        public int getSize()
+        public void setPivot(Object pivot)
         {
-            return size;
-        }
-
-        public void setSize(int size)
-        {
-            this.size = size;
+            this.pivot = pivot;
         }
 
         public boolean isTerminal()
         {
-            return object == null;
+            return pivot == null;
         }
 
         public String toString()
         {
-            return object == null ? "TERMINAL" : object.toString();
+            return pivot == null ? "MINIMAL" : pivot.toString();
         }
     }
 
@@ -772,12 +522,19 @@ implements Serializable
 
         private final List listOfBranches;
 
+        private final ReadWriteLock readWriteLock = new ReentrantWriterPreferenceReadWriteLock();
+
         public InnerTier(Structure structure, Object key, short typeOfChildren)
         {
             this.structure = structure;
             this.key = key;
             this.childType = typeOfChildren;
             this.listOfBranches = new ArrayList(structure.getSize() + 1);
+        }
+
+        public ReadWriteLock getReadWriteLock()
+        {
+            return readWriteLock;
         }
 
         public Object getKey()
@@ -805,14 +562,14 @@ implements Serializable
             this.childType = childType;
         }
 
-        public void add(Object txn, Object keyOfLeft, Object keyOfObject, int sizeOfTier)
+        public void add(Object txn, Object keyOfLeft, Object keyOfObject)
         {
             Object bucket = null;
             if (keyOfObject != null)
             {
                 bucket = structure.newBucket(txn, keyOfObject);
             }
-            listOfBranches.add(new Branch(keyOfLeft, bucket, sizeOfTier));
+            listOfBranches.add(new Branch(keyOfLeft, bucket));
         }
 
         public void add(Branch branch)
@@ -820,9 +577,9 @@ implements Serializable
             listOfBranches.add(branch);
         }
 
-        public void shift(Branch branch)
+        public void add(int index, Branch branch)
         {
-            listOfBranches.add(0, branch);
+            listOfBranches.add(index, branch);
         }
 
         public Branch remove(int index)
@@ -840,44 +597,20 @@ implements Serializable
             return (Branch) listOfBranches.get(index);
         }
 
-        public Split split(Object txn, Comparable[] fields, Object keyOfObject, TierSet setOfDirty)
-        {
-            int partition = (structure.getSize() + 1) / 2;
-
-            Storage storage = structure.getStorage();
-            InnerTier right = storage.newInnerTier(structure, txn, getChildType());
-            for (int i = partition; i < structure.getSize() + 1; i++)
-            {
-                right.add(remove(partition));
-            }
-
-            Branch branch = remove(getSize());
-            Object pivot = branch.getObject();
-            add(new Branch(branch.getLeftKey(), null, branch.getSize()));
-
-            setOfDirty.add(this);
-            setOfDirty.add(right);
-
-            return new Strata.Split(pivot, right);
-        }
-
-        public boolean isFull()
-        {
-            return getSize() == structure.getSize();
-        }
-
         public Branch find(Object txn, Comparable[] fields)
         {
             Iterator branches = listIterator();
+            Branch candidate = (Branch) branches.next();
             while (branches.hasNext())
             {
                 Branch branch = (Branch) branches.next();
-                if (branch.isTerminal() || compare(fields, structure.getFields(txn,branch.getObject())) <= 0)
+                if (compare(fields, structure.getFields(txn, branch.getPivot())) < 0)
                 {
-                    return branch;
+                    break;
                 }
+                candidate = branch;
             }
-            throw new IllegalStateException();
+            return candidate;
         }
 
         public int getIndexOfTier(Object keyOfTier)
@@ -887,135 +620,13 @@ implements Serializable
             while (branches.hasNext())
             {
                 Branch branch = (Branch) branches.next();
-                if (branch.getLeftKey().equals(keyOfTier))
+                if (branch.getRightKey().equals(keyOfTier))
                 {
                     return index;
                 }
                 index++;
             }
             return -1;
-        }
-
-        public Object removeLeafTier(Object keyOfLeafTier, TierSet setOfDirty)
-        {
-            Branch previous = null;
-            ListIterator branches = listIterator();
-            while (branches.hasNext())
-            {
-                Branch branch = (Branch) branches.next();
-                if (branch.getLeftKey().equals(keyOfLeafTier))
-                {
-                    branches.remove();
-                    setOfDirty.add(this);
-                    break;
-                }
-                previous = branch;
-            }
-            return previous.getObject();
-        }
-
-        public void replacePivot(Object txn, Comparable[] oldPivot, Object newPivot, TierSet setOfDirty)
-        {
-            ListIterator branches = listIterator();
-            while (branches.hasNext())
-            {
-                Branch branch = (Branch) branches.next();
-                if (compare(oldPivot, structure.getFields(txn,branch.getObject())) == 0)
-                {
-                    branches.set(new Branch(branch.getLeftKey(), newPivot, branch.getSize()));
-                    setOfDirty.add(this);
-                    break;
-                }
-            }
-        }
-
-        public final void splitRootTier(Object txn, Split split, TierSet setOfDirty)
-        {
-            Strata.Storage storage = structure.getStorage();
-            InnerTier left = storage.newInnerTier(structure, txn, getChildType());
-            int count = getSize() + 1;
-            for (int i = 0; i < count; i++)
-            {
-                left.add(remove(0));
-            }
-            setOfDirty.add(left);
-
-            add(new Branch(left.getKey(), split.getPivot(), left.getSize()));
-            add(new Branch(split.getRight().getKey(), null, split.getRight().getSize()));
-            setChildType(INNER);
-
-            setOfDirty.add(this);
-        }
-
-        public void replace(Tier tier, Split split, TierSet setOfDirty)
-        {
-            Object keyOfTier = tier.getKey();
-            ListIterator branches = listIterator();
-            while (branches.hasNext())
-            {
-                Branch branch = (Branch) branches.next();
-                if (branch.getLeftKey().equals(keyOfTier))
-                {
-                    branches.set(new Branch(keyOfTier, split.getPivot(), tier.getSize()));
-                    branches.add(new Branch(split.getRight().getKey(), branch.getObject(), split.getRight().getSize()));
-                    setOfDirty.add(this);
-                    break;
-                }
-            }
-        }
-
-        public boolean isLeaf()
-        {
-            return false;
-        }
-
-        public boolean canMerge(Tier tier)
-        {
-            int index = getIndexOfTier(tier);
-            if (index > 0 && get(index - 1).getSize() + get(index).getSize() <= structure.getSize())
-            {
-                return true;
-            }
-            else if (index <= structure.getSize() && get(index).getSize() + get(index + 1).getSize() <= structure.getSize())
-            {
-                return true;
-
-            }
-            return false;
-        }
-
-        public void merge(Object txn, Tier tier, TierSet setOfDirty)
-        {
-            int index = getIndexOfTier(tier.getKey());
-            if (canMerge(index - 1, index))
-            {
-                merge(txn, index - 1, index, setOfDirty);
-            }
-            else if (canMerge(index, index + 1))
-            {
-                merge(txn, index, index + 1, setOfDirty);
-            }
-        }
-
-        public void consume(Object txn, Tier left, TierSet setOfDirty)
-        {
-            InnerTier inner = (InnerTier) left;
-
-            Branch oldPivot = inner.get(inner.getSize());
-            shift(new Branch(oldPivot.getLeftKey(), oldPivot.getObject(), oldPivot.getSize()));
-
-            for (int i = left.getSize(); i > 0; i--)
-            {
-                shift(inner.get(i));
-            }
-
-            setOfDirty.add(this);
-            structure.getStorage().free(structure, txn, inner);
-        }
-
-        public void revert(Object txn)
-        {
-            structure.getStorage().revert(structure, txn, this);
         }
 
         public void write(Object txn)
@@ -1030,42 +641,44 @@ implements Serializable
                 throw new IllegalStateException();
             }
 
+            if (getSize() > structure.getSize() + 1)
+            {
+                throw new IllegalStateException();
+            }
+
             Object previous = null;
             Object lastLeftmost = null;
 
             Comparator comparator = new CopaceticComparator(txn, structure);
             Iterator branches = listIterator();
+            boolean isMinimal = true;
             while (branches.hasNext())
             {
                 Branch branch = (Branch) branches.next();
-                if (!branches.hasNext() && !branch.isTerminal())
+                if (isMinimal != branch.isTerminal())
                 {
                     throw new IllegalStateException();
                 }
+                isMinimal = false;
 
-                Strata.Tier left = getTier(txn, branch.getLeftKey());
+                Strata.Tier left = getTier(txn, branch.getRightKey());
                 left.copacetic(txn, copacetic);
-
-                if (branch.getSize() < left.getSize())
-                {
-                    throw new IllegalStateException();
-                }
 
                 if (!branch.isTerminal())
                 {
                     // Each key must be less than the one next to it.
-                    if (previous != null && comparator.compare(previous, branch.getObject()) >= 0)
+                    if (previous != null && comparator.compare(previous, branch.getPivot()) >= 0)
                     {
                         throw new IllegalStateException();
                     }
 
                     // Each key must occur only once in the inner tiers.
-                    if (!copacetic.unique(branch.getObject()))
+                    if (!copacetic.unique(branch.getPivot()))
                     {
                         throw new IllegalStateException();
                     }
                 }
-                previous = branch.getObject();
+                previous = branch.getPivot();
 
                 Object leftmost = getLeftMost(txn, left, getChildType());
                 if (lastLeftmost != null && comparator.compare(lastLeftmost, leftmost) >= 0)
@@ -1082,17 +695,10 @@ implements Serializable
             {
                 InnerTier inner = (InnerTier) tier;
                 childType = inner.getChildType();
-                tier = inner.getTier(txn, inner.get(0).getLeftKey());
+                tier = inner.getTier(txn, inner.get(0).getRightKey());
             }
             LeafTier leaf = (LeafTier) tier;
             return leaf.get(0);
-        }
-
-        // FIXME Is this correct for the inner tier? Do I count pivots or
-        // branches?
-        private boolean canMerge(int indexOfLeft, int indexOfRight)
-        {
-            return indexOfLeft >= 0 && indexOfRight <= getSize() && get(indexOfLeft).getSize() + get(indexOfRight).getSize() < structure.getSize() + 1;
         }
 
         public Tier getTier(Object txn, Object key)
@@ -1100,19 +706,6 @@ implements Serializable
             if (getChildType() == INNER)
                 return structure.getStorage().getInnerTier(structure, txn, key);
             return structure.getStorage().getLeafTier(structure, txn, key);
-        }
-
-        private void merge(Object txn, int indexOfLeft, int indexOfRight, TierSet setOfDirty)
-        {
-            Strata.Tier left = getTier(txn, get(indexOfLeft).getLeftKey());
-            Strata.Tier right = getTier(txn, get(indexOfRight).getLeftKey());
-
-            right.consume(txn, left, setOfDirty);
-
-            get(indexOfRight).setSize(right.getSize());
-            remove(indexOfLeft);
-
-            setOfDirty.add(this);
         }
 
         public String toString()
@@ -1140,10 +733,6 @@ implements Serializable
 
         public void free(Structure structure, Object txn, LeafTier leaf);
 
-        public void revert(Structure structure, Object txn, InnerTier inner);
-
-        public void revert(Structure structure, Object txn, LeafTier leaf);
-
         public Object getKey(Strata.Tier leaf);
 
         public Object getNullKey();
@@ -1151,16 +740,1042 @@ implements Serializable
         public boolean isKeyNull(Object object);
     }
 
+    private final static class Mutation
+    {
+        public final Structure structure;
+
+        public final Object txn;
+
+        public final Object keyOfObject;
+
+        public final Comparable[] fields;
+
+        public final UrnaryOperator test;
+
+        public final LinkedList listOfLevels = new LinkedList();
+
+        public final Map mapOfDirtyTiers = new LinkedHashMap();
+
+        public Object result;
+
+        public Object replacement;
+
+        public LeafOperation leafOperation;
+
+        public final Object bucket;
+
+        public Mutation(Structure structure, Object txn, Object keyOfObject, Comparable[] fields, UrnaryOperator test)
+        {
+            this.structure = structure;
+            this.txn = txn;
+            this.keyOfObject = keyOfObject;
+            this.fields = fields;
+            this.test = test;
+            this.bucket = structure.newBucket(fields, keyOfObject);
+        }
+
+        public void rewind(boolean isLeaf)
+        {
+            Iterator levels = listOfLevels.iterator();
+            Level level = null;
+            boolean unlock = true;
+            for (;;)
+            {
+                if (!levels.hasNext())
+                {
+                    break;
+                }
+                level = (Level) levels.next();
+                if (isLeaf && !levels.hasNext())
+                {
+                    break;
+                }
+                Iterator operations = level.listOfOperations.iterator();
+                while (operations.hasNext())
+                {
+                    Operation operation = (Operation) operations.next();
+                    if (operation.canCancel())
+                    {
+                        operations.remove();
+                    }
+                    else
+                    {
+                        unlock = false;
+                    }
+                }
+                if (unlock)
+                {
+                    if (listOfLevels.size() == 3)
+                    {
+                        level.downgrade();
+                    }
+                    else
+                    {
+                        level.releaseAndClear();
+                        levels.remove();
+                    }
+                }
+            }
+        }
+
+        public void shift()
+        {
+            Iterator levels = listOfLevels.iterator();
+            while (listOfLevels.size() > 3 && levels.hasNext())
+            {
+                Level level = (Level) levels.next();
+                if (level.listOfOperations.size() != 0)
+                {
+                    break;
+                }
+
+                level.releaseAndClear();
+                levels.remove();
+            }
+        }
+    }
+
+    private interface LockExtractor
+    {
+        public Sync getSync(ReadWriteLock readWriteLock);
+
+        public boolean isExeclusive();
+    }
+
+    private final static class ReadLockExtractor
+    implements LockExtractor
+    {
+        public Sync getSync(ReadWriteLock readWriteLock)
+        {
+            return readWriteLock.readLock();
+        }
+
+        public boolean isExeclusive()
+        {
+            return false;
+        }
+    }
+
+    private final static class WriteLockExtractor
+    implements LockExtractor
+    {
+        public Sync getSync(ReadWriteLock readWriteLock)
+        {
+            return readWriteLock.writeLock();
+        }
+
+        public boolean isExeclusive()
+        {
+            return true;
+        }
+    }
+
+    private interface LeafOperation
+    {
+        public boolean operate(Mutation mutation, Level levelOfLeaf);
+    }
+
+    private interface Operation
+    {
+        public void operate(Mutation mutation);
+
+        public boolean canCancel();
+    }
+
+    private interface RootDecision
+    {
+        public boolean test(Mutation mutation, Level levelOfRoot, InnerTier root);
+
+        public void operation(Mutation mutation, Level levelOfRoot, InnerTier root);
+    }
+
+    private interface InnerDecision
+    {
+        public boolean test(Mutation mutation, Level levelOfParent, Level levelOfChild, InnerTier parent, InnerTier child);
+    }
+
+    private interface LeafDecision
+    {
+        public boolean test(Mutation mutation, Level levelOfParent, Level levelOfChild, InnerTier parent);
+    }
+
+    public final static class SplitRoot
+    implements RootDecision
+    {
+        public boolean test(Mutation mutation, Level levelOfRoot, InnerTier root)
+        {
+            return mutation.structure.getSize() == root.getSize();
+        }
+
+        public void operation(Mutation mutation, Level levelOfRoot, InnerTier root)
+        {
+            levelOfRoot.listOfOperations.add(new Split(root));
+        }
+
+        private final static class Split
+        implements Operation
+        {
+            private final InnerTier root;
+
+            public Split(InnerTier root)
+            {
+                this.root = root;
+            }
+
+            public void operate(Mutation mutation)
+            {
+                Strata.Storage storage = mutation.structure.getStorage();
+                InnerTier left = storage.newInnerTier(mutation.structure, mutation.txn, root.getChildType());
+                InnerTier right = storage.newInnerTier(mutation.structure, mutation.txn, root.getChildType());
+                int partition = (root.getSize() + 1) / 2;
+                int fullSize = root.getSize() + 1;
+                for (int i = 0; i < partition; i++)
+                {
+                    left.add(root.remove(0));
+                }
+                for (int i = partition; i < fullSize; i++)
+                {
+                    right.add(root.remove(0));
+                }
+                Object pivot = right.get(0).getPivot();
+                right.get(0).setPivot(null);
+
+                root.add(new Branch(left.getKey(), null));
+                root.add(new Branch(right.getKey(), pivot));
+
+                root.setChildType(INNER);
+
+                mutation.mapOfDirtyTiers.put(root.getKey(), root);
+                mutation.mapOfDirtyTiers.put(left.getKey(), left);
+                mutation.mapOfDirtyTiers.put(right.getKey(), right);
+            }
+
+            public boolean canCancel()
+            {
+                return true;
+            }
+        }
+    }
+
+    private final static class SplitInner
+    implements InnerDecision
+    {
+        public boolean test(Mutation mutation, Level levelOfParent, Level levelOfChild, InnerTier parent, InnerTier child)
+        {
+            levelOfChild.lockAndAdd(child);
+            if (child.getSize() == mutation.structure.getSize())
+            {
+                levelOfParent.listOfOperations.add(new Split(parent, child));
+                return true;
+            }
+            return false;
+        }
+
+        public final static class Split
+        implements Operation
+        {
+            private final InnerTier parent;
+
+            private final InnerTier child;
+
+            public Split(InnerTier parent, InnerTier child)
+            {
+                this.parent = parent;
+                this.child = child;
+            }
+
+            public void operate(Mutation mutation)
+            {
+                Strata.Storage storage = mutation.structure.getStorage();
+
+                InnerTier right = storage.newInnerTier(mutation.structure, mutation.txn, child.getChildType());
+                int partition = (child.getSize() + 1) / 2;
+
+                while (partition <= child.getSize())
+                {
+                    right.add(child.remove(partition));
+                }
+
+                Object pivot = right.get(0).getPivot();
+                right.get(0).setPivot(null);
+
+                int index = parent.getIndexOfTier(child.getKey());
+                parent.add(index + 1, new Branch(right, pivot));
+
+                mutation.mapOfDirtyTiers.put(parent.getKey(), parent);
+                mutation.mapOfDirtyTiers.put(child.getKey(), child);
+                mutation.mapOfDirtyTiers.put(right.getKey(), right);
+            }
+
+            public boolean canCancel()
+            {
+                return true;
+            }
+        }
+    }
+
+    private final static class LeafInsert
+    implements LeafDecision
+    {
+        public boolean test(Mutation mutation, Level levelOfParent, Level levelOfChild, InnerTier parent)
+        {
+            boolean split = true;
+            levelOfChild.getSync = new WriteLockExtractor();
+            Branch branch = parent.find(mutation.txn, mutation.fields);
+            LeafTier leaf = (LeafTier) parent.getTier(mutation.txn, branch.getRightKey());
+            levelOfChild.getSync = new WriteLockExtractor();
+            levelOfChild.lockAndAdd(leaf);
+            if (leaf.getSize() == mutation.structure.getSize())
+            {
+                Comparable[] first = mutation.structure.getFields(mutation.txn, leaf.get(0));
+                Comparable[] last = mutation.structure.getFields(mutation.txn, leaf.get(leaf.getSize() - 1));
+                if (compare(first, last) == 0)
+                {
+                    int compare = compare(mutation.fields, first);
+                    if (compare < 0)
+                    {
+                        mutation.leafOperation = new SplitLinkedListLeft(parent);
+                    }
+                    else if (compare > 0)
+                    {
+                        mutation.leafOperation = new SplitLinkedListRight(parent);
+                    }
+                    else
+                    {
+                        mutation.leafOperation = new InsertLinkedList(leaf);
+                        split = false;
+                    }
+                }
+                else
+                {
+                    levelOfParent.listOfOperations.add(new SplitLeaf(parent));
+                    mutation.leafOperation = new InsertSorted(parent);
+                }
+            }
+            else
+            {
+                mutation.leafOperation = new InsertSorted(parent);
+                split = false;
+            }
+            return split;
+        }
+
+        private final static class SplitLinkedListLeft
+        implements LeafOperation
+        {
+            private final InnerTier inner;
+
+            public SplitLinkedListLeft(InnerTier inner)
+            {
+                this.inner = inner;
+            }
+
+            public boolean operate(Mutation mutation, Level levelOfLeaf)
+            {
+                Branch branch = inner.find(mutation.txn, mutation.fields);
+                LeafTier leaf = (LeafTier) inner.getTier(mutation.txn, branch.getRightKey());
+
+                LeafTier right = mutation.structure.getStorage().newLeafTier(mutation.structure, mutation.txn);
+                while (leaf.getSize() != 0)
+                {
+                    right.add(leaf.remove(0));
+                }
+
+                leaf.link(mutation, right);
+
+                int index = inner.getIndexOfTier(leaf.getKey());
+                if (index != 0)
+                {
+                    throw new IllegalStateException();
+                }
+                inner.add(index + 1, new Branch(right.getKey(), right.get(0)));
+
+                mutation.mapOfDirtyTiers.put(leaf.getKey(), leaf);
+                mutation.mapOfDirtyTiers.put(right.getKey(), right);
+
+                return new InsertSorted(inner).operate(mutation, levelOfLeaf);
+            }
+        }
+
+        private final static class SplitLinkedListRight
+        implements LeafOperation
+        {
+            private final InnerTier inner;
+
+            public SplitLinkedListRight(InnerTier inner)
+            {
+                this.inner = inner;
+            }
+
+            private boolean endOfList(Mutation mutation, LeafTier last)
+            {
+                return mutation.structure.getStorage().isKeyNull(last.getNextLeafKey()) || compare(mutation.structure.getFields(mutation.txn, last.getNext(mutation.txn).get(0)), mutation.structure.getFields(mutation.txn, last.get(0))) != 0;
+            }
+
+            public boolean operate(Mutation mutation, Level levelOfLeaf)
+            {
+                Branch branch = inner.find(mutation.txn, mutation.fields);
+                LeafTier leaf = (LeafTier) inner.getTier(mutation.txn, branch.getRightKey());
+
+                LeafTier last = leaf;
+                while (!endOfList(mutation, last))
+                {
+                    last = last.getNextAndLock(mutation, levelOfLeaf);
+                }
+
+                LeafTier right = mutation.structure.getStorage().newLeafTier(mutation.structure, mutation.txn);
+                last.link(mutation, right);
+
+                inner.add(inner.getIndexOfTier(leaf.getKey()) + 1, new Branch(right.getKey(), mutation.bucket));
+
+                mutation.mapOfDirtyTiers.put(leaf.getKey(), leaf);
+                mutation.mapOfDirtyTiers.put(right.getKey(), right);
+
+                return new InsertSorted(inner).operate(mutation, levelOfLeaf);
+            }
+        }
+
+        private final static class SplitLeaf
+        implements Operation
+        {
+            private final InnerTier inner;
+
+            public SplitLeaf(InnerTier inner)
+            {
+                this.inner = inner;
+            }
+
+            public void operate(Mutation mutation)
+            {
+                Branch branch = inner.find(mutation.txn, mutation.fields);
+                LeafTier leaf = (LeafTier) inner.getTier(mutation.txn, branch.getRightKey());
+
+                int middle = mutation.structure.getSize() >> 1;
+                boolean odd = (mutation.structure.getSize() & 1) == 1;
+                int lesser = middle - 1;
+                int greater = odd ? middle + 1 : middle;
+
+                int partition = -1;
+                Comparable[] candidate = mutation.structure.getFields(mutation.txn, leaf.get(middle));
+                for (int i = 0; partition == -1 && i < middle; i++)
+                {
+                    if (compare(candidate, mutation.structure.getFields(mutation.txn, leaf.get(lesser))) != 0)
+                    {
+                        partition = lesser + 1;
+                    }
+                    else if (compare(candidate, mutation.structure.getFields(mutation.txn, leaf.get(greater))) != 0)
+                    {
+                        partition = greater;
+                    }
+                    lesser--;
+                    greater++;
+                }
+
+                LeafTier right = mutation.structure.getStorage().newLeafTier(mutation.structure, mutation.txn);
+
+                while (partition != leaf.getSize())
+                {
+                    right.add(leaf.remove(partition));
+                }
+
+                leaf.link(mutation, right);
+
+                int index = inner.getIndexOfTier(leaf);
+                inner.add(index + 1, new Branch(right.getKey(), right.get(0)));
+
+                mutation.mapOfDirtyTiers.put(leaf.getKey(), leaf);
+                mutation.mapOfDirtyTiers.put(right.getKey(), right);
+            }
+
+            public boolean canCancel()
+            {
+                return true;
+            }
+        }
+
+        private final static class InsertSorted
+        implements LeafOperation
+        {
+            private final InnerTier inner;
+
+            public InsertSorted(InnerTier inner)
+            {
+                this.inner = inner;
+            }
+
+            public boolean operate(Mutation mutation, Level levelOfLeaf)
+            {
+                Branch branch = inner.find(mutation.txn, mutation.fields);
+                LeafTier leaf = (LeafTier) inner.getTier(mutation.txn, branch.getRightKey());
+
+                Object bucket = mutation.structure.newBucket(mutation.fields, mutation.keyOfObject);
+
+                ListIterator objects = leaf.listIterator();
+                while (objects.hasNext())
+                {
+                    Object before = objects.next();
+                    if (compare(mutation.structure.getFields(mutation.txn, before), mutation.fields) > 0)
+                    {
+                        objects.previous();
+                        objects.add(bucket);
+                        break;
+                    }
+                }
+
+                if (!objects.hasNext())
+                {
+                    objects.add(bucket);
+                }
+
+                mutation.mapOfDirtyTiers.put(leaf.getKey(), leaf);
+
+                return true;
+            }
+        }
+
+        private final static class InsertLinkedList
+        implements LeafOperation
+        {
+            private final LeafTier leaf;
+
+            public InsertLinkedList(LeafTier leaf)
+            {
+                this.leaf = leaf;
+            }
+
+            public boolean operate(Mutation mutation, Level levelOfLeaf)
+            {
+                leaf.append(mutation, levelOfLeaf);
+                return true;
+            }
+        }
+    }
+
+    private final static class DeleteRoot
+    implements RootDecision
+    {
+        public boolean test(Mutation mutation, Level levelOfRoot, InnerTier root)
+        {
+            if (root.getChildType() == INNER && root.getSize() == 1)
+            {
+                InnerTier first = (InnerTier) root.getTier(mutation.txn, root.get(0).getRightKey());
+                InnerTier second = (InnerTier) root.getTier(mutation.txn, root.get(1).getRightKey());
+                return first.getSize() + second.getSize() == mutation.structure.getSize();
+            }
+            return false;
+        }
+
+        public void operation(Mutation mutation, Level levelOfRoot, InnerTier root)
+        {
+            levelOfRoot.listOfOperations.add(new Merge(root));
+        }
+
+        public final static class Merge
+        implements Operation
+        {
+            private final InnerTier root;
+
+            public Merge(InnerTier root)
+            {
+                this.root = root;
+            }
+
+            public void operate(Mutation mutation)
+            {
+                if (root.getSize() != 0)
+                {
+                    throw new IllegalStateException();
+                }
+
+                InnerTier child = (InnerTier) root.getTier(mutation.txn, root.remove(0).getRightKey());
+                while (child.getSize() != -1)
+                {
+                    root.add(child.remove(0));
+                }
+
+                mutation.structure.getStorage().free(mutation.structure, mutation.txn, child);
+
+                mutation.mapOfDirtyTiers.put(root.getKey(), root);
+            }
+
+            public boolean canCancel()
+            {
+                return true;
+            }
+        }
+    }
+
+    private final static class SwapKey
+    implements InnerDecision
+    {
+        public boolean test(Mutation mutation, Level levelOfParent, Level levelOfChild, InnerTier parent, InnerTier child)
+        {
+            Branch branch = parent.find(mutation.txn, mutation.fields);
+            if (branch.getPivot() != null && compare(mutation.structure.getFields(mutation.txn, branch.getPivot()), mutation.fields) == 0)
+            {
+                levelOfParent.listOfOperations.add(new Swap(parent));
+                return true;
+            }
+            return false;
+        }
+
+        private final static class Swap
+        implements Operation
+        {
+            private final InnerTier inner;
+
+            public Swap(InnerTier inner)
+            {
+                this.inner = inner;
+            }
+
+            public void operate(Mutation mutation)
+            {
+                if (mutation.replacement != null)
+                {
+                    Branch branch = inner.find(mutation.txn, mutation.fields);
+                    branch.setPivot(mutation.replacement);
+                    mutation.mapOfDirtyTiers.put(inner.getKey(), inner);
+                }
+            }
+
+            public boolean canCancel()
+            {
+                return false;
+            }
+        }
+    }
+
+    private final static class MergeInner
+    implements InnerDecision
+    {
+        public boolean test(Mutation mutation, Level levelOfParent, Level levelOfChild, InnerTier parent, InnerTier child)
+        {
+            List listToMerge = new ArrayList();
+            int index = parent.getIndexOfTier(child.getKey());
+            if (index != 0)
+            {
+                InnerTier left = (InnerTier) parent.getTier(mutation.txn, parent.get(index - 1).getRightKey());
+                levelOfChild.lockAndAdd(left);
+                levelOfChild.lockAndAdd(child);
+                if (left.getSize() + child.getSize() <= mutation.structure.getSize())
+                {
+                    listToMerge.add(left);
+                    listToMerge.add(child);
+                }
+            }
+            if (listToMerge.isEmpty() && index != parent.getSize())
+            {
+                if (index == 0)
+                {
+                    levelOfChild.lockAndAdd(child);
+                }
+                InnerTier right = (InnerTier) parent.getTier(mutation.txn, parent.get(index + 1).getRightKey());
+                levelOfChild.lockAndAdd(right);
+                if (child.getSize() + right.getSize() <= mutation.structure.getSize())
+                {
+                    listToMerge.add(child);
+                    listToMerge.add(right);
+                }
+            }
+            if (!listToMerge.isEmpty())
+            {
+                levelOfParent.listOfOperations.add(new Merge(parent, listToMerge));
+                return true;
+            }
+            return false;
+        }
+
+        public final static class Merge
+        implements Operation
+        {
+            private final InnerTier parent;
+
+            private final List listToMerge;
+
+            public Merge(InnerTier parent, List listToMerge)
+            {
+                this.parent = parent;
+                this.listToMerge = listToMerge;
+            }
+
+            public void operate(Mutation mutation)
+            {
+                InnerTier left = (InnerTier) listToMerge.get(0);
+                InnerTier right = (InnerTier) listToMerge.get(1);
+
+                int index = parent.getIndexOfTier(right.getKey());
+                Branch branch = parent.remove(index);
+
+                right.get(0).setPivot(branch.getPivot());
+                while (right.getSize() != -1)
+                {
+                    left.add(right.remove(0));
+                }
+
+                mutation.structure.getStorage().free(mutation.structure, mutation.txn, right);
+
+                mutation.mapOfDirtyTiers.put(parent.getKey(), parent);
+                mutation.mapOfDirtyTiers.put(left.getKey(), left);
+            }
+
+            public boolean canCancel()
+            {
+                return true;
+            }
+        }
+    }
+
+    private final static class LeafRemove
+    implements LeafDecision
+    {
+        public boolean test(Mutation mutation, Level levelOfParent, Level levelOfChild, InnerTier parent)
+        {
+            levelOfChild.getSync = new WriteLockExtractor();
+            Branch branch = parent.find(mutation.txn, mutation.fields);
+            int index = parent.getIndexOfTier(branch.getRightKey());
+            LeafTier leaf = null;
+            List listToMerge = new ArrayList();
+            if (index != 0)
+            {
+                LeafTier previous = (LeafTier) parent.getTier(mutation.txn, parent.get(index - 1).getRightKey());
+                levelOfChild.lock(previous);
+                leaf = (LeafTier) parent.getTier(mutation.txn, branch.getRightKey());
+                levelOfChild.lock(leaf);
+                int capacity = previous.getSize() + leaf.getSize();
+                if (capacity <= mutation.structure.getSize() + 1)
+                {
+                    listToMerge.add(previous);
+                    listToMerge.add(leaf);
+                }
+                else
+                {
+                    levelOfChild.release(previous);
+                }
+            }
+            if (listToMerge.isEmpty() && index != parent.getSize())
+            {
+                if (leaf == null)
+                {
+                    leaf = (LeafTier) parent.getTier(mutation.txn, branch.getRightKey());
+                    levelOfChild.lock(leaf);
+                }
+                LeafTier next = (LeafTier) parent.getTier(mutation.txn, parent.get(index + 1).getRightKey());
+                levelOfChild.lock(next);
+                int capacity = next.getSize() + leaf.getSize();
+                if (capacity <= mutation.structure.getSize() + 1)
+                {
+                    listToMerge.add(leaf);
+                    listToMerge.add(next);
+                }
+                else
+                {
+                    levelOfChild.release(next);
+                }
+            }
+            if (listToMerge.isEmpty())
+            {
+                if (leaf == null)
+                {
+                    leaf = (LeafTier) parent.getTier(mutation.txn, branch.getRightKey());
+                    levelOfChild.lock(leaf);
+                }
+                levelOfChild.add(leaf);
+                mutation.leafOperation = new Remove(leaf, index == 0);
+            }
+            else
+            {
+                LeafTier left = (LeafTier) listToMerge.get(0);
+                LeafTier right = (LeafTier) listToMerge.get(1);
+                levelOfChild.add(left);
+                levelOfChild.add(right);
+                levelOfParent.listOfOperations.add(new Merge(parent, left, right));
+                mutation.leafOperation = new Remove(leaf, index == 0);
+            }
+            return !listToMerge.isEmpty();
+        }
+
+        public final static class Remove
+        implements LeafOperation
+        {
+            private final LeafTier leaf;
+
+            private final boolean isLeftMost;
+
+            public Remove(LeafTier leaf, boolean isLeftMost)
+            {
+                this.leaf = leaf;
+                this.isLeftMost = isLeftMost;
+            }
+
+            public boolean operate(Mutation mutation, Level levelOfLeaf)
+            {
+                // FIXME Remove single anywhere but far left.
+                // FIXME Remove single very left most.
+                // FIXME Remove single very right most.
+                // FIXME Is there a way to have orphaned or unballanced penultimate tiers?
+                // Imagine an inner tier with a single branch to a single leaf tier.
+                // Offhand, it seems possible, so there needs to be pure elemination logic.
+                // If it can't merge, it is simply removed, uh, except for that very last one.
+                int count = 0;
+                int found = 0;
+                LeafTier current = leaf;
+                SEARCH: do
+                {
+                    Iterator objects = leaf.listIterator();
+                    while (objects.hasNext())
+                    {
+                        count++;
+                        Object candidate = objects.next();
+                        int compare = compare(mutation.fields, mutation.structure.getFields(mutation.txn, candidate));
+                        if (compare < 0)
+                        {
+                            break SEARCH;
+                        }
+                        else if (compare == 0)
+                        {
+                            found++;
+                            if (mutation.test.operate(candidate))
+                            {
+                                objects.remove();
+                                if (count == 1 && isLeftMost)
+                                {
+                                    if (objects.hasNext())
+                                    {
+                                        mutation.replacement = objects.next();
+                                    }
+                                    else
+                                    {
+                                        LeafTier following = current.getNextAndLock(mutation, levelOfLeaf);
+                                        if (following != null)
+                                        {
+                                            mutation.replacement = following.get(0);
+                                        }
+                                    }
+                                }
+                            }
+                            mutation.mapOfDirtyTiers.put(current.getKey(), current);
+                            mutation.result = candidate;
+                            break SEARCH;
+                        }
+                    }
+                    current = current.getNextAndLock(mutation, levelOfLeaf);
+                }
+                while (current != null && compare(mutation.fields, mutation.structure.getFields(mutation.txn, current.get(0))) == 0);
+
+                if (mutation.result != null && count == found && current.getSize() == mutation.structure.getSize() - 1 && compare(mutation.fields, mutation.structure.getFields(mutation.txn, current.get(current.getSize() - 1))) == 0)
+                {
+                    for (;;)
+                    {
+                        LeafTier subsequent = current.getNextAndLock(mutation, levelOfLeaf);
+                        if (compare(mutation.fields, mutation.structure.getFields(mutation.txn, subsequent.get(0))) != 0)
+                        {
+                            break;
+                        }
+                        current.add(subsequent.remove(0));
+                        if (subsequent.getSize() == 0)
+                        {
+                            current.setNextLeafKey(subsequent.getNextLeafKey());
+                            mutation.structure.getStorage().free(mutation.structure, mutation.txn, subsequent);
+                        }
+                        else
+                        {
+                            mutation.mapOfDirtyTiers.put(subsequent.getKey(), subsequent);
+                        }
+                        current = subsequent;
+                    }
+                }
+
+                return mutation.result != null;
+            }
+        }
+
+        public final class Merge
+        implements Operation
+        {
+            private final InnerTier parent;
+
+            private final LeafTier left;
+
+            private final LeafTier right;
+
+            public Merge(InnerTier parent, LeafTier left, LeafTier right)
+            {
+                this.parent = parent;
+                this.left = left;
+                this.right = right;
+            }
+
+            public void operate(Mutation mutation)
+            {
+                parent.remove(parent.getIndexOfTier(right.getKey()));
+
+                while (right.getSize() != 0)
+                {
+                    left.add(right.remove(0));
+                }
+
+                left.setNextLeafKey(right.getNextLeafKey());
+
+                mutation.structure.getStorage().free(mutation.structure, mutation.txn, right);
+
+                mutation.mapOfDirtyTiers.put(parent.getKey(), parent);
+                mutation.mapOfDirtyTiers.put(left.getKey(), left);
+            }
+
+            public boolean canCancel()
+            {
+                return true;
+            }
+        }
+    }
+
+    private final static class Level
+    {
+        public LockExtractor getSync;
+
+        public final LinkedList listOfLocks = new LinkedList();
+
+        public final LinkedList listOfOperations = new LinkedList();
+
+        public Level(boolean exclusive)
+        {
+            this.getSync = exclusive ? (LockExtractor) new WriteLockExtractor() : (LockExtractor) new ReadLockExtractor();
+        }
+
+        public ReadWriteLock getReadWriteLock()
+        {
+            return (ReadWriteLock) listOfLocks.getFirst();
+        }
+
+        public void lockAndAdd(Tier tier)
+        {
+            lock(tier);
+            add(tier);
+        }
+
+        public void add(Tier tier)
+        {
+            listOfLocks.add(tier.getReadWriteLock());
+        }
+
+        public void lock(Tier tier)
+        {
+            try
+            {
+                getSync.getSync(tier.getReadWriteLock()).acquire();
+            }
+            catch (InterruptedException e)
+            {
+                new Exception(e, "interrupted");
+            }
+        }
+
+        public void release(Tier tier)
+        {
+            getSync.getSync(tier.getReadWriteLock()).release();
+        }
+
+        public void release()
+        {
+            Iterator locks = listOfLocks.iterator();
+            while (locks.hasNext())
+            {
+                ReadWriteLock readWriteLock = (ReadWriteLock) locks.next();
+                getSync.getSync(readWriteLock).release();
+            }
+        }
+
+        public void releaseAndClear()
+        {
+            Iterator locks = listOfLocks.iterator();
+            while (locks.hasNext())
+            {
+                ReadWriteLock readWriteLock = (ReadWriteLock) locks.next();
+                getSync.getSync(readWriteLock).release();
+            }
+            listOfLocks.clear();
+        }
+
+        private void exclusive()
+        {
+            Iterator locks = listOfLocks.iterator();
+            while (locks.hasNext())
+            {
+                ReadWriteLock readWriteLock = (ReadWriteLock) locks.next();
+                try
+                {
+                    readWriteLock.writeLock().acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    throw new Exception(e, "interrupted");
+                }
+            }
+            getSync = new WriteLockExtractor();
+        }
+
+        public void downgrade()
+        {
+            if (getSync.isExeclusive())
+            {
+                Iterator locks = listOfLocks.iterator();
+                while (locks.hasNext())
+                {
+                    ReadWriteLock readWriteLock = (ReadWriteLock) locks.next();
+                    try
+                    {
+                        readWriteLock.readLock().acquire();
+                    }
+                    catch (InterruptedException e)
+                    {
+                        throw new Exception(e, "interrupted");
+                    }
+                    readWriteLock.writeLock().release();
+                }
+                getSync = new ReadLockExtractor();
+            }
+        }
+
+        public void upgrade()
+        {
+            if (getSync.isExeclusive())
+            {
+                throw new IllegalStateException();
+            }
+            release();
+            exclusive();
+        }
+
+        public boolean upgrade(Level levelOfChild)
+        {
+            if (!getSync.isExeclusive())
+            {
+                release();
+                levelOfChild.release();
+                levelOfChild.listOfLocks.clear();
+                exclusive();
+                levelOfChild.exclusive();
+                return true;
+            }
+            else if (!levelOfChild.getSync.isExeclusive())
+            {
+                levelOfChild.release();
+                levelOfChild.listOfLocks.clear();
+                levelOfChild.exclusive();
+                return true;
+            }
+            return false;
+        }
+    }
+
     public final class Query
     {
         private final Object txn;
 
-        private final Map mapOfDirtyTiers;
-
         public Query(Object txn)
         {
             this.txn = txn;
-            this.mapOfDirtyTiers = new HashMap();
         }
 
         public int getSize()
@@ -1171,104 +1786,127 @@ implements Serializable
         public void insert(Object keyOfObject)
         {
             Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfObject);
-
-            // Maintaining a list of tiers to split.
-            //
-            // During the decent into the tree, we check for full tiers. When
-            // a full tier is first encountered, a list of full tiers is begun
-            // starting with the parent of the first full tier, and followed
-            // by all of the full tiers to the leaf tier. If less than full
-            // tier is encountered, we reset the list of tiers.
-            //
-            // The list of tiers is locked in order from upper most teirs to
-            // the leaf.
-
-            List listOfFullTiers = new ArrayList();
-            InnerTier grandParent = null;
-            InnerTier parent = null;
-            InnerTier inner = getRoot();
-
-            if (inner.isFull())
+            Mutation mutation = new Mutation(structure, txn, keyOfObject, fields, null);
+            generalized(mutation, new SplitRoot(), new InnerDecision[] { new SplitInner() }, new LeafInsert());
+            synchronized (this)
             {
-                listOfFullTiers.add(grandParent);
-                listOfFullTiers.add(parent);
+                size++;
             }
+        }
 
-            TierSet setOfDirty = new TierSet(mapOfDirtyTiers);
-            for (;;)
+        private boolean test(InnerDecision[] decisions, Mutation mutation, Level levelOfParent, Level levelOfChild, InnerTier parent, InnerTier child)
+        {
+            boolean exclusive = false;
+            for (int i = 0; i < decisions.length; i++)
             {
-                grandParent = parent;
-                parent = inner;
-                Branch branch = parent.find(txn, fields);
-                Tier tier = parent.getTier(txn, branch.getLeftKey());
+                exclusive = decisions[i].test(mutation, levelOfParent, levelOfChild, parent, child) || exclusive;
+            }
+            return exclusive;
+        }
 
-                if (tier.isFull())
+        private Object generalized(Mutation mutation, RootDecision initial, InnerDecision[] subsequent, LeafDecision penultimate)
+        {
+            mutation.listOfLevels.add(new Level(false));
+            mutation.listOfLevels.add(new Level(false));
+
+            InnerTier parent = getRoot();
+            Level levelOfParent = new Level(false);
+            levelOfParent.lockAndAdd(parent);
+            mutation.listOfLevels.add(levelOfParent);
+
+            Level levelOfChild = new Level(false);
+            mutation.listOfLevels.add(levelOfChild);
+
+            if (initial.test(mutation, levelOfParent, parent))
+            {
+                levelOfParent.upgrade(levelOfChild);
+                if (initial.test(mutation, levelOfParent, parent))
                 {
-                    if (listOfFullTiers.isEmpty())
-                    {
-                        listOfFullTiers.add(grandParent);
-                    }
-                    listOfFullTiers.add(parent);
+                    initial.operation(mutation, levelOfParent, parent);
                 }
                 else
                 {
-                    listOfFullTiers.clear();
+                    mutation.rewind(false);
                 }
-
-                if (parent.getChildType() == LEAF)
+            }
+            for (;;)
+            {
+                Branch branch = parent.find(mutation.txn, mutation.fields);
+                if (parent.getChildType() == INNER)
                 {
-                    if (tier.isFull())
+                    InnerTier child = (InnerTier) parent.getTier(txn, branch.getRightKey());
+                    if (test(subsequent, mutation, levelOfParent, levelOfChild, parent, child))
                     {
-                        listOfFullTiers.add(tier);
-
-                        Iterator ancestors = listOfFullTiers.iterator();
-                        parent = (InnerTier) ancestors.next();
-                        tier = (Tier) ancestors.next();
-                        do
+                        if (!levelOfParent.getSync.isExeclusive() || !levelOfChild.getSync.isExeclusive())
                         {
-                            grandParent = parent;
-                            parent = (InnerTier) tier;
-                            Tier full = (Tier) ancestors.next();
-                            Split split = full.split(txn, fields, keyOfObject, setOfDirty);
-                            if (split == null)
+                            levelOfParent.upgrade(levelOfChild);
+                            levelOfParent.listOfOperations.clear();
+                            levelOfChild.listOfOperations.clear();
+                            if (!test(subsequent, mutation, levelOfParent, levelOfChild, parent, child))
                             {
-                                tier = full;
-                            }
-                            else
-                            {
-                                if (parent == null)
-                                {
-                                    parent = (InnerTier) full;
-                                    parent.splitRootTier(txn, split, setOfDirty);
-                                }
-                                else
-                                {
-                                    parent.replace(full, split, setOfDirty);
-                                    if (grandParent != null)
-                                    {
-                                        grandParent.find(txn, fields).setSize(parent.getSize());
-                                        setOfDirty.add(grandParent);
-                                    }
-                                }
-                                branch = parent.find(txn, fields);
-                                tier = parent.getTier(txn, branch.getLeftKey());
+                                mutation.rewind(false);
                             }
                         }
-                        while (ancestors.hasNext());
+                    }
+                    else
+                    {
+                        mutation.rewind(false);
+                    }
+                    parent = child;
+                }
+                else
+                {
+                    if (penultimate.test(mutation, levelOfParent, levelOfChild, parent))
+                    {
+                        if (!levelOfParent.getSync.isExeclusive())
+                        {
+                            levelOfParent.upgrade(levelOfChild);
+                            levelOfParent.listOfOperations.clear();
+                            levelOfChild.listOfOperations.clear();
+                            if (!penultimate.test(mutation, levelOfParent, levelOfChild, parent))
+                            {
+                                mutation.rewind(true);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        mutation.rewind(true);
                     }
 
-                    LeafTier leaf = (LeafTier) tier;
-                    branch.setSize(branch.getSize() + 1);
-                    setOfDirty.add(parent);
-                    leaf.insert(txn, fields, keyOfObject, setOfDirty);
                     break;
                 }
-
-                inner = (InnerTier) tier;
+                levelOfParent = levelOfChild;
+                levelOfChild = new Level(levelOfChild.getSync.isExeclusive());
+                mutation.listOfLevels.add(levelOfChild);
+                mutation.shift();
             }
 
-            // FIXME Syncrhonize.
-            size++;
+            if (mutation.leafOperation.operate(mutation, levelOfChild))
+            {
+                ListIterator levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
+                while (levels.hasPrevious())
+                {
+                    Level level = (Level) levels.previous();
+                    ListIterator operations = level.listOfOperations.listIterator(level.listOfOperations.size());
+                    while (operations.hasPrevious())
+                    {
+                        Operation operation = (Operation) operations.previous();
+                        operation.operate(mutation);
+                    }
+                }
+
+                write(mutation.mapOfDirtyTiers);
+            }
+
+            ListIterator levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
+            while (levels.hasPrevious())
+            {
+                Level level = (Level) levels.previous();
+                level.releaseAndClear();
+            }
+
+            return mutation.result;
         }
 
         public Cursor find(Object keyOfObject)
@@ -1284,75 +1922,26 @@ implements Serializable
                 Branch branch = tier.find(txn, fields);
                 if (tier.getChildType() == LEAF)
                 {
-                    LeafTier leaf = structure.getStorage().getLeafTier(structure, txn, branch.getLeftKey());
+                    LeafTier leaf = structure.getStorage().getLeafTier(structure, txn, branch.getRightKey());
                     return leaf.find(txn, fields);
                 }
-                tier = (InnerTier) tier.getTier(txn, branch.getLeftKey());
+                tier = (InnerTier) tier.getTier(txn, branch.getRightKey());
             }
         }
 
-        public Collection remove(Object keyOfObject)
+        public Object remove(Object keyOfObject)
         {
             Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfObject);
-            TierSet setOfDirty = new TierSet(mapOfDirtyTiers);
-            LinkedList listOfAncestors = new LinkedList();
-            InnerTier inner = null;
-            InnerTier parent = null;
-            InnerTier tier = getRoot();
-            for (;;)
+            Mutation mutation = new Mutation(structure, txn, keyOfObject, fields, True.INSTANCE);
+            Object removed = generalized(mutation, new DeleteRoot(), new InnerDecision[] { new MergeInner(), new SwapKey() }, new LeafRemove());
+            if (removed != null)
             {
-                listOfAncestors.addLast(tier);
-                parent = tier;
-                Branch branch = parent.find(txn, fields);
-                if (branch.getObject() != null && keyOfObject.equals(structure.getObjectKey(branch.getObject())))
+                synchronized (this)
                 {
-                    inner = tier;
+                    size--;
                 }
-                if (tier.getChildType() == LEAF)
-                {
-                    LeafTier leaf = structure.getStorage().getLeafTier(structure, txn, branch.getLeftKey());
-                    Collection collection = leaf.remove(txn, keyOfObject);
-                    branch.setSize(leaf.getSize());
-                    setOfDirty.add(parent);
-
-                    if (inner != null)
-                    {
-                        int objectCount = leaf.getSize();
-                        if (objectCount == 0)
-                        {
-                            int index = parent.getIndexOfTier(leaf);
-                            if (inner.getChildType() == LEAF)
-                            {
-                                parent.removeLeafTier(leaf, setOfDirty);
-                            }
-                            else
-                            {
-                                Branch newPivot = parent.get(index - 1);
-                                parent.removeLeafTier(leaf, setOfDirty);
-                                parent.replacePivot(txn, structure.getFields(txn, newPivot.getObject()), null, setOfDirty);
-                                inner.replacePivot(txn, fields, newPivot.getObject(), setOfDirty);
-                            }
-                        }
-                        else
-                        {
-                            Object newPivot = leaf.get(objectCount - 1);
-                            inner.replacePivot(txn, fields, newPivot, setOfDirty);
-                        }
-                    }
-
-                    Tier child = leaf;
-                    Iterator ancestors = listOfAncestors.iterator();
-                    while (ancestors.hasNext())
-                    {
-                        InnerTier merge = (InnerTier) ancestors.next();
-                        merge.merge(txn, child, setOfDirty);
-                    }
-
-                    size -= collection.size();
-                    return collection;
-                }
-                tier = (InnerTier) parent.getTier(txn, branch.getLeftKey());
             }
+            return removed;
         }
 
         public Cursor first()
@@ -1366,11 +1955,11 @@ implements Serializable
                 {
                     break;
                 }
-                tier = (InnerTier) tier.getTier(txn, branch.getLeftKey());
+                tier = (InnerTier) tier.getTier(txn, branch.getRightKey());
             }
-            return new Cursor(structure, txn, (LeafTier) tier.getTier(txn, branch.getLeftKey()), 0);
+            return new Cursor(structure, txn, (LeafTier) tier.getTier(txn, branch.getRightKey()), 0);
         }
-        
+
         public Cursor last()
         {
             Branch branch = null;
@@ -1382,13 +1971,13 @@ implements Serializable
                 {
                     break;
                 }
-                tier = (InnerTier) tier.getTier(txn, branch.getLeftKey());
+                tier = (InnerTier) tier.getTier(txn, branch.getRightKey());
             }
-            LeafTier leaf = structure.getStorage().getLeafTier(structure, txn, branch.getLeftKey());
+            LeafTier leaf = structure.getStorage().getLeafTier(structure, txn, branch.getRightKey());
             return new Cursor(structure, txn, leaf, leaf.getSize());
         }
 
-        public void write()
+        private void write(Map mapOfDirtyTiers)
         {
             if (mapOfDirtyTiers.size() != 0)
             {
@@ -1397,20 +1986,6 @@ implements Serializable
                 {
                     Tier tier = (Tier) tiers.next();
                     tier.write(txn);
-                }
-                mapOfDirtyTiers.clear();
-            }
-        }
-
-        public void revert()
-        {
-            if (mapOfDirtyTiers.size() != 0)
-            {
-                Iterator tiers = mapOfDirtyTiers.values().iterator();
-                while (tiers.hasNext())
-                {
-                    Tier tier = (Tier) tiers.next();
-                    tier.revert(txn);
                 }
                 mapOfDirtyTiers.clear();
             }
@@ -1500,26 +2075,6 @@ implements Serializable
                 index = 0;
             }
             return structure.getObjectKey(leaf.get(index++));
-        }
-
-        public boolean hasPrevious()
-        {
-            return index > 0 || !structure.getStorage().isKeyNull(leaf.getPreviousLeafKey());
-        }
-
-        public Object previous()
-        {
-            if (index == 0)
-            {
-                Storage storage = structure.getStorage();
-                if (storage.isKeyNull(leaf.getPreviousLeafKey()))
-                {
-                    throw new IllegalStateException();
-                }
-                leaf = structure.getStorage().getLeafTier(structure, txn, leaf.getPreviousLeafKey());
-                index = leaf.getSize();
-            }
-            return leaf.get(--index);
         }
     }
 
