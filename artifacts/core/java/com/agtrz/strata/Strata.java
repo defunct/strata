@@ -1090,6 +1090,7 @@ implements Serializable
                 }
                 inner.add(index + 1, new Branch(right.getKey(), right.get(0)));
 
+                mutation.mapOfDirtyTiers.put(inner.getKey(), inner);
                 mutation.mapOfDirtyTiers.put(leaf.getKey(), leaf);
                 mutation.mapOfDirtyTiers.put(right.getKey(), right);
 
@@ -1128,6 +1129,7 @@ implements Serializable
 
                 inner.add(inner.getIndexOfTier(leaf.getKey()) + 1, new Branch(right.getKey(), mutation.bucket));
 
+                mutation.mapOfDirtyTiers.put(inner.getKey(), inner);
                 mutation.mapOfDirtyTiers.put(leaf.getKey(), leaf);
                 mutation.mapOfDirtyTiers.put(right.getKey(), right);
 
@@ -1180,9 +1182,10 @@ implements Serializable
 
                 leaf.link(mutation, right);
 
-                int index = inner.getIndexOfTier(leaf);
+                int index = inner.getIndexOfTier(leaf.getKey());
                 inner.add(index + 1, new Branch(right.getKey(), right.get(0)));
 
+                mutation.mapOfDirtyTiers.put(inner.getKey(), inner);
                 mutation.mapOfDirtyTiers.put(leaf.getKey(), leaf);
                 mutation.mapOfDirtyTiers.put(right.getKey(), right);
             }
@@ -1208,7 +1211,7 @@ implements Serializable
                 Branch branch = inner.find(mutation.txn, mutation.fields);
                 LeafTier leaf = (LeafTier) inner.getTier(mutation.txn, branch.getRightKey());
 
-                Object bucket = mutation.structure.newBucket(mutation.fields, mutation.keyOfObject);
+                Object bucket = mutation.bucket;
 
                 ListIterator objects = leaf.listIterator();
                 while (objects.hasNext())
@@ -1293,6 +1296,7 @@ implements Serializable
                     root.add(child.remove(0));
                 }
 
+                mutation.mapOfDirtyTiers.get(child.getKey());
                 mutation.structure.getStorage().free(mutation.structure, mutation.txn, child);
 
                 mutation.mapOfDirtyTiers.put(root.getKey(), root);
@@ -1413,6 +1417,7 @@ implements Serializable
                     left.add(right.remove(0));
                 }
 
+                mutation.mapOfDirtyTiers.remove(right.getKey());
                 mutation.structure.getStorage().free(mutation.structure, mutation.txn, right);
 
                 mutation.mapOfDirtyTiers.put(parent.getKey(), parent);
@@ -1513,10 +1518,14 @@ implements Serializable
                 // FIXME Remove single anywhere but far left.
                 // FIXME Remove single very left most.
                 // FIXME Remove single very right most.
-                // FIXME Is there a way to have orphaned or unballanced penultimate tiers?
-                // Imagine an inner tier with a single branch to a single leaf tier.
-                // Offhand, it seems possible, so there needs to be pure elemination logic.
-                // If it can't merge, it is simply removed, uh, except for that very last one.
+                // FIXME Is there a way to have orphaned or unballanced
+                // penultimate tiers?
+                // Imagine an inner tier with a single branch to a single leaf
+                // tier.
+                // Offhand, it seems possible, so there needs to be pure
+                // elemination logic.
+                // If it can't merge, it is simply removed, uh, except for
+                // that very last one.
                 int count = 0;
                 int found = 0;
                 LeafTier current = leaf;
@@ -1617,6 +1626,7 @@ implements Serializable
 
                 left.setNextLeafKey(right.getNextLeafKey());
 
+                mutation.mapOfDirtyTiers.remove(right.getKey());
                 mutation.structure.getStorage().free(mutation.structure, mutation.txn, right);
 
                 mutation.mapOfDirtyTiers.put(parent.getKey(), parent);
@@ -1896,6 +1906,7 @@ implements Serializable
                     }
                 }
 
+                // FIXME Need to commit changes here, not externally.
                 write(mutation.mapOfDirtyTiers);
             }
 

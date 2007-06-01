@@ -200,7 +200,6 @@ implements Strata.Storage, Serializable
         }
 
         block.write();
-
     }
 
     public void free(Strata.Structure structure, Object txn, Strata.InnerTier inner)
