@@ -735,8 +735,6 @@ implements Serializable
 
         public Object getKey(Strata.Tier leaf);
 
-        public Object getNullKey();
-
         public boolean isKeyNull(Object object);
     }
 

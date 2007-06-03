@@ -55,11 +55,6 @@ implements Strata.Storage
         return leaf;
     }
 
-    public Object getNullKey()
-    {
-        return null;
-    }
-
     public boolean isKeyNull(Object object)
     {
         return object == null;

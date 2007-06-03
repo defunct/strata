@@ -200,7 +200,7 @@ implements Strata.Storage, Serializable
         ByteBuffer out = block.toByteBuffer();
 
         out.putInt(leaf.getSize());
-        
+
         Bento.Address addressOfNext = (Bento.Address) leaf.getNextLeafKey();
         out.putLong(addressOfNext.getPosition());
         out.putInt(addressOfNext.getBlockSize());
@@ -238,11 +238,6 @@ implements Strata.Storage, Serializable
     public Object getKey(Strata.Tier leaf)
     {
         return leaf.getStorageData();
-    }
-
-    public Object getNullKey()
-    {
-        return Bento.NULL_ADDRESS;
     }
 
     public boolean isKeyNull(Object object)
