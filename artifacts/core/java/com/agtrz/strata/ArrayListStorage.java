@@ -42,11 +42,7 @@ implements Strata.Storage
     {
     }
 
-    public void revert(Strata.Structure structure, Object txn, Strata.InnerTier inner)
-    {
-    }
-
-    public void revert(Strata.Structure structure, Object txn, Strata.LeafTier leaf)
+    public void commit(Object txn)
     {
     }
 

@@ -733,9 +733,11 @@ implements Serializable
 
         public void free(Structure structure, Object txn, LeafTier leaf);
 
-        public Object getKey(Strata.Tier leaf);
+        public Object getKey(Tier tier);
 
         public boolean isKeyNull(Object object);
+        
+        public void commit(Object txn);
     }
 
     private final static class Mutation

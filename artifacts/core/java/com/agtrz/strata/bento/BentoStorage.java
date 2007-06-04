@@ -235,6 +235,12 @@ implements Strata.Storage, Serializable
         mutator.free(mutator.load(address));
     }
 
+    public void commit(Object txn)
+    {
+        Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
+        mutator.getJournal().commit();
+    }
+
     public Object getKey(Strata.Tier leaf)
     {
         return leaf.getStorageData();
