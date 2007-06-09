@@ -1,5 +1,7 @@
 package com.agtrz.strata;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -12,6 +14,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import EDU.oswego.cs.dl.util.concurrent.Mutex;
+import EDU.oswego.cs.dl.util.concurrent.NullSync;
 import EDU.oswego.cs.dl.util.concurrent.ReadWriteLock;
 import EDU.oswego.cs.dl.util.concurrent.ReentrantWriterPreferenceReadWriteLock;
 import EDU.oswego.cs.dl.util.concurrent.Sync;
@@ -35,12 +39,16 @@ implements Serializable
 
     private int size;
 
+    private transient Sync writeMutex;
+
+    private final int maxDirtyTiers;
+
     public Strata()
     {
-        this(new ArrayListStorage(), null, new ComparableExtractor(), false, 5);
+        this(new ArrayListStorage(), null, new ComparableExtractor(), false, 5, 1);
     }
 
-    public Strata(Storage storage, Object txn, FieldExtractor extractor, boolean cacheFields, int size)
+    public Strata(Storage storage, Object txn, FieldExtractor extractor, boolean cacheFields, int size, int maxDirtyTiers)
     {
         Cooper cooper = cacheFields ? (Cooper) new BucketCooper() : (Cooper) new LookupCooper();
         Structure structure = new Structure(storage, extractor, cooper, size);
@@ -53,6 +61,9 @@ implements Serializable
 
         this.structure = structure;
         this.rootKey = root.getKey();
+
+        this.writeMutex = maxDirtyTiers == 1 ? (Sync) new NullSync() : (Sync) new Mutex();
+        this.maxDirtyTiers = maxDirtyTiers;
     }
 
     public int getSize()
@@ -63,6 +74,12 @@ implements Serializable
     public Query query(Object txn)
     {
         return new Query(txn);
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException
+    {
+        in.defaultReadObject();
+        writeMutex = maxDirtyTiers == 1 ? (Sync) new NullSync() : (Sync) new Mutex();
     }
 
     public final static class Exception
@@ -87,9 +104,11 @@ implements Serializable
 
         private boolean cacheFields = false;
 
+        private int maxDirtyTiers = 1;
+
         public Strata create(Object txn)
         {
-            return new Strata(storage, txn, extractor, cacheFields, size);
+            return new Strata(storage, txn, extractor, cacheFields, size, maxDirtyTiers);
         }
 
         public void setStorage(Storage storage)
@@ -110,6 +129,11 @@ implements Serializable
         public void setSize(int size)
         {
             this.size = size;
+        }
+
+        public void setMaxDirtyTiers(int maxDirtyTiers)
+        {
+            this.maxDirtyTiers = maxDirtyTiers;
         }
     }
 
@@ -736,7 +760,7 @@ implements Serializable
         public Object getKey(Tier tier);
 
         public boolean isKeyNull(Object object);
-        
+
         public void commit(Object txn);
     }
 
@@ -754,7 +778,7 @@ implements Serializable
 
         public final LinkedList listOfLevels = new LinkedList();
 
-        public final Map mapOfDirtyTiers = new LinkedHashMap();
+        public final Map mapOfDirtyTiers;
 
         public Object result;
 
@@ -764,10 +788,11 @@ implements Serializable
 
         public final Object bucket;
 
-        public Mutation(Structure structure, Object txn, Object keyOfObject, Comparable[] fields, UrnaryOperator test)
+        public Mutation(Structure structure, Object txn, Map mapOfDirtyTiers, Object keyOfObject, Comparable[] fields, UrnaryOperator test)
         {
             this.structure = structure;
             this.txn = txn;
+            this.mapOfDirtyTiers = mapOfDirtyTiers;
             this.keyOfObject = keyOfObject;
             this.fields = fields;
             this.test = test;
@@ -1783,9 +1808,12 @@ implements Serializable
     {
         private final Object txn;
 
+        private final Map mapOfDirtyTiers;
+
         public Query(Object txn)
         {
             this.txn = txn;
+            this.mapOfDirtyTiers = new LinkedHashMap();
         }
 
         public int getSize()
@@ -1796,7 +1824,7 @@ implements Serializable
         public void insert(Object keyOfObject)
         {
             Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfObject);
-            Mutation mutation = new Mutation(structure, txn, keyOfObject, fields, null);
+            Mutation mutation = new Mutation(structure, txn, mapOfDirtyTiers, keyOfObject, fields, null);
             generalized(mutation, new SplitRoot(), new InnerDecision[] { new SplitInner() }, new LeafInsert());
             synchronized (this)
             {
@@ -1814,8 +1842,21 @@ implements Serializable
             return exclusive;
         }
 
+        // TODO Reorder methods.
         private Object generalized(Mutation mutation, RootDecision initial, InnerDecision[] subsequent, LeafDecision penultimate)
         {
+            if (mapOfDirtyTiers.size() == 0)
+            {
+                try
+                {
+                    writeMutex.acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    new Exception(e, "unable.to.lock.for.write");
+                }
+            }
+
             mutation.listOfLevels.add(new Level(false));
             mutation.listOfLevels.add(new Level(false));
 
@@ -1907,7 +1948,10 @@ implements Serializable
                 }
 
                 // FIXME Need to commit changes here, not externally.
-                write(mutation.mapOfDirtyTiers);
+                if (mutation.mapOfDirtyTiers.size() >= maxDirtyTiers)
+                {
+                    write(mutation.mapOfDirtyTiers);
+                }
             }
 
             ListIterator levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
@@ -1915,6 +1959,11 @@ implements Serializable
             {
                 Level level = (Level) levels.previous();
                 level.releaseAndClear();
+            }
+
+            if (mapOfDirtyTiers.size() == 0)
+            {
+                writeMutex.release();
             }
 
             return mutation.result;
@@ -1943,7 +1992,7 @@ implements Serializable
         public Object remove(Object keyOfObject)
         {
             Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfObject);
-            Mutation mutation = new Mutation(structure, txn, keyOfObject, fields, True.INSTANCE);
+            Mutation mutation = new Mutation(structure, txn, mapOfDirtyTiers, keyOfObject, fields, True.INSTANCE);
             Object removed = generalized(mutation, new DeleteRoot(), new InnerDecision[] { new MergeInner(), new SwapKey() }, new LeafRemove());
             if (removed != null)
             {
@@ -1988,18 +2037,26 @@ implements Serializable
             return new Cursor(structure, txn, leaf, leaf.getSize());
         }
 
-        private void write(Map mapOfDirtyTiers)
+        public void commit()
         {
             if (mapOfDirtyTiers.size() != 0)
             {
-                Iterator tiers = mapOfDirtyTiers.values().iterator();
-                while (tiers.hasNext())
-                {
-                    Tier tier = (Tier) tiers.next();
-                    tier.write(txn);
-                }
-                mapOfDirtyTiers.clear();
+                write(mapOfDirtyTiers);
+                writeMutex.release();
             }
+        }
+
+        private void write(Map mapOfDirtyTiers)
+        {
+            Iterator tiers = mapOfDirtyTiers.values().iterator();
+            while (tiers.hasNext())
+            {
+                Tier tier = (Tier) tiers.next();
+                tier.write(txn);
+            }
+            mapOfDirtyTiers.clear();
+
+            structure.getStorage().commit(txn);
         }
 
         public void copacetic()
