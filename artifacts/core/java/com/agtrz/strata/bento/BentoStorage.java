@@ -16,13 +16,10 @@ implements Strata.Storage, Serializable
 {
     private static final long serialVersionUID = 20070401L;
 
-    // FIXME Nix. Create your own interface.
     private final Reader reader;
 
-    // FIXME Mix. Create a local interface.
     private final Writer writer;
 
-    // FIXME Use a size property.
     private final int recordSize;
 
     public BentoStorage()

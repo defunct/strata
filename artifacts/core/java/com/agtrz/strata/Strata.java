@@ -20,8 +20,6 @@ import EDU.oswego.cs.dl.util.concurrent.ReadWriteLock;
 import EDU.oswego.cs.dl.util.concurrent.ReentrantWriterPreferenceReadWriteLock;
 import EDU.oswego.cs.dl.util.concurrent.Sync;
 
-import com.agtrz.operators.True;
-import com.agtrz.operators.UrnaryOperator;
 import com.agtrz.swag.danger.Danger;
 
 public class Strata
@@ -774,7 +772,7 @@ implements Serializable
 
         public final Comparable[] fields;
 
-        public final UrnaryOperator test;
+        public final Deletable deletable;
 
         public final LinkedList listOfLevels = new LinkedList();
 
@@ -788,14 +786,14 @@ implements Serializable
 
         public final Object bucket;
 
-        public Mutation(Structure structure, Object txn, Map mapOfDirtyTiers, Object keyOfObject, Comparable[] fields, UrnaryOperator test)
+        public Mutation(Structure structure, Object txn, Map mapOfDirtyTiers, Object keyOfObject, Comparable[] fields, Deletable deletable)
         {
             this.structure = structure;
             this.txn = txn;
             this.mapOfDirtyTiers = mapOfDirtyTiers;
             this.keyOfObject = keyOfObject;
             this.fields = fields;
-            this.test = test;
+            this.deletable = deletable;
             this.bucket = structure.newBucket(fields, keyOfObject);
         }
 
@@ -1569,7 +1567,7 @@ implements Serializable
                         else if (compare == 0)
                         {
                             found++;
-                            if (mutation.test.operate(candidate))
+                            if (mutation.deletable.deletable(candidate))
                             {
                                 objects.remove();
                                 if (count == 1 && isLeftMost)
@@ -1804,6 +1802,20 @@ implements Serializable
         }
     }
 
+    public interface Deletable
+    {
+        public boolean deletable(Object object);
+    }
+
+    private final static class DeleteAnything
+    implements Deletable
+    {
+        public boolean deletable(Object object)
+        {
+            return true;
+        }
+    }
+
     public final class Query
     {
         private final Object txn;
@@ -1821,15 +1833,17 @@ implements Serializable
             return size;
         }
 
-        public void insert(Object keyOfObject)
+        private void write()
         {
-            Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfObject);
-            Mutation mutation = new Mutation(structure, txn, mapOfDirtyTiers, keyOfObject, fields, null);
-            generalized(mutation, new SplitRoot(), new InnerDecision[] { new SplitInner() }, new LeafInsert());
-            synchronized (this)
+            Iterator tiers = mapOfDirtyTiers.values().iterator();
+            while (tiers.hasNext())
             {
-                size++;
+                Tier tier = (Tier) tiers.next();
+                tier.write(txn);
             }
+            mapOfDirtyTiers.clear();
+
+            structure.getStorage().commit(txn);
         }
 
         private boolean test(InnerDecision[] decisions, Mutation mutation, Level levelOfParent, Level levelOfChild, InnerTier parent, InnerTier child)
@@ -1842,7 +1856,6 @@ implements Serializable
             return exclusive;
         }
 
-        // TODO Reorder methods.
         private Object generalized(Mutation mutation, RootDecision initial, InnerDecision[] subsequent, LeafDecision penultimate)
         {
             if (mapOfDirtyTiers.size() == 0)
@@ -1947,10 +1960,9 @@ implements Serializable
                     }
                 }
 
-                // FIXME Need to commit changes here, not externally.
                 if (mutation.mapOfDirtyTiers.size() >= maxDirtyTiers)
                 {
-                    write(mutation.mapOfDirtyTiers);
+                    write();
                 }
             }
 
@@ -1967,6 +1979,32 @@ implements Serializable
             }
 
             return mutation.result;
+        }
+
+        public void insert(Object keyOfObject)
+        {
+            Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfObject);
+            Mutation mutation = new Mutation(structure, txn, mapOfDirtyTiers, keyOfObject, fields, null);
+            generalized(mutation, new SplitRoot(), new InnerDecision[] { new SplitInner() }, new LeafInsert());
+            synchronized (this)
+            {
+                size++;
+            }
+        }
+
+        public Object remove(Object keyOfObject)
+        {
+            Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfObject);
+            Mutation mutation = new Mutation(structure, txn, mapOfDirtyTiers, keyOfObject, fields, new DeleteAnything());
+            Object removed = generalized(mutation, new DeleteRoot(), new InnerDecision[] { new MergeInner(), new SwapKey() }, new LeafRemove());
+            if (removed != null)
+            {
+                synchronized (this)
+                {
+                    size--;
+                }
+            }
+            return removed;
         }
 
         public Cursor find(Object keyOfObject)
@@ -1987,21 +2025,6 @@ implements Serializable
                 }
                 tier = (InnerTier) tier.getTier(txn, branch.getRightKey());
             }
-        }
-
-        public Object remove(Object keyOfObject)
-        {
-            Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfObject);
-            Mutation mutation = new Mutation(structure, txn, mapOfDirtyTiers, keyOfObject, fields, True.INSTANCE);
-            Object removed = generalized(mutation, new DeleteRoot(), new InnerDecision[] { new MergeInner(), new SwapKey() }, new LeafRemove());
-            if (removed != null)
-            {
-                synchronized (this)
-                {
-                    size--;
-                }
-            }
-            return removed;
         }
 
         public Cursor first()
@@ -2041,22 +2064,9 @@ implements Serializable
         {
             if (mapOfDirtyTiers.size() != 0)
             {
-                write(mapOfDirtyTiers);
+                write();
                 writeMutex.release();
             }
-        }
-
-        private void write(Map mapOfDirtyTiers)
-        {
-            Iterator tiers = mapOfDirtyTiers.values().iterator();
-            while (tiers.hasNext())
-            {
-                Tier tier = (Tier) tiers.next();
-                tier.write(txn);
-            }
-            mapOfDirtyTiers.clear();
-
-            structure.getStorage().commit(txn);
         }
 
         public void copacetic()
