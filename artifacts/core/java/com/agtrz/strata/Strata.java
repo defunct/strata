@@ -68,7 +68,7 @@ implements Serializable
     {
         return size;
     }
-
+    
     public Query query(Object txn)
     {
         return new Query(txn);
@@ -768,8 +768,6 @@ implements Serializable
 
         public final Object txn;
 
-        public final Object keyOfObject;
-
         public final Comparable[] fields;
 
         public final Deletable deletable;
@@ -786,15 +784,14 @@ implements Serializable
 
         public final Object bucket;
 
-        public Mutation(Structure structure, Object txn, Map mapOfDirtyTiers, Object keyOfObject, Comparable[] fields, Deletable deletable)
+        public Mutation(Structure structure, Object txn, Map mapOfDirtyTiers, Object bucket, Comparable[] fields, Deletable deletable)
         {
             this.structure = structure;
             this.txn = txn;
             this.mapOfDirtyTiers = mapOfDirtyTiers;
-            this.keyOfObject = keyOfObject;
             this.fields = fields;
             this.deletable = deletable;
-            this.bucket = structure.newBucket(fields, keyOfObject);
+            this.bucket = bucket;
         }
 
         public void rewind(boolean isLeaf)
@@ -1807,14 +1804,13 @@ implements Serializable
         public boolean deletable(Object object);
     }
 
-    private final static class DeleteAnything
-    implements Deletable
+    public final static Deletable ANY = new Deletable() 
     {
         public boolean deletable(Object object)
         {
             return true;
         }
-    }
+    };
 
     public final class Query
     {
@@ -1984,7 +1980,8 @@ implements Serializable
         public void insert(Object keyOfObject)
         {
             Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfObject);
-            Mutation mutation = new Mutation(structure, txn, mapOfDirtyTiers, keyOfObject, fields, null);
+            Object bucket = structure.newBucket(fields, keyOfObject);
+            Mutation mutation = new Mutation(structure, txn, mapOfDirtyTiers, bucket, fields, null);
             generalized(mutation, new SplitRoot(), new InnerDecision[] { new SplitInner() }, new LeafInsert());
             synchronized (this)
             {
@@ -1995,7 +1992,12 @@ implements Serializable
         public Object remove(Object keyOfObject)
         {
             Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfObject);
-            Mutation mutation = new Mutation(structure, txn, mapOfDirtyTiers, keyOfObject, fields, new DeleteAnything());
+            return remove(fields, ANY);
+        }
+
+        public Object remove(Comparable[] fields, Deletable deletable)
+        {
+            Mutation mutation = new Mutation(structure, txn, mapOfDirtyTiers, null, fields, deletable);
             Object removed = generalized(mutation, new DeleteRoot(), new InnerDecision[] { new MergeInner(), new SwapKey() }, new LeafRemove());
             if (removed != null)
             {
@@ -2060,7 +2062,7 @@ implements Serializable
             return new Cursor(structure, txn, leaf, leaf.getSize());
         }
 
-        public void commit()
+        public void flush()
         {
             if (mapOfDirtyTiers.size() != 0)
             {
