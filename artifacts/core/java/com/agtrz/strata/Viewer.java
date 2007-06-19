@@ -11,6 +11,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.event.EventListenerList;
+import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
@@ -103,6 +104,15 @@ public class Viewer
             throw new UnsupportedOperationException();
         }
 
+        public void fire()
+        {
+            TreeModelListener[] listeners = (TreeModelListener[]) listOfListeners.getListeners(TreeModelListener.class);
+            for (int i = 0; i < listeners.length; i++)
+            {
+                listeners[i].treeStructureChanged(new TreeModelEvent(this, new Object[] { root }));
+            }
+        }
+
         public Strata.InnerTier newInnerTier(Strata.Structure structure, Object txn, short typeOfChildren)
         {
             Strata.InnerTier inner = storage.newInnerTier(structure, txn, typeOfChildren);
@@ -174,24 +184,81 @@ public class Viewer
     {
         private final JTextField entry;
 
+        private final JTree tree;
+
         private final Strata strata;
 
-        public AddNumber(JTextField entry, Strata strata)
+        public AddNumber(JTextField entry, JTree tree, Strata strata)
         {
             this.entry = entry;
+            this.tree = tree;
             this.strata = strata;
         }
 
         public void actionPerformed(ActionEvent event)
         {
+            int number;
             try
             {
-                int number = Integer.parseInt(entry.getText());
-                strata.query(null).insert(new Integer(number));
+                number = Integer.parseInt(entry.getText());
             }
             catch (NumberFormatException e)
             {
+                return;
             }
+
+            strata.query(null).insert(new Integer(number));
+
+            TreeModelStorage treeModel = (TreeModelStorage) tree.getModel();
+            treeModel.fire();
+
+            int i = 0;
+            while (i < tree.getRowCount())
+            {
+                tree.expandRow(i);
+                i++;
+            }
+
+            entry.setText("");
+        }
+    }
+
+    // If expand is true, expands all nodes in the tree.
+    // Otherwise, collapses all nodes in the tree.
+    public static void expandAll(JTree tree, boolean expand)
+    {
+        TreeModel model = tree.getModel();
+        Object root = model.getRoot();
+
+        // Traverse tree from root
+        expandAll(tree, new TreePath(root), expand);
+    }
+
+    private static void expandAll(JTree tree, TreePath parent, boolean expand)
+    {
+        TreeModel model = tree.getModel();
+
+        // Traverse children
+        Object node = parent.getLastPathComponent();
+        if (!model.isLeaf(node))
+        {
+            int childCount = model.getChildCount(node);
+            for (int i = 0; i < childCount; i++)
+            {
+                Object n = model.getChild(node, i);
+                TreePath path = parent.pathByAddingChild(n);
+                expandAll(tree, path, expand);
+            }
+        }
+
+        // Expansion or collapse must be done bottom-up
+        if (expand)
+        {
+            tree.expandPath(parent);
+        }
+        else
+        {
+            tree.collapsePath(parent);
         }
     }
 
@@ -215,10 +282,8 @@ public class Viewer
         JTextField entry = new JTextField(10);
         JButton add = new JButton("Add");
 
-        add.addActionListener(new AddNumber(entry, strata));
-
         panel.add(entry);
-        panel.add(new JButton("Add"));
+        panel.add(add);
 
         frame.add(panel, BorderLayout.NORTH);
 
@@ -226,9 +291,19 @@ public class Viewer
         tree.setRootVisible(false);
         frame.add(tree, BorderLayout.CENTER);
 
+        add.addActionListener(new AddNumber(entry, tree, strata));
+
         frame.pack();
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.setVisible(true);
+
+        // expandAll(tree, true);
+        int i = 0;
+        while (i < tree.getRowCount())
+        {
+            tree.expandRow(i);
+            i++;
+        }
     }
 }
 
