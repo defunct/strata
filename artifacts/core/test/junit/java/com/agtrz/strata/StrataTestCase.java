@@ -502,6 +502,20 @@ extends TestCase
         assertRemove(query, 3, 16);
         query.copacetic();
     }
+    
+    public void testRemoveNumbers()
+    {
+        Strata strata = new Strata();
+        Strata.Query query = strata.query(null);
+        
+        query.insert(new Integer(1));
+        query.insert(new Integer(1));
+        query.insert(new Integer(1));
+        query.insert(new Integer(1));
+        query.insert(new Integer(1));
+        
+        query.remove(new Integer(1));
+    }
 
     private void assertRemove(Strata.Query query, int value, int count)
     {

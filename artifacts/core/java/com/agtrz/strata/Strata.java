@@ -68,7 +68,7 @@ implements Serializable
     {
         return size;
     }
-    
+
     public Query query(Object txn)
     {
         return new Query(txn);
@@ -305,6 +305,8 @@ implements Serializable
 
     public interface Tier
     {
+        public Structure getStructure();
+
         public ReadWriteLock getReadWriteLock();
 
         public Object getKey();
@@ -343,6 +345,11 @@ implements Serializable
             this.structure = structure;
             this.storageData = storageData;
             this.listOfObjects = new ArrayList(structure.getSize());
+        }
+
+        public Structure getStructure()
+        {
+            return structure;
         }
 
         public ReadWriteLock getReadWriteLock()
@@ -552,6 +559,11 @@ implements Serializable
             this.key = key;
             this.childType = typeOfChildren;
             this.listOfBranches = new ArrayList(structure.getSize() + 1);
+        }
+
+        public Structure getStructure()
+        {
+            return structure;
         }
 
         public ReadWriteLock getReadWriteLock()
@@ -1597,7 +1609,7 @@ implements Serializable
                     for (;;)
                     {
                         LeafTier subsequent = current.getNextAndLock(mutation, levelOfLeaf);
-                        if (compare(mutation.fields, mutation.structure.getFields(mutation.txn, subsequent.get(0))) != 0)
+                        if (subsequent == null || compare(mutation.fields, mutation.structure.getFields(mutation.txn, subsequent.get(0))) != 0)
                         {
                             break;
                         }
@@ -1804,7 +1816,7 @@ implements Serializable
         public boolean deletable(Object object);
     }
 
-    public final static Deletable ANY = new Deletable() 
+    public final static Deletable ANY = new Deletable()
     {
         public boolean deletable(Object object)
         {
