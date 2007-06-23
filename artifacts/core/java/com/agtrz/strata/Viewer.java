@@ -88,7 +88,7 @@ public class Viewer
             {
                 Object object = leaf.get(0);
                 int offset = index;
-                while (offset > size)
+                while (offset >= size)
                 {
                     offset -= size;
                     leaf = storage.getLeafTier(leaf.getStructure(), null, leaf.getNextLeafKey());
