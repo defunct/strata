@@ -2,13 +2,28 @@
 package com.agtrz.strata;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 
 import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.JTree;
@@ -78,7 +93,7 @@ public class Viewer
             if (index == size)
             {
                 Strata.LeafTier next = storage.getLeafTier(leaf.getStructure(), null, leaf.getNextLeafKey());
-                if (next != null && next.get(0).equals(leaf.get(0)))
+                if (next != null && next.getSize() != 0 && next.get(0).equals(leaf.get(0)))
                 {
                     return next.get(0) + " [" + index + "]";
                 }
@@ -99,7 +114,7 @@ public class Viewer
                 }
                 return leaf.get(0) + " [" + index + "]";
             }
-            
+
             if (index == leaf.getSize())
             {
                 return "<";
@@ -122,7 +137,7 @@ public class Viewer
                 return object;
             }
 
-            return leaf.get(index) + " [" + (index-offset) + "]";
+            return leaf.get(index) + " [" + (index - offset) + "]";
         }
 
         private boolean linkedLeaves(Strata.Tier tier)
@@ -155,7 +170,7 @@ public class Viewer
                     leaf = storage.getLeafTier(leaf.getStructure(), null, leaf.getNextLeafKey());
                 }
                 while (leaf != null && previous.get(0).equals(leaf.get(0)));
-                
+
                 return count + 1;
             }
             return node.tier.getSize() + 1;
@@ -256,6 +271,199 @@ public class Viewer
         }
     }
 
+    private interface Operation
+    {
+        public void operate(int number);
+    }
+
+    private final static class Insert
+    implements Operation
+    {
+        private final Strata strata;
+
+        private final StringBuffer actions;
+
+        private final StringBuffer tests;
+
+        public Insert(Strata strata, StringBuffer actions, StringBuffer tests)
+        {
+            this.strata = strata;
+            this.actions = actions;
+            this.tests = tests;
+        }
+
+        public void operate(int number)
+        {
+            actions.append("A" + number + "\n");
+            tests.append("query.append(new Integer(" + number + "));\n");
+
+            strata.query(null).insert(new Integer(number));
+        }
+    }
+
+    private final static class Remove
+    implements Operation
+    {
+        private final Strata strata;
+
+        private final StringBuffer actions;
+
+        private final StringBuffer tests;
+
+        public Remove(Strata strata, StringBuffer actions, StringBuffer tests)
+        {
+            this.strata = strata;
+            this.actions = actions;
+            this.tests = tests;
+        }
+
+        public void operate(int number)
+        {
+            actions.append("D" + number + "\n");
+            tests.append("query.remove(new Integer(" + number + "));\n");
+
+            strata.query(null).remove(new Integer(number));
+        }
+    }
+
+    private final static class SaveFile
+    extends AbstractAction
+    {
+        private static final long serialVersionUID = 20070620L;
+
+        private final Component parent;
+
+        private final StringBuffer buffer;
+
+        public SaveFile(Component parent, StringBuffer buffer)
+        {
+            this.parent = parent;
+            this.buffer = buffer;
+            putValue(Action.NAME, "Save");
+        }
+
+        public void actionPerformed(ActionEvent event)
+        {
+            JFileChooser chooser = new JFileChooser();
+            int choice = chooser.showSaveDialog(parent);
+            if (choice == JFileChooser.APPROVE_OPTION)
+            {
+                File file = chooser.getSelectedFile();
+                FileWriter writer;
+                try
+                {
+                    writer = new FileWriter(file);
+                    writer.write(buffer.toString());
+                    writer.close();
+                }
+                catch (IOException e)
+                {
+                    JOptionPane.showMessageDialog(parent, "Cannot write file.");
+                }
+            }
+        }
+    }
+
+    private final static class OpenFile
+    extends AbstractAction
+    {
+        private static final long serialVersionUID = 20070620L;
+
+        private final Component parent;
+
+        private final JTree tree;
+
+        private final Operation insert;
+
+        private final Operation remove;
+
+        public OpenFile(Component parent, JTree tree, Operation insert, Operation remove)
+        {
+            this.parent = parent;
+            this.tree = tree;
+            this.insert = insert;
+            this.remove = remove;
+            putValue(Action.NAME, "Open");
+        }
+
+        public void actionPerformed(ActionEvent event)
+        {
+            JFileChooser chooser = new JFileChooser();
+            int choice = chooser.showSaveDialog(parent);
+            if (choice == JFileChooser.APPROVE_OPTION)
+            {
+                File file = chooser.getSelectedFile();
+                try
+                {
+                    BufferedReader reader = new BufferedReader(new FileReader(file));
+                    int lineNumber = 1;
+                    String line = null;
+                    while ((line = reader.readLine()) != null)
+                    {
+                        char action = line.charAt(0);
+                        String value = line.substring(1);
+                        int number;
+                        try
+                        {
+                            number = Integer.parseInt(value);
+                        }
+                        catch (NumberFormatException e)
+                        {
+                            throw new IOException("Cannot parse number <" + value + "> at line " + lineNumber + ".");
+                        }
+                        switch (action)
+                        {
+                        case 'A':
+                            insert.operate(number);
+                            break;
+                        case 'D':
+                            remove.operate(number);
+                            break;
+                        default:
+                            throw new IOException("Unknown action <" + action + "> at line " + lineNumber + ".");
+                        }
+                        lineNumber++;
+                    }
+                }
+                catch (IOException e)
+                {
+                    JOptionPane.showMessageDialog(parent, "Cannot Open File", e.getMessage(), JOptionPane.ERROR_MESSAGE);
+                }
+            }
+
+            TreeModelStorage model = (TreeModelStorage) tree.getModel();
+            model.fire();
+
+            int i = 0;
+            while (i < tree.getRowCount())
+            {
+                tree.expandRow(i);
+                i++;
+            }
+        }
+    }
+
+    private final static class CopyTest
+    extends AbstractAction
+    {
+        private static final long serialVersionUID = 20070620L;
+
+        private final StringBuffer tests;
+
+        public CopyTest(StringBuffer tests)
+        {
+            this.tests = tests;
+            putValue(Action.NAME, "Copy Test To Clipboard");
+        }
+
+        public void actionPerformed(ActionEvent arg0)
+        {
+            Clipboard system = Toolkit.getDefaultToolkit().getSystemClipboard();
+            StringSelection selection = new StringSelection(tests.toString());
+            system.setContents(selection, selection);
+        }
+    }
+
     private final static class AddNumber
     extends AbstractAction
     {
@@ -265,13 +473,13 @@ public class Viewer
 
         private final JTree tree;
 
-        private final Strata strata;
+        private final Operation add;
 
-        public AddNumber(JTextField entry, JTree tree, Strata strata)
+        public AddNumber(JTextField entry, JTree tree, Operation add)
         {
             this.entry = entry;
             this.tree = tree;
-            this.strata = strata;
+            this.add = add;
         }
 
         public void actionPerformed(ActionEvent event)
@@ -286,7 +494,7 @@ public class Viewer
                 return;
             }
 
-            strata.query(null).insert(new Integer(number));
+            add.operate(number);
 
             TreeModelStorage model = (TreeModelStorage) tree.getModel();
             model.fire();
@@ -307,12 +515,12 @@ public class Viewer
     {
         private final JTree tree;
 
-        private final Strata strata;
+        private final Operation remove;
 
-        public RemoveNumber(JTree tree, Strata strata)
+        public RemoveNumber(JTree tree, Operation remove)
         {
             this.tree = tree;
-            this.strata = strata;
+            this.remove = remove;
         }
 
         public void mousePressed(MouseEvent event)
@@ -341,7 +549,8 @@ public class Viewer
                     {
                         return;
                     }
-                    strata.query(null).remove(new Integer(number));
+
+                    remove.operate(number);
 
                     model.fire();
 
@@ -355,45 +564,6 @@ public class Viewer
             }
         }
     };
-
-    // If expand is true, expands all nodes in the tree.
-    // Otherwise, collapses all nodes in the tree.
-    public static void expandAll(JTree tree, boolean expand)
-    {
-        TreeModel model = tree.getModel();
-        Object root = model.getRoot();
-
-        // Traverse tree from root
-        expandAll(tree, new TreePath(root), expand);
-    }
-
-    private static void expandAll(JTree tree, TreePath parent, boolean expand)
-    {
-        TreeModel model = tree.getModel();
-
-        // Traverse children
-        Object node = parent.getLastPathComponent();
-        if (!model.isLeaf(node))
-        {
-            int childCount = model.getChildCount(node);
-            for (int i = 0; i < childCount; i++)
-            {
-                Object n = model.getChild(node, i);
-                TreePath path = parent.pathByAddingChild(n);
-                expandAll(tree, path, expand);
-            }
-        }
-
-        // Expansion or collapse must be done bottom-up
-        if (expand)
-        {
-            tree.expandPath(parent);
-        }
-        else
-        {
-            tree.collapsePath(parent);
-        }
-    }
 
     public final static void main(String[] args)
     {
@@ -418,17 +588,38 @@ public class Viewer
         panel.add(entry);
         panel.add(add);
 
+        StringBuffer actions = new StringBuffer();
+        StringBuffer tests = new StringBuffer();
+
         frame.add(panel, BorderLayout.NORTH);
 
         JTree tree = new JTree(storage);
-        tree.addMouseListener(new RemoveNumber(tree, strata));
+        Operation remove = new Remove(strata, actions, tests);
+        tree.addMouseListener(new RemoveNumber(tree, remove));
         tree.setRootVisible(false);
         frame.add(tree, BorderLayout.CENTER);
 
-        AddNumber addNumber = new AddNumber(entry, tree, strata);
+        Operation insert = new Insert(strata, actions, tests);
+        AddNumber addNumber = new AddNumber(entry, tree, insert);
         entry.getActionMap().put("addNumber", addNumber);
         entry.getInputMap().put(KeyStroke.getKeyStroke("ENTER"), "addNumber");
         add.addActionListener(addNumber);
+
+        JMenuBar menuBar = new JMenuBar();
+        JMenu menu = new JMenu("File");
+        menuBar.add(menu);
+
+        JMenuItem save = new JMenuItem(new SaveFile(frame, actions));
+        menu.add(save);
+        JMenuItem open = new JMenuItem(new OpenFile(frame, tree, insert, remove));
+        menu.add(open);
+
+        menu.addSeparator();
+
+        JMenuItem copyTests = new JMenuItem(new CopyTest(tests));
+        menu.add(copyTests);
+
+        frame.setJMenuBar(menuBar);
 
         frame.pack();
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
