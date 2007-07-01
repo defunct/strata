@@ -357,6 +357,7 @@ extends TestCase
 
         assertRemove(query, 3, 1);
         assertContains(query, new int[] { 1, 2, 4, 5 });
+        query.copacetic();
     }
 
     public void testRemoveMany()
@@ -502,19 +503,189 @@ extends TestCase
         assertRemove(query, 3, 16);
         query.copacetic();
     }
-    
+
     public void testRemoveNumbers()
     {
         Strata strata = new Strata();
         Strata.Query query = strata.query(null);
-        
+
         query.insert(new Integer(1));
         query.insert(new Integer(1));
         query.insert(new Integer(1));
         query.insert(new Integer(1));
         query.insert(new Integer(1));
-        
+
         query.remove(new Integer(1));
+    }
+
+    public void testDeleteSingleNoGoingBack()
+    {
+        Strata.Creator newStrata = new Strata.Creator();
+        newStrata.setSize(2);
+        Strata strata = newStrata.create(null);
+
+        Strata.Query query = strata.query(null);
+
+        query.insert(new Integer(1000));
+        query.insert(new Integer(2000));
+        query.insert(new Integer(3000));
+        query.insert(new Integer(4000));
+        query.insert(new Integer(5000));
+        query.insert(new Integer(6000));
+        query.insert(new Integer(7000));
+        query.insert(new Integer(8000));
+        query.insert(new Integer(9000));
+        query.insert(new Integer(10000));
+        query.insert(new Integer(11000));
+        query.insert(new Integer(12000));
+        query.insert(new Integer(13000));
+        query.insert(new Integer(14000));
+        query.insert(new Integer(15000));
+        query.insert(new Integer(16000));
+        query.insert(new Integer(17000));
+        query.insert(new Integer(18000));
+        query.insert(new Integer(19000));
+        query.insert(new Integer(20000));
+        query.insert(new Integer(21000));
+        query.insert(new Integer(22000));
+        query.insert(new Integer(24000));
+        query.insert(new Integer(25000));
+        query.insert(new Integer(26000));
+        query.insert(new Integer(27000));
+        query.insert(new Integer(28000));
+        query.insert(new Integer(29000));
+        query.insert(new Integer(30000));
+        query.insert(new Integer(31000));
+        query.insert(new Integer(32000));
+        query.insert(new Integer(33000));
+        query.insert(new Integer(34000));
+        query.insert(new Integer(29100));
+        query.insert(new Integer(29200));
+        query.remove(new Integer(26000));
+        query.insert(new Integer(34100));
+        query.insert(new Integer(34200));
+        query.insert(new Integer(34300));
+        query.insert(new Integer(34400));
+        query.remove(new Integer(27000));
+        
+        query.copacetic();
+    }
+
+    public void testDeleteSingle()
+    {
+        Strata.Creator newStrata = new Strata.Creator();
+        newStrata.setSize(2);
+        Strata strata = newStrata.create(null);
+
+        Strata.Query query = strata.query(null);
+
+        query.insert(new Integer(1000));
+        query.insert(new Integer(2000));
+        query.insert(new Integer(3000));
+        query.insert(new Integer(4000));
+        query.insert(new Integer(5000));
+        query.insert(new Integer(6000));
+        query.insert(new Integer(7000));
+        query.insert(new Integer(8000));
+        query.insert(new Integer(9000));
+        query.insert(new Integer(2100));
+        query.insert(new Integer(2200));
+        query.insert(new Integer(6100));
+        query.insert(new Integer(6200));
+        query.remove(new Integer(4000));
+        query.remove(new Integer(3000));
+        query.copacetic();
+    }
+
+    public void testMergeTerminatesAtSwap()
+    {
+        Strata.Creator newStrata = new Strata.Creator();
+        newStrata.setSize(2);
+        Strata strata = newStrata.create(null);
+
+        Strata.Query query = strata.query(null);
+
+        query.insert(new Integer(1000));
+        query.insert(new Integer(2000));
+        query.insert(new Integer(3000));
+        query.insert(new Integer(4000));
+        query.insert(new Integer(5000));
+        query.insert(new Integer(6000));
+        query.insert(new Integer(7000));
+        query.insert(new Integer(8000));
+        query.insert(new Integer(9000));
+        query.insert(new Integer(10000));
+        query.insert(new Integer(11000));
+        query.insert(new Integer(12000));
+        query.insert(new Integer(13000));
+        query.insert(new Integer(14000));
+        query.insert(new Integer(15000));
+        query.insert(new Integer(16000));
+        query.insert(new Integer(17000));
+        query.insert(new Integer(18000));
+        query.insert(new Integer(19000));
+        query.insert(new Integer(20000));
+        query.insert(new Integer(21000));
+        query.insert(new Integer(22000));
+        query.insert(new Integer(24000));
+        query.insert(new Integer(25000));
+        query.insert(new Integer(26000));
+        query.insert(new Integer(27000));
+        query.insert(new Integer(28000));
+        query.insert(new Integer(29000));
+        query.insert(new Integer(30000));
+        query.insert(new Integer(31000));
+        query.insert(new Integer(32000));
+        query.insert(new Integer(33000));
+        query.insert(new Integer(34000));
+        query.insert(new Integer(29100));
+        query.insert(new Integer(29200));
+        query.remove(new Integer(26000));
+        query.insert(new Integer(34100));
+        query.insert(new Integer(34200));
+        query.insert(new Integer(34300));
+        query.insert(new Integer(34400));
+        query.insert(new Integer(27100));
+        query.remove(new Integer(29000));
+        query.insert(new Integer(27200));
+        query.remove(new Integer(27000));
+        query.copacetic();
+    }
+
+    public void testMergeRoot()
+    {
+        Strata.Creator newStrata = new Strata.Creator();
+        newStrata.setSize(2);
+        Strata strata = newStrata.create(null);
+
+        Strata.Query query = strata.query(null);
+
+        query.insert(new Integer(1));
+        query.insert(new Integer(3));
+        query.insert(new Integer(5));
+        query.insert(new Integer(7));
+        query.insert(new Integer(9));
+        query.copacetic();
+        query.remove(new Integer(9));
+        query.copacetic();
+    }
+
+    public void testSwapRoot()
+    {
+        Strata.Creator newStrata = new Strata.Creator();
+        newStrata.setSize(2);
+        Strata strata = newStrata.create(null);
+
+        Strata.Query query = strata.query(null);
+
+        query.insert(new Integer(1));
+        query.insert(new Integer(3));
+        query.insert(new Integer(5));
+        query.insert(new Integer(7));
+        query.insert(new Integer(2));
+        query.insert(new Integer(4));
+        query.remove(new Integer(3));
+        query.copacetic();
     }
 
     private void assertRemove(Strata.Query query, int value, int count)
@@ -525,6 +696,7 @@ extends TestCase
             assertNotNull(object);
             Integer integer = (Integer) object;
             assertEquals(value, integer.intValue());
+            query.copacetic();
         }
         assertNull(query.remove(new Integer(value)));
     }

@@ -25,6 +25,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.KeyStroke;
@@ -295,9 +296,10 @@ public class Viewer
         public void operate(int number)
         {
             actions.append("A" + number + "\n");
-            tests.append("query.append(new Integer(" + number + "));\n");
+            tests.append("query.insert(new Integer(" + number + "));\n");
 
             strata.query(null).insert(new Integer(number));
+            strata.query(null).copacetic();
         }
     }
 
@@ -323,6 +325,7 @@ public class Viewer
             tests.append("query.remove(new Integer(" + number + "));\n");
 
             strata.query(null).remove(new Integer(number));
+//            strata.query(null).copacetic();
         }
     }
 
@@ -371,15 +374,18 @@ public class Viewer
 
         private final Component parent;
 
+        private final Strata strata;
+
         private final JTree tree;
 
         private final Operation insert;
 
         private final Operation remove;
 
-        public OpenFile(Component parent, JTree tree, Operation insert, Operation remove)
+        public OpenFile(Component parent, Strata strata, JTree tree, Operation insert, Operation remove)
         {
             this.parent = parent;
+            this.strata = strata;
             this.tree = tree;
             this.insert = insert;
             this.remove = remove;
@@ -389,7 +395,7 @@ public class Viewer
         public void actionPerformed(ActionEvent event)
         {
             JFileChooser chooser = new JFileChooser();
-            int choice = chooser.showSaveDialog(parent);
+            int choice = chooser.showOpenDialog(parent);
             if (choice == JFileChooser.APPROVE_OPTION)
             {
                 File file = chooser.getSelectedFile();
@@ -422,6 +428,7 @@ public class Viewer
                         default:
                             throw new IOException("Unknown action <" + action + "> at line " + lineNumber + ".");
                         }
+                        strata.query(null).copacetic();
                         lineNumber++;
                     }
                 }
@@ -597,7 +604,7 @@ public class Viewer
         Operation remove = new Remove(strata, actions, tests);
         tree.addMouseListener(new RemoveNumber(tree, remove));
         tree.setRootVisible(false);
-        frame.add(tree, BorderLayout.CENTER);
+        frame.add(new JScrollPane(tree), BorderLayout.CENTER);
 
         Operation insert = new Insert(strata, actions, tests);
         AddNumber addNumber = new AddNumber(entry, tree, insert);
@@ -611,7 +618,7 @@ public class Viewer
 
         JMenuItem save = new JMenuItem(new SaveFile(frame, actions));
         menu.add(save);
-        JMenuItem open = new JMenuItem(new OpenFile(frame, tree, insert, remove));
+        JMenuItem open = new JMenuItem(new OpenFile(frame, strata, tree, insert, remove));
         menu.add(open);
 
         menu.addSeparator();

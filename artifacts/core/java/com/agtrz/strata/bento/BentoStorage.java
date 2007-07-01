@@ -162,7 +162,7 @@ implements Strata.Storage, Serializable
             out.putLong(addressOfChild.getPosition());
             out.putInt(addressOfChild.getBlockSize());
 
-            if (branch.isTerminal())
+            if (branch.isMinimal())
             {
                 for (int j = 0; j < recordSize; j++)
                 {
