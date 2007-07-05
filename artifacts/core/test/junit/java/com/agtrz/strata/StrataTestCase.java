@@ -61,6 +61,7 @@ extends TestCase
     {
         assertTrue(cursor.hasNext());
         assertEquals(object.toString(), cursor.next().toString());
+        cursor.release();
     }
 
     private static void assertEquals(int count, Object object, Strata.Cursor cursor)
@@ -70,6 +71,7 @@ extends TestCase
             assertTrue(cursor.hasNext());
             assertEquals(object.toString(), cursor.next().toString());
         }
+        cursor.release();
     }
 
     private void assertInsert(Strata.Query query, int[] insert)

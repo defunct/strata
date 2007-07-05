@@ -2116,29 +2116,60 @@ implements Serializable
             return remove(fields, ANY);
         }
 
-        private LeafTier getRightMostLeaf(Mutation mutation, InnerTier inner, int index)
+        private LeafTier getRightMostLeaf(Mutation mutation, InnerTier inner, int index, Sync previous)
         {
             while (inner.getChildType() == INNER)
             {
+                try
+                {
+                    inner.getReadWriteLock().readLock().acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    throw new Exception(e, "interrupted");
+                }
+                previous.release();
+                previous = inner.getReadWriteLock().readLock();
                 Branch branch = inner.get(index);
                 inner = (InnerTier) inner.getTier(mutation.txn, branch.getRightKey());
                 index = inner.getSize();
             }
             Branch branch = inner.get(inner.getSize());
-            return (LeafTier) inner.getTier(mutation.txn, branch.getRightKey());
+            LeafTier leaf = (LeafTier) inner.getTier(mutation.txn, branch.getRightKey());
+            try
+            {
+                leaf.getReadWriteLock().readLock().acquire();
+            }
+            catch (InterruptedException e)
+            {
+                throw new Exception(e, "interrupted");
+            }
+            previous.release();
+            return leaf;
         }
 
         private LeafTier findLeftLeaf(Mutation mutation, Object keyOfSought)
         {
             Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfSought);
             InnerTier inner = getRoot();
+            Sync previous = new NullSync();
             while (inner.getChildType() == INNER)
             {
+                try
+                {
+                    inner.getReadWriteLock().readLock().acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    throw new Exception(e, "interrupted");
+                }
+                previous.release();
+                previous = inner.getReadWriteLock().readLock();
                 Branch branch = inner.find(mutation, fields);
                 if (!branch.isMinimal() && compare(structure.getFields(mutation.txn, branch.getPivot()), fields) == 0)
                 {
                     int index = inner.getIndexOfTier(branch.getRightKey()) - 1;
-                    return getRightMostLeaf(mutation, inner, index);
+                    return getRightMostLeaf(mutation, inner, index, previous);
                 }
                 inner = (InnerTier) inner.getTier(mutation.txn, branch.getRightKey());
             }
@@ -2195,13 +2226,33 @@ implements Serializable
 
         public Cursor find(Comparable[] fields)
         {
+            Sync previous = new NullSync();
             InnerTier tier = getRoot();
             for (;;)
             {
+                try
+                {
+                    tier.getReadWriteLock().readLock().acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    throw new Exception(e, "interrupted");
+                }
+                previous.release();
+                previous = tier.getReadWriteLock().readLock();
                 Branch branch = tier.find(txn, fields);
                 if (tier.getChildType() == LEAF)
                 {
                     LeafTier leaf = structure.getStorage().getLeafTier(structure, txn, branch.getRightKey());
+                    try
+                    {
+                        leaf.getReadWriteLock().readLock().acquire();
+                    }
+                    catch (InterruptedException e)
+                    {
+                        throw new Exception(e, "interrupted");
+                    }
+                    previous.release();
                     return leaf.find(txn, fields);
                 }
                 tier = (InnerTier) tier.getTier(txn, branch.getRightKey());
@@ -2212,8 +2263,19 @@ implements Serializable
         {
             Branch branch = null;
             InnerTier tier = getRoot();
+            Sync previous = new NullSync();
             for (;;)
             {
+                try
+                {
+                    tier.getReadWriteLock().readLock().acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    throw new Exception(e, "interrupted");
+                }
+                previous.release();
+                previous = tier.getReadWriteLock().readLock();
                 branch = tier.get(0);
                 if (tier.getChildType() == LEAF)
                 {
@@ -2221,15 +2283,36 @@ implements Serializable
                 }
                 tier = (InnerTier) tier.getTier(txn, branch.getRightKey());
             }
-            return new Cursor(structure, txn, (LeafTier) tier.getTier(txn, branch.getRightKey()), 0);
+            LeafTier leaf = (LeafTier) tier.getTier(txn, branch.getRightKey());
+            try
+            {
+                leaf.getReadWriteLock().readLock().acquire();
+            }
+            catch (InterruptedException e)
+            {
+                throw new Exception(e, "interrupted");
+            }
+            previous.release();
+            return new Cursor(structure, txn, leaf, 0);
         }
 
         public Cursor last()
         {
             Branch branch = null;
             InnerTier tier = getRoot();
+            Sync previous = new NullSync();
             for (;;)
             {
+                try
+                {
+                    tier.getReadWriteLock().readLock().acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    throw new Exception(e, "interrupted");
+                }
+                previous.release();
+                previous = tier.getReadWriteLock().readLock();
                 branch = tier.get(tier.getSize());
                 if (tier.getChildType() == LEAF)
                 {
@@ -2238,6 +2321,15 @@ implements Serializable
                 tier = (InnerTier) tier.getTier(txn, branch.getRightKey());
             }
             LeafTier leaf = structure.getStorage().getLeafTier(structure, txn, branch.getRightKey());
+            try
+            {
+                leaf.getReadWriteLock().readLock().acquire();
+            }
+            catch (InterruptedException e)
+            {
+                throw new Exception(e, "interrupted");
+            }
+            previous.release();
             return new Cursor(structure, txn, leaf, leaf.getSize());
         }
 
@@ -2252,6 +2344,7 @@ implements Serializable
 
         public void copacetic()
         {
+            // FIXME Lock.
             Comparator comparator = new CopaceticComparator(txn, structure);
             getRoot().copacetic(txn, new Copacetic(comparator));
             Strata.Cursor cursor = first();
@@ -2330,10 +2423,25 @@ implements Serializable
                 {
                     throw new IllegalStateException();
                 }
-                leaf = structure.getStorage().getLeafTier(structure, txn, leaf.getNextLeafKey());
+                LeafTier next = structure.getStorage().getLeafTier(structure, txn, leaf.getNextLeafKey());
+                try
+                {
+                    next.getReadWriteLock().readLock().acquire();
+                }
+                catch (InterruptedException e)
+                {
+                    throw new Exception(e, "interrupted");
+                }
+                leaf.getReadWriteLock().readLock().release();
+                leaf = next;
                 index = 0;
             }
             return structure.getObjectKey(leaf.get(index++));
+        }
+
+        public void release()
+        {
+            leaf.getReadWriteLock().readLock().release();
         }
     }
 
