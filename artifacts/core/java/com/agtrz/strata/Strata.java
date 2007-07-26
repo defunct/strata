@@ -88,8 +88,7 @@ implements Serializable
 
         public Exception(Throwable cause, String message)
         {
-            super(cause);
-            message(message);
+            super(message, cause);
         }
     }
 
