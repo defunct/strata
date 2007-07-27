@@ -223,7 +223,7 @@ implements Serializable
 
         public int compare(Object left, Object right)
         {
-            return Strata.compare(structure.getFields(txn, left), structure.getFields(txn, right));
+            return compare(structure.getFields(txn, left), structure.getFields(txn, right));
         }
     }
 
@@ -328,7 +328,7 @@ implements Serializable
     }
 
     public final static class LeafTier
-    implements Strata.Tier
+    implements Tier
     {
         private Object keyOfNext;
 
@@ -336,11 +336,11 @@ implements Serializable
 
         private final List listOfObjects;
 
-        private final Strata.Structure structure;
+        private final Structure structure;
 
         private final ReadWriteLock readWriteLock = new ReentrantWriterPreferenceReadWriteLock();
 
-        public LeafTier(Strata.Structure structure, Object storageData)
+        public LeafTier(Structure structure, Object storageData)
         {
             this.structure = structure;
             this.storageData = storageData;
@@ -431,7 +431,7 @@ implements Serializable
         {
             if (getSize() == structure.getSize())
             {
-                Strata.Storage storage = structure.getStorage();
+                Storage storage = structure.getStorage();
                 LeafTier nextLeaf = getNextAndLock(mutation, levelOfLeaf);
                 if (null == nextLeaf || compare(mutation.fields, structure.getFields(mutation.txn, nextLeaf.get(0))) != 0)
                 {
@@ -695,7 +695,7 @@ implements Serializable
                 }
                 isMinimal = false;
 
-                Strata.Tier left = getTier(txn, branch.getRightKey());
+                Tier left = getTier(txn, branch.getRightKey());
                 left.copacetic(txn, copacetic);
                 if (getChildType() == INNER && !(left instanceof InnerTier))
                 {
@@ -763,7 +763,7 @@ implements Serializable
     public interface Storage
     extends Serializable
     {
-        public InnerTier newInnerTier(Strata.Structure structure, Object txn, short typeOfChildren);
+        public InnerTier newInnerTier(Structure structure, Object txn, short typeOfChildren);
 
         public LeafTier newLeafTier(Structure structure, Object txn);
 
@@ -964,7 +964,7 @@ implements Serializable
 
             public void operate(Mutation mutation)
             {
-                Strata.Storage storage = mutation.structure.getStorage();
+                Storage storage = mutation.structure.getStorage();
                 InnerTier left = storage.newInnerTier(mutation.structure, mutation.txn, root.getChildType());
                 InnerTier right = storage.newInnerTier(mutation.structure, mutation.txn, root.getChildType());
                 int partition = (root.getSize() + 1) / 2;
@@ -1028,7 +1028,7 @@ implements Serializable
 
             public void operate(Mutation mutation)
             {
-                Strata.Storage storage = mutation.structure.getStorage();
+                Storage storage = mutation.structure.getStorage();
 
                 InnerTier right = storage.newInnerTier(mutation.structure, mutation.txn, child.getChildType());
                 int partition = (child.getSize() + 1) / 2;
@@ -2346,7 +2346,7 @@ implements Serializable
             // FIXME Lock.
             Comparator comparator = new CopaceticComparator(txn, structure);
             getRoot().copacetic(txn, new Copacetic(comparator));
-            Strata.Cursor cursor = first();
+            Cursor cursor = first();
             if (getSize() != 0)
             {
                 Object previous = cursor.next();
