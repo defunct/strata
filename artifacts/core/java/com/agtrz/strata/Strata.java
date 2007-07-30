@@ -433,7 +433,7 @@ implements Serializable
             {
                 Storage storage = structure.getStorage();
                 LeafTier nextLeaf = getNextAndLock(mutation, levelOfLeaf);
-                if (null == nextLeaf || compare(mutation.fields, structure.getFields(mutation.txn, nextLeaf.get(0))) != 0)
+                if (null == nextLeaf || compare(mutation.fields, mutation.getFields(nextLeaf.get(0))) != 0)
                 {
                     nextLeaf = storage.newLeafTier(structure, mutation.txn);
                     link(mutation, nextLeaf);
@@ -878,6 +878,11 @@ implements Serializable
                 levels.remove();
             }
         }
+
+        public Comparable[] getFields(Object key)
+        {
+            return structure.getFields(txn, key);
+        }
     }
 
     private interface LockExtractor
@@ -1069,8 +1074,8 @@ implements Serializable
             levelOfChild.lockAndAdd(leaf);
             if (leaf.getSize() == mutation.structure.getSize())
             {
-                Comparable[] first = mutation.structure.getFields(mutation.txn, leaf.get(0));
-                Comparable[] last = mutation.structure.getFields(mutation.txn, leaf.get(leaf.getSize() - 1));
+                Comparable[] first = mutation.getFields(leaf.get(0));
+                Comparable[] last = mutation.getFields(leaf.get(leaf.getSize() - 1));
                 if (compare(first, last) == 0)
                 {
                     int compare = compare(mutation.fields, first);
@@ -1152,7 +1157,7 @@ implements Serializable
 
             private boolean endOfList(Mutation mutation, LeafTier last)
             {
-                return mutation.structure.getStorage().isKeyNull(last.getNextLeafKey()) || compare(mutation.structure.getFields(mutation.txn, last.getNext(mutation.txn).get(0)), mutation.structure.getFields(mutation.txn, last.get(0))) != 0;
+                return mutation.structure.getStorage().isKeyNull(last.getNextLeafKey()) || compare(mutation.getFields(last.getNext(mutation.txn).get(0)), mutation.getFields(last.get(0))) != 0;
             }
 
             public boolean operate(Mutation mutation, Level levelOfLeaf)
@@ -1200,14 +1205,14 @@ implements Serializable
                 int greater = odd ? middle + 1 : middle;
 
                 int partition = -1;
-                Comparable[] candidate = mutation.structure.getFields(mutation.txn, leaf.get(middle));
+                Comparable[] candidate = mutation.getFields(leaf.get(middle));
                 for (int i = 0; partition == -1 && i < middle; i++)
                 {
-                    if (compare(candidate, mutation.structure.getFields(mutation.txn, leaf.get(lesser))) != 0)
+                    if (compare(candidate, mutation.getFields(leaf.get(lesser))) != 0)
                     {
                         partition = lesser + 1;
                     }
-                    else if (compare(candidate, mutation.structure.getFields(mutation.txn, leaf.get(greater))) != 0)
+                    else if (compare(candidate, mutation.getFields(leaf.get(greater))) != 0)
                     {
                         partition = greater;
                     }
@@ -1259,7 +1264,7 @@ implements Serializable
                 while (objects.hasNext())
                 {
                     Object before = objects.next();
-                    if (compare(mutation.structure.getFields(mutation.txn, before), mutation.fields) > 0)
+                    if (compare(mutation.getFields(before), mutation.fields) > 0)
                     {
                         objects.previous();
                         objects.add(bucket);
@@ -1368,7 +1373,7 @@ implements Serializable
         public boolean test(Mutation mutation, Level levelOfParent, Level levelOfChild, InnerTier parent)
         {
             Branch branch = parent.find(mutation.txn, mutation.fields);
-            if (branch.getPivot() != null && compare(mutation.structure.getFields(mutation.txn, branch.getPivot()), mutation.fields) == 0)
+            if (branch.getPivot() != null && compare(mutation.getFields(branch.getPivot()), mutation.fields) == 0)
             {
                 levelOfParent.listOfOperations.add(new Swap(parent));
                 return true;
@@ -1411,8 +1416,8 @@ implements Serializable
         {
             if (search != null && branch.getPivot() != null && !mutation.mapOfVariables.containsKey(LEFT_LEAF))
             {
-                Comparable[] searchFields = mutation.structure.getFields(mutation.txn, search);
-                Comparable[] pivotFields = mutation.structure.getFields(mutation.txn, branch.getPivot());
+                Comparable[] searchFields = mutation.getFields(search);
+                Comparable[] pivotFields = mutation.getFields(branch.getPivot());
                 return compare(searchFields, pivotFields) == 0;
             }
             return false;
@@ -1690,7 +1695,7 @@ implements Serializable
                     {
                         count++;
                         Object candidate = objects.next();
-                        int compare = compare(mutation.fields, mutation.structure.getFields(mutation.txn, candidate));
+                        int compare = compare(mutation.fields, mutation.getFields(candidate));
                         if (compare < 0)
                         {
                             break SEARCH;
@@ -1724,14 +1729,14 @@ implements Serializable
                     }
                     current = current.getNextAndLock(mutation, levelOfLeaf);
                 }
-                while (current != null && compare(mutation.fields, mutation.structure.getFields(mutation.txn, current.get(0))) == 0);
+                while (current != null && compare(mutation.fields, mutation.getFields(current.get(0))) == 0);
 
-                if (mutation.mapOfVariables.containsKey(RESULT) && count == found && current.getSize() == mutation.structure.getSize() - 1 && compare(mutation.fields, mutation.structure.getFields(mutation.txn, current.get(current.getSize() - 1))) == 0)
+                if (mutation.mapOfVariables.containsKey(RESULT) && count == found && current.getSize() == mutation.structure.getSize() - 1 && compare(mutation.fields, mutation.getFields(current.get(current.getSize() - 1))) == 0)
                 {
                     for (;;)
                     {
                         LeafTier subsequent = current.getNextAndLock(mutation, levelOfLeaf);
-                        if (subsequent == null || compare(mutation.fields, mutation.structure.getFields(mutation.txn, subsequent.get(0))) != 0)
+                        if (subsequent == null || compare(mutation.fields, mutation.getFields(subsequent.get(0))) != 0)
                         {
                             break;
                         }
