@@ -26,9 +26,11 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.KeyStroke;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.event.EventListenerList;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
@@ -206,6 +208,11 @@ public class Viewer
             }
         }
 
+        public void reset()
+        {
+            root = null;
+        }
+
         public Strata.InnerTier newInnerTier(Strata.Structure structure, Object txn, short typeOfChildren)
         {
             Strata.InnerTier inner = storage.newInnerTier(structure, txn, typeOfChildren);
@@ -280,15 +287,15 @@ public class Viewer
     private final static class Insert
     implements Operation
     {
-        private final Strata strata;
+        private final StrataCozy strataCozy;
 
         private final StringBuffer actions;
 
         private final StringBuffer tests;
 
-        public Insert(Strata strata, StringBuffer actions, StringBuffer tests)
+        public Insert(StrataCozy strataCozy, StringBuffer actions, StringBuffer tests)
         {
-            this.strata = strata;
+            this.strataCozy = strataCozy;
             this.actions = actions;
             this.tests = tests;
         }
@@ -298,23 +305,23 @@ public class Viewer
             actions.append("A" + number + "\n");
             tests.append("query.insert(new Integer(" + number + "));\n");
 
-            strata.query(null).insert(new Integer(number));
-            strata.query(null).copacetic();
+            strataCozy.getStrata().query(null).insert(new Integer(number));
+            strataCozy.getStrata().query(null).copacetic();
         }
     }
 
     private final static class Remove
     implements Operation
     {
-        private final Strata strata;
+        private final StrataCozy strataCozy;
 
         private final StringBuffer actions;
 
         private final StringBuffer tests;
 
-        public Remove(Strata strata, StringBuffer actions, StringBuffer tests)
+        public Remove(StrataCozy strataCozy, StringBuffer actions, StringBuffer tests)
         {
-            this.strata = strata;
+            this.strataCozy = strataCozy;
             this.actions = actions;
             this.tests = tests;
         }
@@ -324,8 +331,8 @@ public class Viewer
             actions.append("D" + number + "\n");
             tests.append("query.remove(new Integer(" + number + "));\n");
 
-            strata.query(null).remove(new Integer(number));
-//            strata.query(null).copacetic();
+            strataCozy.getStrata().query(null).remove(new Integer(number));
+            // strata.query(null).copacetic();
         }
     }
 
@@ -348,7 +355,7 @@ public class Viewer
         public void actionPerformed(ActionEvent event)
         {
             JFileChooser chooser = new JFileChooser();
-            int choice = chooser.showSaveDialog(parent);
+            int choice = chooser.showSaveDialog(null);
             if (choice == JFileChooser.APPROVE_OPTION)
             {
                 File file = chooser.getSelectedFile();
@@ -367,6 +374,94 @@ public class Viewer
         }
     }
 
+    private final static class SetSize
+    extends AbstractAction
+    {
+        private static final long serialVersionUID = 20070729L;
+
+        private final StrataCozy strataCozy;
+
+        private final JTree tree;
+
+        public SetSize(StrataCozy strataCozy, JTree tree)
+        {
+            this.strataCozy = strataCozy;
+            this.tree = tree;
+            putValue(Action.NAME, "Set Tier Size...");
+        }
+
+        public void actionPerformed(ActionEvent arg0)
+        {
+            SpinnerNumberModel number = new SpinnerNumberModel();
+            number.setMinimum(new Integer(2));
+            number.setValue(new Integer(strataCozy.getSize()));
+            String[] options = new String[] { "OK", "Cancel" };
+            int result = JOptionPane.showOptionDialog(null, new Object[] { "Set size of Strata tiers.", new JSpinner(number) }, "Set Tier Size", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+            if (result == 0)
+            {
+                strataCozy.setSize(((Integer) number.getValue()).intValue());
+            }
+
+            TreeModelStorage model = (TreeModelStorage) tree.getModel();
+            model.fire();
+
+            int i = 0;
+            while (i < tree.getRowCount())
+            {
+                tree.expandRow(i);
+                i++;
+            }
+        }
+    }
+
+    private final static class StrataCozy
+    {
+        private TreeModelStorage storage;
+
+        private Strata strata;
+
+        private int size;
+
+        public StrataCozy(int size)
+        {
+            this.storage = new TreeModelStorage();
+            setSize(size);
+        }
+
+        public void setSize(int size)
+        {
+            storage.reset();
+
+            Strata.Creator creator = new Strata.Creator();
+
+            creator.setSize(size);
+            creator.setStorage(storage);
+
+            this.size = size;
+            this.strata = creator.create(null);
+        }
+
+        public void reset()
+        {
+            setSize(getSize());
+        }
+
+        public int getSize()
+        {
+            return size;
+        }
+
+        public Strata getStrata()
+        {
+            return strata;
+        }
+
+        public TreeModel getTreeModel()
+        {
+            return storage;
+        }
+    }
+
     private final static class OpenFile
     extends AbstractAction
     {
@@ -374,7 +469,7 @@ public class Viewer
 
         private final Component parent;
 
-        private final Strata strata;
+        private final StrataCozy strataCozy;
 
         private final JTree tree;
 
@@ -382,10 +477,10 @@ public class Viewer
 
         private final Operation remove;
 
-        public OpenFile(Component parent, Strata strata, JTree tree, Operation insert, Operation remove)
+        public OpenFile(Component parent, StrataCozy strataCozy, JTree tree, Operation insert, Operation remove)
         {
             this.parent = parent;
-            this.strata = strata;
+            this.strataCozy = strataCozy;
             this.tree = tree;
             this.insert = insert;
             this.remove = remove;
@@ -395,9 +490,10 @@ public class Viewer
         public void actionPerformed(ActionEvent event)
         {
             JFileChooser chooser = new JFileChooser();
-            int choice = chooser.showOpenDialog(parent);
+            int choice = chooser.showOpenDialog(null);
             if (choice == JFileChooser.APPROVE_OPTION)
             {
+                strataCozy.reset();
                 File file = chooser.getSelectedFile();
                 try
                 {
@@ -428,7 +524,7 @@ public class Viewer
                         default:
                             throw new IOException("Unknown action <" + action + "> at line " + lineNumber + ".");
                         }
-                        strata.query(null).copacetic();
+                        strataCozy.getStrata().query(null).copacetic();
                         lineNumber++;
                     }
                 }
@@ -578,14 +674,7 @@ public class Viewer
 
         frame.setLayout(new BorderLayout());
 
-        TreeModelStorage storage = new TreeModelStorage();
-
-        Strata.Creator creator = new Strata.Creator();
-
-        creator.setSize(2);
-        creator.setStorage(storage);
-
-        Strata strata = creator.create(null);
+        StrataCozy strataCozy = new StrataCozy(2);
 
         JPanel panel = new JPanel();
 
@@ -600,13 +689,13 @@ public class Viewer
 
         frame.add(panel, BorderLayout.NORTH);
 
-        JTree tree = new JTree(storage);
-        Operation remove = new Remove(strata, actions, tests);
+        JTree tree = new JTree(strataCozy.getTreeModel());
+        Operation remove = new Remove(strataCozy, actions, tests);
         tree.addMouseListener(new RemoveNumber(tree, remove));
         tree.setRootVisible(false);
         frame.add(new JScrollPane(tree), BorderLayout.CENTER);
 
-        Operation insert = new Insert(strata, actions, tests);
+        Operation insert = new Insert(strataCozy, actions, tests);
         AddNumber addNumber = new AddNumber(entry, tree, insert);
         entry.getActionMap().put("addNumber", addNumber);
         entry.getInputMap().put(KeyStroke.getKeyStroke("ENTER"), "addNumber");
@@ -618,8 +707,13 @@ public class Viewer
 
         JMenuItem save = new JMenuItem(new SaveFile(frame, actions));
         menu.add(save);
-        JMenuItem open = new JMenuItem(new OpenFile(frame, strata, tree, insert, remove));
+        JMenuItem open = new JMenuItem(new OpenFile(frame, strataCozy, tree, insert, remove));
         menu.add(open);
+        
+        menu.addSeparator();
+        
+        JMenuItem size = new JMenuItem(new SetSize(strataCozy, tree));
+        menu.add(size);
 
         menu.addSeparator();
 

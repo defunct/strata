@@ -1438,11 +1438,11 @@ implements Serializable
                 while (inner.getChildType() == INNER)
                 {
                     inner = storage.getInnerTier(mutation.structure, mutation.txn, inner.get(index).getRightKey());
-                    levelOfChild.lockAndAdd(inner);
+                    levelOfParent.lockAndAdd(inner);
                     index = inner.getSize();
                 }
                 LeafTier leaf = storage.getLeafTier(mutation.structure, mutation.txn, inner.get(index).getRightKey());
-                levelOfChild.lockAndAdd(leaf);
+                levelOfParent.lockAndAdd(leaf);
                 mutation.mapOfVariables.put(LEFT_LEAF, leaf);
             }
 
@@ -1603,6 +1603,7 @@ implements Serializable
                     levelOfChild.release(previous);
                 }
             }
+
             if (leaf == null)
             {
                 leaf = (LeafTier) parent.getTier(mutation.txn, branch.getRightKey());
@@ -1612,10 +1613,7 @@ implements Serializable
             if (leaf.getSize() == 1 && parent.getSize() == 0 && mutation.mapOfVariables.containsKey(DELETING))
             {
                 LeafTier left = (LeafTier) mutation.mapOfVariables.get(LEFT_LEAF);
-                // FIXME: Doucment: Here is where equality of keys matters,
-                // where else?
-                // FIXME: Can't I do compare?
-                if (left == null || !left.getNextLeafKey().equals(leaf.getKey()))
+                if (left == null)
                 {
                     mutation.mapOfVariables.put(SEARCH, leaf.get(0));
                     mutation.leafOperation = new Fail();
