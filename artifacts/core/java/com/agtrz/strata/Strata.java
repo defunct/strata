@@ -223,7 +223,7 @@ implements Serializable
 
         public int compare(Object left, Object right)
         {
-            return compare(structure.getFields(txn, left), structure.getFields(txn, right));
+            return Strata.compare(structure.getFields(txn, left), structure.getFields(txn, right));
         }
     }
 
@@ -1407,26 +1407,38 @@ implements Serializable
     private final static class MergeInner
     implements Decision
     {
+        private boolean lockLeft(Mutation mutation, Branch branch, Object search)
+        {
+            if (search != null && branch.getPivot() != null && !mutation.mapOfVariables.containsKey(LEFT_LEAF))
+            {
+                Comparable[] searchFields = mutation.structure.getFields(mutation.txn, search);
+                Comparable[] pivotFields = mutation.structure.getFields(mutation.txn, branch.getPivot());
+                return compare(searchFields, pivotFields) == 0;
+            }
+            return false;
+        }
+
         public boolean test(Mutation mutation, Level levelOfParent, Level levelOfChild, InnerTier parent)
         {
             Branch branch = parent.find(mutation.txn, mutation.fields);
             InnerTier child = (InnerTier) parent.getTier(mutation.txn, branch.getRightKey());
-            List listToMerge = new ArrayList();
-            int index = parent.getIndexOfTier(child.getKey());
-            if (index != 0)
+
+            Object search = mutation.mapOfVariables.get(SEARCH);
+
+            if (lockLeft(mutation, branch, search))
             {
-                InnerTier left = (InnerTier) parent.getTier(mutation.txn, parent.get(index - 1).getRightKey());
-                levelOfChild.lockAndAdd(left);
-                levelOfChild.lockAndAdd(child);
-                if (left.getSize() + child.getSize() <= mutation.structure.getSize())
+                Storage storage = mutation.structure.getStorage();
+                int index = parent.getIndexOfTier(child.getKey()) - 1;
+                InnerTier inner = parent;
+                while (inner.getChildType() == INNER)
                 {
-                    listToMerge.add(left);
-                    listToMerge.add(child);
+                    inner = storage.getInnerTier(mutation.structure, mutation.txn, inner.get(index).getRightKey());
+                    levelOfChild.lockAndAdd(inner);
+                    index = inner.getSize();
                 }
-            }
-            if (index == 0)
-            {
-                levelOfChild.lockAndAdd(child);
+                LeafTier leaf = storage.getLeafTier(mutation.structure, mutation.txn, inner.get(index).getRightKey());
+                levelOfChild.lockAndAdd(leaf);
+                mutation.mapOfVariables.put(LEFT_LEAF, leaf);
             }
 
             if (child.getSize() == 0)
@@ -1439,6 +1451,26 @@ implements Serializable
                 return true;
             }
 
+            List listToMerge = new ArrayList();
+
+            int index = parent.getIndexOfTier(child.getKey());
+            if (index != 0)
+            {
+                InnerTier left = (InnerTier) parent.getTier(mutation.txn, parent.get(index - 1).getRightKey());
+                levelOfChild.lockAndAdd(left);
+                levelOfChild.lockAndAdd(child);
+                if (left.getSize() + child.getSize() <= mutation.structure.getSize())
+                {
+                    listToMerge.add(left);
+                    listToMerge.add(child);
+                }
+            }
+
+            if (index == 0)
+            {
+                levelOfChild.lockAndAdd(child);
+            }
+
             if (listToMerge.isEmpty() && index != parent.getSize())
             {
                 InnerTier right = (InnerTier) parent.getTier(mutation.txn, parent.get(index + 1).getRightKey());
@@ -1449,6 +1481,7 @@ implements Serializable
                     listToMerge.add(right);
                 }
             }
+
             if (!listToMerge.isEmpty())
             {
                 if (mutation.mapOfVariables.containsKey(DELETING))
@@ -1459,7 +1492,9 @@ implements Serializable
                 levelOfParent.listOfOperations.add(new Merge(parent, listToMerge));
                 return true;
             }
+
             mutation.mapOfVariables.remove(DELETING);
+
             return false;
         }
 
@@ -1568,16 +1603,20 @@ implements Serializable
                 leaf = (LeafTier) parent.getTier(mutation.txn, branch.getRightKey());
                 levelOfChild.lock(leaf);
             }
+
             if (leaf.getSize() == 1 && parent.getSize() == 0 && mutation.mapOfVariables.containsKey(DELETING))
             {
                 LeafTier left = (LeafTier) mutation.mapOfVariables.get(LEFT_LEAF);
-                // Here is where equality of keys matters, where else?
+                // FIXME: Doucment: Here is where equality of keys matters,
+                // where else?
+                // FIXME: Can't I do compare?
                 if (left == null || !left.getNextLeafKey().equals(leaf.getKey()))
                 {
                     mutation.mapOfVariables.put(SEARCH, leaf.get(0));
                     mutation.leafOperation = new Fail();
                     return false;
                 }
+
                 levelOfParent.listOfOperations.add(new RemoveLeaf(parent, leaf, left));
                 mutation.leafOperation = new Remove(leaf);
                 return true;
@@ -1790,6 +1829,8 @@ implements Serializable
 
                 mutation.mapOfDirtyTiers.put(parent.getKey(), parent);
                 mutation.mapOfDirtyTiers.put(left.getKey(), left);
+
+                mutation.mapOfVariables.remove(SEARCH);
             }
 
             public boolean canCancel()
@@ -2115,95 +2156,21 @@ implements Serializable
             return remove(fields, ANY);
         }
 
-        private LeafTier getRightMostLeaf(Mutation mutation, InnerTier inner, int index, Sync previous)
-        {
-            while (inner.getChildType() == INNER)
-            {
-                try
-                {
-                    inner.getReadWriteLock().readLock().acquire();
-                }
-                catch (InterruptedException e)
-                {
-                    throw new Exception(e, "interrupted");
-                }
-                previous.release();
-                previous = inner.getReadWriteLock().readLock();
-                Branch branch = inner.get(index);
-                inner = (InnerTier) inner.getTier(mutation.txn, branch.getRightKey());
-                index = inner.getSize();
-            }
-            Branch branch = inner.get(inner.getSize());
-            LeafTier leaf = (LeafTier) inner.getTier(mutation.txn, branch.getRightKey());
-            try
-            {
-                leaf.getReadWriteLock().readLock().acquire();
-            }
-            catch (InterruptedException e)
-            {
-                throw new Exception(e, "interrupted");
-            }
-            previous.release();
-            return leaf;
-        }
-
-        private LeafTier findLeftLeaf(Mutation mutation, Object keyOfSought)
-        {
-            Comparable[] fields = structure.getFieldExtractor().getFields(txn, keyOfSought);
-            InnerTier inner = getRoot();
-            Sync previous = new NullSync();
-            while (inner.getChildType() == INNER)
-            {
-                try
-                {
-                    inner.getReadWriteLock().readLock().acquire();
-                }
-                catch (InterruptedException e)
-                {
-                    throw new Exception(e, "interrupted");
-                }
-                previous.release();
-                previous = inner.getReadWriteLock().readLock();
-                Branch branch = inner.find(mutation, fields);
-                if (!branch.isMinimal() && compare(structure.getFields(mutation.txn, branch.getPivot()), fields) == 0)
-                {
-                    int index = inner.getIndexOfTier(branch.getRightKey()) - 1;
-                    return getRightMostLeaf(mutation, inner, index, previous);
-                }
-                inner = (InnerTier) inner.getTier(mutation.txn, branch.getRightKey());
-            }
-            // This will never be requested of a leaf whose key is in a
-            // penultimate tier, that would trigger a merge.
-            return null;
-        }
-
         public Object remove(Comparable[] fields, Deletable deletable)
         {
             Mutation mutation = new Mutation(structure, txn, mapOfDirtyTiers, null, fields, deletable);
             do
             {
                 mutation.listOfLevels.clear();
+
                 Object search = mutation.mapOfVariables.get(SEARCH);
                 mutation.mapOfVariables.clear();
-                LeafTier left = null;
                 if (search != null)
                 {
-                    left = (LeafTier) findLeftLeaf(mutation, search);
-                    try
-                    {
-                        left.getReadWriteLock().writeLock().acquire();
-                    }
-                    catch (InterruptedException e)
-                    {
-                        throw new Exception(e, "interrupted");
-                    }
-                    mutation.mapOfVariables.put(LEFT_LEAF, left);
+                    mutation.mapOfVariables.put(SEARCH, search);
                 }
+
                 generalized(mutation, new DeleteRoot(), new MergeInner(), new SwapKey(), new LeafRemove());
-                if (left != null)
-                {
-                    left.getReadWriteLock().writeLock().release();
-                }
             }
             while (mutation.mapOfVariables.containsKey(SEARCH));
 
