@@ -56,6 +56,7 @@ implements Strata.Storage, Serializable
         leaf.setNextLeafKey(Bento.NULL_ADDRESS);
         Object box = address.toKey();
         mapOfTiers.put(box, new WeakMapValue(box, leaf, mapOfTiers, queue));
+        System.out.println("New: " + leaf.getKey());
         return leaf;
     }
 

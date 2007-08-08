@@ -338,13 +338,14 @@ implements Serializable
 
         private final Structure structure;
 
-        private final ReadWriteLock readWriteLock = new ReentrantWriterPreferenceReadWriteLock();
+        private final ReadWriteLock readWriteLock;
 
         public LeafTier(Structure structure, Object storageData)
         {
             this.structure = structure;
             this.storageData = storageData;
             this.listOfObjects = new ArrayList(structure.getSize());
+            this.readWriteLock = new TracingReadWriteLock(new ReentrantWriterPreferenceReadWriteLock(), getKey().toString() + " " + System.currentTimeMillis());
         }
 
         public Structure getStructure()
@@ -551,7 +552,7 @@ implements Serializable
 
         private final List listOfBranches;
 
-        private final ReadWriteLock readWriteLock = new ReentrantWriterPreferenceReadWriteLock();
+        private final ReadWriteLock readWriteLock;
 
         public InnerTier(Structure structure, Object key, short typeOfChildren)
         {
@@ -559,6 +560,7 @@ implements Serializable
             this.key = key;
             this.childType = typeOfChildren;
             this.listOfBranches = new ArrayList(structure.getSize() + 1);
+            this.readWriteLock = new TracingReadWriteLock(new ReentrantWriterPreferenceReadWriteLock(), getKey().toString() + " " + System.currentTimeMillis());
         }
 
         public Structure getStructure()
@@ -795,6 +797,62 @@ implements Serializable
     private final static Object LEFT_LEAF = new Object();
 
     private final static Object SEARCH = new Object();
+
+    private final static class TracingSync
+    implements Sync
+    {
+        private final Sync sync;
+
+        private final String key;
+
+        public TracingSync(Sync sync, String key)
+        {
+            this.sync = sync;
+            this.key = key;
+        }
+
+        public void acquire() throws InterruptedException
+        {
+            System.out.println("Sync acquire (" + key + ")");
+            sync.acquire();
+        }
+
+        public boolean attempt(long timeout) throws InterruptedException
+        {
+            System.out.println("Sync attempt (" + key + ")");
+            return sync.attempt(timeout);
+        }
+
+        public void release()
+        {
+            System.out.println("Sync release (" + key + ")");
+            sync.release();
+        }
+    }
+
+    private final static class TracingReadWriteLock
+    implements ReadWriteLock
+    {
+        private final ReadWriteLock readWriteLock;
+
+        private final String key;
+
+        public TracingReadWriteLock(ReadWriteLock readWriteLock, String key)
+        {
+            this.readWriteLock = readWriteLock;
+            this.key = key;
+        }
+
+        public Sync readLock()
+        {
+            return new TracingSync(readWriteLock.readLock(), "read , " + key);
+        }
+
+        public Sync writeLock()
+        {
+            return new TracingSync(readWriteLock.writeLock(), "write, " + key);
+        }
+    }
 
     private final static class Mutation
     {
@@ -1847,7 +1905,7 @@ implements Serializable
     {
         public LockExtractor getSync;
 
-        public final LinkedList listOfLocks = new LinkedList();
+        public final LinkedList listOfLockedTiers = new LinkedList();
 
         public final LinkedList listOfOperations = new LinkedList();
 
@@ -1858,7 +1916,7 @@ implements Serializable
 
         public ReadWriteLock getReadWriteLock()
         {
-            return (ReadWriteLock) listOfLocks.getFirst();
+            return (ReadWriteLock) listOfLockedTiers.getFirst();
         }
 
         public void lockAndAdd(Tier tier)
@@ -1869,7 +1927,7 @@ implements Serializable
 
         public void add(Tier tier)
         {
-            listOfLocks.add(tier.getReadWriteLock());
+            listOfLockedTiers.add(tier);
         }
 
         public void lock(Tier tier)
@@ -1891,34 +1949,34 @@ implements Serializable
 
         public void release()
         {
-            Iterator locks = listOfLocks.iterator();
-            while (locks.hasNext())
+            Iterator lockedTiers = listOfLockedTiers.iterator();
+            while (lockedTiers.hasNext())
             {
-                ReadWriteLock readWriteLock = (ReadWriteLock) locks.next();
-                getSync.getSync(readWriteLock).release();
+                Tier tier = (Tier) lockedTiers.next();
+                getSync.getSync(tier.getReadWriteLock()).release();
             }
         }
 
         public void releaseAndClear()
         {
-            Iterator locks = listOfLocks.iterator();
-            while (locks.hasNext())
+            Iterator lockedTiers = listOfLockedTiers.iterator();
+            while (lockedTiers.hasNext())
             {
-                ReadWriteLock readWriteLock = (ReadWriteLock) locks.next();
-                getSync.getSync(readWriteLock).release();
+                Tier tier = (Tier) lockedTiers.next();
+                getSync.getSync(tier.getReadWriteLock()).release();
             }
-            listOfLocks.clear();
+            listOfLockedTiers.clear();
         }
 
         private void exclusive()
         {
-            Iterator locks = listOfLocks.iterator();
-            while (locks.hasNext())
+            Iterator lockedTiers = listOfLockedTiers.iterator();
+            while (lockedTiers.hasNext())
             {
-                ReadWriteLock readWriteLock = (ReadWriteLock) locks.next();
+                Tier tier = (Tier) lockedTiers.next();
                 try
                 {
-                    readWriteLock.writeLock().acquire();
+                    tier.getReadWriteLock().writeLock().acquire();
                 }
                 catch (InterruptedException e)
                 {
@@ -1932,19 +1990,19 @@ implements Serializable
         {
             if (getSync.isExeclusive())
             {
-                Iterator locks = listOfLocks.iterator();
-                while (locks.hasNext())
+                Iterator lockedTiers = listOfLockedTiers.iterator();
+                while (lockedTiers.hasNext())
                 {
-                    ReadWriteLock readWriteLock = (ReadWriteLock) locks.next();
+                    Tier tier = (Tier) lockedTiers.next();
                     try
                     {
-                        readWriteLock.readLock().acquire();
+                        tier.getReadWriteLock().readLock().acquire();
                     }
                     catch (InterruptedException e)
                     {
                         throw new Exception(e, "interrupted");
                     }
-                    readWriteLock.writeLock().release();
+                    tier.getReadWriteLock().writeLock().release();
                 }
                 getSync = new ReadLockExtractor();
             }
@@ -1965,8 +2023,9 @@ implements Serializable
             if (!getSync.isExeclusive())
             {
                 release();
+                // TODO Use Release and Clear.
                 levelOfChild.release();
-                levelOfChild.listOfLocks.clear();
+                levelOfChild.listOfLockedTiers.clear();
                 exclusive();
                 levelOfChild.exclusive();
                 return true;
@@ -1974,7 +2033,7 @@ implements Serializable
             else if (!levelOfChild.getSync.isExeclusive())
             {
                 levelOfChild.release();
-                levelOfChild.listOfLocks.clear();
+                levelOfChild.listOfLockedTiers.clear();
                 levelOfChild.exclusive();
                 return true;
             }
