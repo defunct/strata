@@ -345,7 +345,7 @@ implements Serializable
             this.structure = structure;
             this.storageData = storageData;
             this.listOfObjects = new ArrayList(structure.getSize());
-            this.readWriteLock = new TracingReadWriteLock(new ReentrantWriterPreferenceReadWriteLock(), getKey().toString() + " " + System.currentTimeMillis());
+            this.readWriteLock = /*new TracingReadWriteLock(*/new ReentrantWriterPreferenceReadWriteLock()/*, getKey().toString() + " " + System.currentTimeMillis())*/;
         }
 
         public Structure getStructure()
@@ -560,7 +560,7 @@ implements Serializable
             this.key = key;
             this.childType = typeOfChildren;
             this.listOfBranches = new ArrayList(structure.getSize() + 1);
-            this.readWriteLock = new TracingReadWriteLock(new ReentrantWriterPreferenceReadWriteLock(), getKey().toString() + " " + System.currentTimeMillis());
+            this.readWriteLock = /*new TracingReadWriteLock(*/new ReentrantWriterPreferenceReadWriteLock()/*, getKey().toString() + " " + System.currentTimeMillis())*/;
         }
 
         public Structure getStructure()
@@ -830,7 +830,7 @@ implements Serializable
         }
     }
 
-    private final static class TracingReadWriteLock
+    public final static class TracingReadWriteLock
     implements ReadWriteLock
     {
         private final ReadWriteLock readWriteLock;

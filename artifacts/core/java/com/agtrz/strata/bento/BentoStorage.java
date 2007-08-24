@@ -40,7 +40,7 @@ implements Strata.Storage, Serializable
     {
         Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
         int blockSize = SizeOf.SHORT + SizeOf.INTEGER + (Bento.ADDRESS_SIZE + recordSize) * (structure.getSize() + 1);
-        Bento.Address address = mutator.allocate(blockSize).getAddress();
+        Bento.Address address = mutator.allocate(blockSize);
         Strata.InnerTier inner = new Strata.InnerTier(structure, address, typeOfChildren);
         Object box = address.toKey();
         mapOfTiers.put(box, new WeakMapValue(box, inner, mapOfTiers, queue));
@@ -51,7 +51,7 @@ implements Strata.Storage, Serializable
     {
         Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
         int blockSize = SizeOf.INTEGER + (Bento.ADDRESS_SIZE * 2) + (recordSize * structure.getSize());
-        Bento.Address address = mutator.allocate(blockSize).getAddress();
+        Bento.Address address = mutator.allocate(blockSize);
         Strata.LeafTier leaf = new Strata.LeafTier(structure, address);
         leaf.setNextLeafKey(Bento.NULL_ADDRESS);
         Object box = address.toKey();
