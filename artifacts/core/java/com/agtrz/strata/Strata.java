@@ -345,7 +345,11 @@ implements Serializable
             this.structure = structure;
             this.storageData = storageData;
             this.listOfObjects = new ArrayList(structure.getSize());
-            this.readWriteLock = /*new TracingReadWriteLock(*/new ReentrantWriterPreferenceReadWriteLock()/*, getKey().toString() + " " + System.currentTimeMillis())*/;
+            this.readWriteLock = /* new TracingReadWriteLock( */new ReentrantWriterPreferenceReadWriteLock()/*
+                                                                                                             * ,
+                                                                                                             * getKey().toString() + " " +
+                                                                                                             * System.currentTimeMillis())
+                                                                                                             */;
         }
 
         public Structure getStructure()
@@ -388,9 +392,14 @@ implements Serializable
             return listOfObjects.listIterator();
         }
 
-        public void add(Object object)
+        public void add(Object txn, Object keyOfObject)
         {
-            listOfObjects.add(object);
+            listOfObjects.add(structure.newBucket(txn, keyOfObject));
+        }
+
+        public void addBucket(Object bucket)
+        {
+            listOfObjects.add(bucket);
         }
 
         public Object remove(int index)
@@ -443,7 +452,7 @@ implements Serializable
             }
             else
             {
-                add(mutation.bucket);
+                addBucket(mutation.bucket);
                 mutation.mapOfDirtyTiers.put(getKey(), this);
             }
         }
@@ -560,7 +569,11 @@ implements Serializable
             this.key = key;
             this.childType = typeOfChildren;
             this.listOfBranches = new ArrayList(structure.getSize() + 1);
-            this.readWriteLock = /*new TracingReadWriteLock(*/new ReentrantWriterPreferenceReadWriteLock()/*, getKey().toString() + " " + System.currentTimeMillis())*/;
+            this.readWriteLock = /* new TracingReadWriteLock( */new ReentrantWriterPreferenceReadWriteLock()/*
+                                                                                                             * ,
+                                                                                                             * getKey().toString() + " " +
+                                                                                                             * System.currentTimeMillis())
+                                                                                                             */;
         }
 
         public Structure getStructure()
@@ -1183,7 +1196,7 @@ implements Serializable
                 LeafTier right = mutation.structure.getStorage().newLeafTier(mutation.structure, mutation.txn);
                 while (leaf.getSize() != 0)
                 {
-                    right.add(leaf.remove(0));
+                    right.addBucket(leaf.remove(0));
                 }
 
                 leaf.link(mutation, right);
@@ -1282,7 +1295,7 @@ implements Serializable
 
                 while (partition != leaf.getSize())
                 {
-                    right.add(leaf.remove(partition));
+                    right.addBucket(leaf.remove(partition));
                 }
 
                 leaf.link(mutation, right);
@@ -1796,7 +1809,7 @@ implements Serializable
                         {
                             break;
                         }
-                        current.add(subsequent.remove(0));
+                        current.addBucket(subsequent.remove(0));
                         if (subsequent.getSize() == 0)
                         {
                             current.setNextLeafKey(subsequent.getNextLeafKey());
@@ -1845,7 +1858,7 @@ implements Serializable
 
                 while (right.getSize() != 0)
                 {
-                    left.add(right.remove(0));
+                    left.addBucket(right.remove(0));
                 }
 
                 left.setNextLeafKey(right.getNextLeafKey());
@@ -2368,6 +2381,35 @@ implements Serializable
                 write();
                 writeMutex.release();
             }
+        }
+
+        private void destroy(InnerTier inner)
+        {
+            if (inner.getChildType() == INNER)
+            {
+                Iterator branches = inner.listIterator();
+                while (branches.hasNext())
+                {
+                    Branch branch = (Branch) branches.next();
+                    destroy(structure.storage.getInnerTier(structure, txn, branch.getRightKey()));
+                }
+            }
+            else
+            {
+                Iterator branches = inner.listIterator();
+                while (branches.hasNext())
+                {
+                    Branch branch = (Branch) branches.next();
+                    LeafTier leaf = structure.storage.getLeafTier(structure, txn, branch.getRightKey());
+                    structure.storage.free(structure, txn, leaf);
+                }
+            }
+            structure.storage.free(structure, txn, inner);
+        }
+
+        public void destroy()
+        {
+            destroy(getRoot());
         }
 
         public void copacetic()
