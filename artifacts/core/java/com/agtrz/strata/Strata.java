@@ -57,6 +57,9 @@ implements Serializable
 
         root.add(new Branch(leaf.getKey(), null));
         root.write(txn);
+        
+        // FIXME Delay this by returning a query from the creator.
+        structure.getStorage().commit(txn);
 
         this.structure = structure;
         this.rootKey = root.getKey();
@@ -1692,7 +1695,7 @@ implements Serializable
                 }
 
                 levelOfParent.listOfOperations.add(new RemoveLeaf(parent, leaf, left));
-                mutation.leafOperation = new Remove(leaf);
+                mutation.leafOperation = new Remove(mutation.structure, leaf);
                 return true;
             }
             else if (listToMerge.isEmpty() && index != parent.getSize())
@@ -1719,7 +1722,7 @@ implements Serializable
                     levelOfChild.lock(leaf);
                 }
                 levelOfChild.add(leaf);
-                mutation.leafOperation = new Remove(leaf);
+                mutation.leafOperation = new Remove(mutation.structure, leaf);
             }
             else
             {
@@ -1734,7 +1737,7 @@ implements Serializable
                 levelOfChild.add(left);
                 levelOfChild.add(right);
                 levelOfParent.listOfOperations.add(new Merge(parent, left, right));
-                mutation.leafOperation = new Remove(leaf);
+                mutation.leafOperation = new Remove(mutation.structure, leaf);
             }
             return !listToMerge.isEmpty();
         }
@@ -1742,10 +1745,13 @@ implements Serializable
         public final static class Remove
         implements LeafOperation
         {
+            private final Structure structure;
+
             private final LeafTier leaf;
 
-            public Remove(LeafTier leaf)
+            public Remove(Structure structure, LeafTier leaf)
             {
+                this.structure = structure;
                 this.leaf = leaf;
             }
 
@@ -1772,7 +1778,7 @@ implements Serializable
                         else if (compare == 0)
                         {
                             found++;
-                            if (mutation.deletable.deletable(candidate))
+                            if (mutation.deletable.deletable(structure.getObjectKey(candidate)))
                             {
                                 objects.remove();
                                 if (count == 1)
