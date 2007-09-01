@@ -157,6 +157,11 @@ implements Strata.Storage, Serializable
         for (int i = 0; i < inner.getSize() + 1; i++)
         {
             Strata.Branch branch = inner.get(i);
+            
+            if (!(branch.getRightKey() instanceof Bento.Address))
+            {
+                System.out.println(branch.getRightKey());
+            }
 
             Bento.Address addressOfChild = (Bento.Address) branch.getRightKey();
             out.putLong(addressOfChild.getPosition());

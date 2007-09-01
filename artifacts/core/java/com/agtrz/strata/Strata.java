@@ -57,7 +57,7 @@ implements Serializable
 
         root.add(new Branch(leaf.getKey(), null));
         root.write(txn);
-        
+
         // FIXME Delay this by returning a query from the creator.
         structure.getStorage().commit(txn);
 
@@ -1121,7 +1121,7 @@ implements Serializable
                 right.get(0).setPivot(null);
 
                 int index = parent.getIndexOfTier(child.getKey());
-                parent.add(index + 1, new Branch(right, pivot));
+                parent.add(index + 1, new Branch(right.getKey(), pivot));
 
                 mutation.mapOfDirtyTiers.put(parent.getKey(), parent);
                 mutation.mapOfDirtyTiers.put(child.getKey(), child);
