@@ -2466,6 +2466,8 @@ implements Serializable
         private int index;
 
         private LeafTier leaf;
+        
+        private boolean released;
 
         public Cursor(Structure structure, Object txn, LeafTier leaf, int index)
         {
@@ -2517,7 +2519,15 @@ implements Serializable
 
         public void release()
         {
-            leaf.getReadWriteLock().readLock().release();
+            if (!released)
+            {
+                leaf.getReadWriteLock().readLock().release();
+                released = true;
+            }
+            else
+            {
+                System.err.println("Double release.");
+            }
         }
     }
 
