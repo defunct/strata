@@ -2466,7 +2466,7 @@ implements Serializable
         private int index;
 
         private LeafTier leaf;
-        
+
         private boolean released;
 
         public Cursor(Structure structure, Object txn, LeafTier leaf, int index)
@@ -2553,28 +2553,40 @@ implements Serializable
 
     private final static int compare(Comparable[] left, Comparable[] right)
     {
-        if (left == null && right == null)
-        {
-            throw new IllegalStateException();
-        }
-
         if (left == null)
         {
-            return 1;
-        }
-
-        if (right == null)
-        {
+            if (right == null)
+            {
+                throw new IllegalStateException();
+            }
             return -1;
+        }
+        else if (right == null)
+        {
+            return 1;
         }
 
         int count = Math.min(left.length, right.length);
         for (int i = 0; i < count; i++)
         {
-            int compare = left[i].compareTo(right[i]);
-            if (compare != 0)
+            if (left[i] == null)
             {
-                return compare;
+                if (right[i] != null)
+                {
+                    return -1;
+                }
+            }
+            else if (right[i] == null)
+            {
+                return 1;
+            }
+            else
+            {
+                int compare = left[i].compareTo(right[i]);
+                if (compare != 0)
+                {
+                    return compare;
+                }
             }
         }
 
