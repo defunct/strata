@@ -1273,8 +1273,8 @@ implements Serializable
                 Branch branch = inner.find(mutation.txn, mutation.fields);
                 LeafTier leaf = (LeafTier) inner.getTier(mutation.txn, branch.getRightKey());
 
-                int middle = mutation.structure.getSize() >> 1;
-                boolean odd = (mutation.structure.getSize() & 1) == 1;
+                int middle = leaf.getSize() >> 1;
+                boolean odd = (leaf.getSize() & 1) == 1;
                 int lesser = middle - 1;
                 int greater = odd ? middle + 1 : middle;
 
