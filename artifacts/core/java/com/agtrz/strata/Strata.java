@@ -348,11 +348,10 @@ implements Serializable
             this.structure = structure;
             this.storageData = storageData;
             this.listOfObjects = new ArrayList(structure.getSize());
-            this.readWriteLock = /* new TracingReadWriteLock( */new ReentrantWriterPreferenceReadWriteLock()/*
-                                                                                                             * ,
-                                                                                                             * getKey().toString() + " " +
-                                                                                                             * System.currentTimeMillis())
-                                                                                                             */;
+            // this.readWriteLock = new TracingReadWriteLock(new
+            // ReentrantWriterPreferenceReadWriteLock(), getKey().toString() +
+            // " " + System.currentTimeMillis());
+            this.readWriteLock = new ReentrantWriterPreferenceReadWriteLock();
         }
 
         public Structure getStructure()
@@ -572,11 +571,10 @@ implements Serializable
             this.key = key;
             this.childType = typeOfChildren;
             this.listOfBranches = new ArrayList(structure.getSize() + 1);
-            this.readWriteLock = /* new TracingReadWriteLock( */new ReentrantWriterPreferenceReadWriteLock()/*
-                                                                                                             * ,
-                                                                                                             * getKey().toString() + " " +
-                                                                                                             * System.currentTimeMillis())
-                                                                                                             */;
+            // this.readWriteLock = new TracingReadWriteLock(new
+            // ReentrantWriterPreferenceReadWriteLock(), getKey().toString() +
+            // " " + System.currentTimeMillis());
+            this.readWriteLock = new ReentrantWriterPreferenceReadWriteLock();
         }
 
         public Structure getStructure()
@@ -2494,6 +2492,10 @@ implements Serializable
 
         public Object next()
         {
+            if (released)
+            {
+                throw new IllegalStateException();
+            }
             if (index == leaf.getSize())
             {
                 Storage storage = structure.getStorage();
@@ -2514,7 +2516,12 @@ implements Serializable
                 leaf = next;
                 index = 0;
             }
-            return structure.getObjectKey(leaf.get(index++));
+            Object object = structure.getObjectKey(leaf.get(index++));
+            if (!hasNext())
+            {
+                release();
+            }
+            return object;
         }
 
         public void release()
@@ -2523,10 +2530,6 @@ implements Serializable
             {
                 leaf.getReadWriteLock().readLock().release();
                 released = true;
-            }
-            else
-            {
-                System.err.println("Double release.");
             }
         }
     }
