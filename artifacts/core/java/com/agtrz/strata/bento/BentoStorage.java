@@ -180,16 +180,16 @@ implements Strata.Storage, Serializable
             }
         }
 
-        for (int i = inner.getSize() + 1; i < structure.getSize() + 1; i++)
-        {
-            out.putLong(0L);
-            out.putInt(0);
-
-            for (int j = 0; j < recordSize; j++)
-            {
-                out.put((byte) 0);
-            }
-        }
+//        for (int i = inner.getSize() + 1; i < structure.getSize() + 1; i++)
+//        {
+//            out.putLong(0L);
+//            out.putInt(0);
+//
+//            for (int j = 0; j < recordSize; j++)
+//            {
+//                out.put((byte) 0);
+//            }
+//        }
 
         block.write();
     }
@@ -212,13 +212,13 @@ implements Strata.Storage, Serializable
             writer.write(out, structure.getObjectKey(leaf.get(i)));
         }
 
-        for (int i = leaf.getSize(); i < structure.getSize(); i++)
-        {
-            for (int j = 0; j < recordSize; j++)
-            {
-                out.put((byte) 0);
-            }
-        }
+//        for (int i = leaf.getSize(); i < structure.getSize(); i++)
+//        {
+//            for (int j = 0; j < recordSize; j++)
+//            {
+//                out.put((byte) 0);
+//            }
+//        }
 
         block.write();
     }

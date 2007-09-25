@@ -105,7 +105,7 @@ implements Serializable
 
         private boolean cacheFields = false;
 
-        private int maxDirtyTiers = 1;
+        private int maxDirtyTiers = 0;
 
         public Strata create(Object txn)
         {
@@ -2196,7 +2196,7 @@ implements Serializable
                     }
                 }
 
-                if (mutation.mapOfDirtyTiers.size() >= maxDirtyTiers)
+                if (mutation.mapOfDirtyTiers.size() > maxDirtyTiers)
                 {
                     write();
                 }
