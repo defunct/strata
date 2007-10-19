@@ -522,9 +522,9 @@ extends TestCase
 
     public void testDeleteSingleNoGoingBack()
     {
-        Strata.Creator newStrata = new Strata.Creator();
+        Strata.Schema newStrata = new Strata.Schema();
         newStrata.setSize(2);
-        Strata strata = newStrata.create(null);
+        Strata strata = newStrata.newStrata(null);
 
         Strata.Query query = strata.query(null);
 
@@ -575,9 +575,9 @@ extends TestCase
 
     public void testDeleteSingle()
     {
-        Strata.Creator newStrata = new Strata.Creator();
+        Strata.Schema newStrata = new Strata.Schema();
         newStrata.setSize(2);
-        Strata strata = newStrata.create(null);
+        Strata strata = newStrata.newStrata(null);
 
         Strata.Query query = strata.query(null);
 
@@ -601,9 +601,9 @@ extends TestCase
 
     public void testMergeTerminatesAtSwap()
     {
-        Strata.Creator newStrata = new Strata.Creator();
+        Strata.Schema newStrata = new Strata.Schema();
         newStrata.setSize(2);
-        Strata strata = newStrata.create(null);
+        Strata strata = newStrata.newStrata(null);
 
         Strata.Query query = strata.query(null);
 
@@ -656,9 +656,9 @@ extends TestCase
 
     public void testMergeRoot()
     {
-        Strata.Creator newStrata = new Strata.Creator();
+        Strata.Schema newStrata = new Strata.Schema();
         newStrata.setSize(2);
-        Strata strata = newStrata.create(null);
+        Strata strata = newStrata.newStrata(null);
 
         Strata.Query query = strata.query(null);
 
@@ -674,9 +674,9 @@ extends TestCase
 
     public void testSwapRoot()
     {
-        Strata.Creator newStrata = new Strata.Creator();
+        Strata.Schema newStrata = new Strata.Schema();
         newStrata.setSize(2);
-        Strata strata = newStrata.create(null);
+        Strata strata = newStrata.newStrata(null);
 
         Strata.Query query = strata.query(null);
 

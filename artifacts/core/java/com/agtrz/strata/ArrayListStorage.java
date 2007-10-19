@@ -1,6 +1,8 @@
 /* Copyright Alan Gutierrez 2006 */
 package com.agtrz.strata;
 
+import com.agtrz.strata.Strata.Storage;
+
 public class ArrayListStorage
 implements Strata.Storage
 {
@@ -54,6 +56,25 @@ implements Strata.Storage
     public boolean isKeyNull(Object object)
     {
         return object == null;
+    }
+
+    public Object getNullKey()
+    {
+        return null;
+    }
+
+    public Strata.Storage.Schema getSchema()
+    {
+        return new Schema();
+    }
+
+    public final static class Schema
+    implements Strata.Storage.Schema
+    {
+        public Storage newStorage()
+        {
+            return new ArrayListStorage();
+        }
     }
 }
 

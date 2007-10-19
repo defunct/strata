@@ -136,22 +136,24 @@ public class StrataStressor
 
     public void kickTires(int count, int max, ObjectOutputStream out) throws IOException
     {
+        int size = 0;
         Strata strata = new Strata();
         Strata.Query query = strata.query(null);
         for (int i = 0; i < count; i++)
         {
             Operation operation = null;
-            if (strata.getSize() == 0)
+            if (size == 0)
             {
                 operation = new Add(newCompound());
             }
             else
             {
-                double probablity = ((double) strata.getSize()) / max;
+                double probablity = ((double) size) / max;
                 int add = random.nextInt((int) (probablity * max));
                 if (add < (max / 2))
                 {
                     operation = new Add(newCompound());
+                    size++;
                 }
                 else
                 {
@@ -165,6 +167,7 @@ public class StrataStressor
                     while (!collection.hasNext());
 
                     operation = new Remove(compound);
+                    size--;
                 }
             }
             out.writeObject(operation);

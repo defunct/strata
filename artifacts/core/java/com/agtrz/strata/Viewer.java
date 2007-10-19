@@ -37,6 +37,8 @@ import javax.swing.event.TreeModelListener;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 
+import com.agtrz.strata.Strata.Storage;
+
 public class Viewer
 {
     private final static class TreeNode
@@ -66,6 +68,8 @@ public class Viewer
 
         private final EventListenerList listOfListeners = new EventListenerList();
 
+        private Strata.Structure structure;
+
         private Strata.Tier root;
 
         public void addTreeModelListener(TreeModelListener listener)
@@ -92,10 +96,10 @@ public class Viewer
             }
 
             Strata.LeafTier leaf = (Strata.LeafTier) node.tier;
-            int size = leaf.getStructure().getSize();
+            int size = structure.getSchema().getSize();
             if (index == size)
             {
-                Strata.LeafTier next = storage.getLeafTier(leaf.getStructure(), null, leaf.getNextLeafKey());
+                Strata.LeafTier next = storage.getLeafTier(structure, null, leaf.getNextLeafKey());
                 if (next != null && next.getSize() != 0 && next.get(0).equals(leaf.get(0)))
                 {
                     return next.get(0) + " [" + index + "]";
@@ -109,7 +113,7 @@ public class Viewer
                 while (offset >= size)
                 {
                     offset -= size;
-                    leaf = storage.getLeafTier(leaf.getStructure(), null, leaf.getNextLeafKey());
+                    leaf = storage.getLeafTier(structure, null, leaf.getNextLeafKey());
                 }
                 if (leaf == null || !leaf.get(0).equals(object) || leaf.getSize() == offset)
                 {
@@ -150,7 +154,7 @@ public class Viewer
                 return false;
             }
             Strata.LeafTier leaf = (Strata.LeafTier) tier;
-            int size = leaf.getStructure().getSize();
+            int size = structure.getSchema().getSize();
             if (leaf.getSize() == size && leaf.get(0).equals(leaf.get(size - 1)))
             {
                 return true;
@@ -170,7 +174,7 @@ public class Viewer
                 {
                     count += leaf.getSize();
                     previous = leaf;
-                    leaf = storage.getLeafTier(leaf.getStructure(), null, leaf.getNextLeafKey());
+                    leaf = storage.getLeafTier(structure, null, leaf.getNextLeafKey());
                 }
                 while (leaf != null && previous.get(0).equals(leaf.get(0)));
 
@@ -218,7 +222,11 @@ public class Viewer
             Strata.InnerTier inner = storage.newInnerTier(structure, txn, typeOfChildren);
             if (root == null)
             {
-                root = inner;
+                this.root = inner;
+            }
+            if (structure == null)
+            {
+                this.structure = structure;
             }
             return inner;
         }
@@ -248,9 +256,28 @@ public class Viewer
             return storage.getKey(tier);
         }
 
+        public Object getNullKey()
+        {
+            return storage.getNullKey();
+        }
+
         public boolean isKeyNull(Object object)
         {
             return storage.isKeyNull(object);
+        }
+
+        public Strata.Storage.Schema getSchema()
+        {
+            return new Schema();
+        }
+
+        public final static class Schema
+        implements Strata.Storage.Schema
+        {
+            public Storage newStorage()
+            {
+                return new TreeModelStorage();
+            }
         }
 
         public void write(Strata.Structure structure, Object txn, Strata.InnerTier inner)
@@ -432,13 +459,15 @@ public class Viewer
         {
             storage.reset();
 
-            Strata.Creator creator = new Strata.Creator();
+            Strata.Schema creator = new Strata.Schema();
 
             creator.setSize(size);
-            creator.setStorage(storage);
+
+            // FIXME Broken.
+            creator.setStorage(storage.getSchema());
 
             this.size = size;
-            this.strata = creator.create(null);
+            this.strata = creator.newStrata(null);
         }
 
         public void reset()
@@ -515,14 +544,14 @@ public class Viewer
                         }
                         switch (action)
                         {
-                        case 'A':
-                            insert.operate(number);
-                            break;
-                        case 'D':
-                            remove.operate(number);
-                            break;
-                        default:
-                            throw new IOException("Unknown action <" + action + "> at line " + lineNumber + ".");
+                            case 'A':
+                                insert.operate(number);
+                                break;
+                            case 'D':
+                                remove.operate(number);
+                                break;
+                            default:
+                                throw new IOException("Unknown action <" + action + "> at line " + lineNumber + ".");
                         }
                         strataCozy.getStrata().query(null).copacetic();
                         lineNumber++;
@@ -709,9 +738,9 @@ public class Viewer
         menu.add(save);
         JMenuItem open = new JMenuItem(new OpenFile(frame, strataCozy, tree, insert, remove));
         menu.add(open);
-        
+
         menu.addSeparator();
-        
+
         JMenuItem size = new JMenuItem(new SetSize(strataCozy, tree));
         menu.add(size);
 
