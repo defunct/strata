@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -21,22 +20,14 @@ import EDU.oswego.cs.dl.util.concurrent.ReadWriteLock;
 import EDU.oswego.cs.dl.util.concurrent.ReentrantWriterPreferenceReadWriteLock;
 import EDU.oswego.cs.dl.util.concurrent.Sync;
 
-import com.agtrz.swag.danger.Danger;
-
 public class Strata
 implements Serializable
 {
+    private static final long serialVersionUID = 20070207L;
+
     public final static short INNER = 1;
 
     public final static short LEAF = 2;
-
-    public final static Deletable ANY = new Deletable()
-    {
-        public boolean deletable(Object object)
-        {
-            return true;
-        }
-    };
 
     private final static Object RESULT = new Object();
 
@@ -48,8 +39,6 @@ implements Serializable
 
     private final static Object SEARCH = new Object();
 
-    private static final long serialVersionUID = 20070207L;
-
     private final Structure structure;
 
     private final Object rootKey;
@@ -58,10 +47,10 @@ implements Serializable
 
     public Strata()
     {
-        this(new Schema(), null);
+        this(new Schema(), null, new HashMap());
     }
 
-    public Strata(Schema creator, Object txn)
+    public Strata(Schema creator, Object txn, Map mapOfDirtyTiers)
     {
         Storage storage = creator.getStorageSchema().newStorage();
 
@@ -73,16 +62,15 @@ implements Serializable
         LeafTier leaf = storage.newLeafTier(structure, txn);
         root.add(new Branch(leaf.getKey(), null));
 
-        structure.getStorage().write(structure, txn, root);
-        structure.getStorage().write(structure, txn, leaf);
-        structure.getStorage().commit(txn);
+        mapOfDirtyTiers.put(root.getKey(), root);
+        mapOfDirtyTiers.put(leaf.getKey(), leaf);
 
         this.rootKey = root.getKey();
     }
 
     public Query query(Object txn)
     {
-        return new Query(txn, this);
+        return new Query(txn, this, new HashMap());
     }
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException
@@ -133,12 +121,12 @@ implements Serializable
         return left.length - right.length;
     }
 
-    public final static class Exception
-    extends Danger
+    public final static class Danger
+    extends RuntimeException
     {
         private static final long serialVersionUID = 20070513L;
 
-        public Exception(Throwable cause, String message)
+        public Danger(Throwable cause, String message)
         {
             super(message, cause);
         }
@@ -155,7 +143,7 @@ implements Serializable
 
         private int size;
 
-        private Cooper cooper;
+        private boolean cacheFields;
 
         private int maxDirtyTiers;
 
@@ -164,7 +152,7 @@ implements Serializable
             this.storageSchema = new ArrayListStorage.Schema();
             this.extractor = new ComparableExtractor();
             this.size = 5;
-            this.cooper = new LookupCooper();
+            this.cacheFields = false;
             this.maxDirtyTiers = 0;
         }
 
@@ -173,13 +161,27 @@ implements Serializable
             this.storageSchema = creator.storageSchema;
             this.extractor = creator.extractor;
             this.size = creator.size;
-            this.cooper = creator.cooper;
+            this.cacheFields = creator.cacheFields;
             this.maxDirtyTiers = creator.maxDirtyTiers;
         }
 
         public Strata newStrata(Object txn)
         {
-            return new Strata(this, txn);
+            Query query = newQuery(txn);
+            query.flush();
+            return query.getStrata();
+        }
+
+        public Query newQuery(Object txn)
+        {
+            Map mapOfDirtyTiers = new HashMap();
+            Strata strata = new Strata(this, txn, mapOfDirtyTiers);
+            Query query = new Query(txn, strata, mapOfDirtyTiers);
+            if (mapOfDirtyTiers.size() <= getMaxDirtyTiers())
+            {
+                query.flush();
+            }
+            return query;
         }
 
         public void setStorage(Storage.Schema storageSchema)
@@ -204,12 +206,12 @@ implements Serializable
 
         public void setCacheFields(boolean cacheFields)
         {
-            this.cooper = cacheFields ? (Cooper) new BucketCooper() : (Cooper) new LookupCooper();
+            this.cacheFields = cacheFields;
         }
 
         public boolean getCacheFields()
         {
-            return cooper.getCacheFields();
+            return cacheFields;
         }
 
         public void setSize(int size)
@@ -408,8 +410,6 @@ implements Serializable
 
     public interface Tier
     {
-        // public Cooper getStructure();
-
         public ReadWriteLock getReadWriteLock();
 
         public Object getKey();
@@ -525,11 +525,10 @@ implements Serializable
             return structure.getStorage().getLeafTier(structure, txn, getNextLeafKey());
         }
 
-        public void link(Mutation mutation, LeafTier nextLeaf)
+        public void link(LeafTier nextLeaf, Map mapOfDirtyTiers)
         {
-            // FIXME Remove mutation. Put this method elsewhere?
-            mutation.mapOfDirtyTiers.put(getKey(), this);
-            mutation.mapOfDirtyTiers.put(nextLeaf.getKey(), nextLeaf);
+            mapOfDirtyTiers.put(getKey(), this);
+            mapOfDirtyTiers.put(nextLeaf.getKey(), nextLeaf);
             Object nextLeafKey = getNextLeafKey();
             setNextLeafKey(nextLeaf.getKey());
             nextLeaf.setNextLeafKey(nextLeafKey);
@@ -543,7 +542,7 @@ implements Serializable
                 if (null == nextLeaf || compare(mutation.fields, mutation.getFields(nextLeaf.get(0))) != 0)
                 {
                     nextLeaf = structure.getStorage().newLeafTier(structure, mutation.txn);
-                    link(mutation, nextLeaf);
+                    link(nextLeaf, mutation.mapOfDirtyTiers);
                 }
                 nextLeaf.append(mutation, levelOfLeaf);
             }
@@ -1289,7 +1288,7 @@ implements Serializable
                     right.addBucket(leaf.remove(0));
                 }
 
-                leaf.link(mutation, right);
+                leaf.link(right, mutation.mapOfDirtyTiers);
 
                 int index = inner.getIndexOfTier(leaf.getKey());
                 if (index != 0)
@@ -1333,7 +1332,7 @@ implements Serializable
                 }
 
                 LeafTier right = mutation.structure.getStorage().newLeafTier(mutation.structure, mutation.txn);
-                last.link(mutation, right);
+                last.link(right, mutation.mapOfDirtyTiers);
 
                 inner.add(inner.getIndexOfTier(leaf.getKey()) + 1, new Branch(right.getKey(), mutation.bucket));
 
@@ -1388,7 +1387,7 @@ implements Serializable
                     right.addBucket(leaf.remove(partition));
                 }
 
-                leaf.link(mutation, right);
+                leaf.link(right, mutation.mapOfDirtyTiers);
 
                 int index = inner.getIndexOfTier(leaf.getKey());
                 inner.add(index + 1, new Branch(right.getKey(), right.get(0)));
@@ -2041,7 +2040,7 @@ implements Serializable
             }
             catch (InterruptedException e)
             {
-                new Exception(e, "interrupted");
+                new Danger(e, "interrupted");
             }
         }
 
@@ -2083,7 +2082,7 @@ implements Serializable
                 }
                 catch (InterruptedException e)
                 {
-                    throw new Exception(e, "interrupted");
+                    throw new Danger(e, "interrupted");
                 }
             }
             getSync = new WriteLockExtractor();
@@ -2103,7 +2102,7 @@ implements Serializable
                     }
                     catch (InterruptedException e)
                     {
-                        throw new Exception(e, "interrupted");
+                        throw new Danger(e, "interrupted");
                     }
                     tier.getReadWriteLock().writeLock().release();
                 }
@@ -2149,6 +2148,14 @@ implements Serializable
         public boolean deletable(Object object);
     }
 
+    public final static Deletable ANY = new Deletable()
+    {
+        public boolean deletable(Object object)
+        {
+            return true;
+        }
+    };
+
     public final static class Query
     {
         private final Object txn;
@@ -2157,10 +2164,10 @@ implements Serializable
 
         private final Strata strata;
 
-        public Query(Object txn, Strata strata)
+        public Query(Object txn, Strata strata, Map mapOfDirtyTiers)
         {
             this.txn = txn;
-            this.mapOfDirtyTiers = new LinkedHashMap();
+            this.mapOfDirtyTiers = mapOfDirtyTiers;
             this.strata = strata;
         }
 
@@ -2216,7 +2223,7 @@ implements Serializable
                 }
                 catch (InterruptedException e)
                 {
-                    new Exception(e, "unable.to.lock.for.write");
+                    new Danger(e, "unable.to.lock.for.write");
                 }
             }
 
@@ -2387,7 +2394,7 @@ implements Serializable
                 }
                 catch (InterruptedException e)
                 {
-                    throw new Exception(e, "interrupted");
+                    throw new Danger(e, "interrupted");
                 }
                 previous.release();
                 previous = tier.getReadWriteLock().readLock();
@@ -2401,7 +2408,7 @@ implements Serializable
                     }
                     catch (InterruptedException e)
                     {
-                        throw new Exception(e, "interrupted");
+                        throw new Danger(e, "interrupted");
                     }
                     previous.release();
                     return leaf.find(txn, fields);
@@ -2425,7 +2432,7 @@ implements Serializable
             }
             catch (InterruptedException e)
             {
-                throw new Exception(e, "interrupted");
+                throw new Danger(e, "interrupted");
             }
             return new Cursor(strata.structure, txn, leaf, 0);
         }
@@ -2443,7 +2450,7 @@ implements Serializable
                 }
                 catch (InterruptedException e)
                 {
-                    throw new Exception(e, "interrupted");
+                    throw new Danger(e, "interrupted");
                 }
                 previous.release();
                 previous = tier.getReadWriteLock().readLock();
@@ -2461,7 +2468,7 @@ implements Serializable
             }
             catch (InterruptedException e)
             {
-                throw new Exception(e, "interrupted");
+                throw new Danger(e, "interrupted");
             }
             previous.release();
             return new Cursor(strata.structure, txn, leaf, 0);
@@ -2485,7 +2492,7 @@ implements Serializable
                 }
                 catch (InterruptedException e)
                 {
-                    throw new Exception(e, "interrupted");
+                    throw new Danger(e, "interrupted");
                 }
                 previous.release();
                 previous = tier.getReadWriteLock().readLock();
@@ -2503,7 +2510,7 @@ implements Serializable
             }
             catch (InterruptedException e)
             {
-                throw new Exception(e, "interrupted");
+                throw new Danger(e, "interrupted");
             }
             previous.release();
             return new Cursor(strata.structure, txn, leaf, leaf.getSize());
@@ -2633,7 +2640,7 @@ implements Serializable
                 }
                 catch (InterruptedException e)
                 {
-                    throw new Exception(e, "interrupted");
+                    throw new Danger(e, "interrupted");
                 }
                 leaf.getReadWriteLock().readLock().release();
                 leaf = next;

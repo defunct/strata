@@ -5,9 +5,9 @@
 	<classpathentry excluding="**/.svn|**/.svn/**" kind="src" output="artifacts/core/test/junit/target/classes" path="artifacts/core/test/junit/resource"/>
 	<classpathentry excluding="**/.svn|**/.svn/**" kind="src" output="artifacts/core/test/junit/target/classes" path="artifacts/core/test/junit/java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="src" path="/swag"/>
 	<classpathentry kind="lib" path="/mix/lib/junit/junit.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/bento"/>
 	<classpathentry kind="lib" path="/mix/lib/concurrent/concurrent.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/swag"/>
 	<classpathentry kind="output" path="ERRORS-IN-PATH"/>
 </classpath>

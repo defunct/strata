@@ -8,7 +8,6 @@ import com.agtrz.bento.Bento;
 import com.agtrz.strata.Strata;
 import com.agtrz.strata.Strata.Storage;
 import com.agtrz.swag.io.SizeOf;
-import com.agtrz.swag.util.Queueable;
 import com.agtrz.swag.util.WeakMapValue;
 
 public class BentoStorage
@@ -17,23 +16,17 @@ implements Strata.Storage, Serializable
 {
     private static final long serialVersionUID = 20070401L;
 
-    private final Reader reader;
-
-    private final Writer writer;
-
-    private final int recordSize;
+    private final Schema schema;
 
     public BentoStorage(Schema schema)
     {
-        this.reader = schema.getReader();
-        this.writer = schema.getWriter();
-        this.recordSize = schema.getRecordSize();
+        this.schema = schema;
     }
 
     public Strata.InnerTier newInnerTier(Strata.Structure structure, Object txn, short typeOfChildren)
     {
         Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
-        int blockSize = SizeOf.SHORT + SizeOf.INTEGER + (Bento.ADDRESS_SIZE + recordSize) * (structure.getSchema().getSize() + 1);
+        int blockSize = SizeOf.SHORT + SizeOf.INTEGER + (Bento.ADDRESS_SIZE + schema.getRecordSize()) * (structure.getSchema().getSize() + 1);
         Bento.Address address = mutator.allocate(blockSize);
         Strata.InnerTier inner = new Strata.InnerTier(structure, address, typeOfChildren);
         Object box = address.toKey();
@@ -44,7 +37,7 @@ implements Strata.Storage, Serializable
     public Strata.LeafTier newLeafTier(Strata.Structure structure, Object txn)
     {
         Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
-        int blockSize = SizeOf.INTEGER + (Bento.ADDRESS_SIZE * 2) + (recordSize * structure.getSchema().getSize());
+        int blockSize = SizeOf.INTEGER + (Bento.ADDRESS_SIZE * 2) + (schema.getRecordSize() * structure.getSchema().getSize());
         Bento.Address address = mutator.allocate(blockSize);
         Strata.LeafTier leaf = new Strata.LeafTier(structure, address);
         leaf.setNextLeafKey(Bento.NULL_ADDRESS);
@@ -83,7 +76,7 @@ implements Strata.Storage, Serializable
                 {
                     Bento.Address keyOfTier = new Bento.Address(in.getLong(), in.getInt());
                     inner.add(txn, keyOfTier, null);
-                    for (int j = 0; j < recordSize; j++)
+                    for (int j = 0; j < schema.getRecordSize(); j++)
                     {
                         in.get();
                     }
@@ -91,7 +84,7 @@ implements Strata.Storage, Serializable
                 for (int i = 1; i < size; i++)
                 {
                     Bento.Address keyOfTier = new Bento.Address(in.getLong(), in.getInt());
-                    Object object = reader.read(in);
+                    Object object = schema.getReader().read(in);
                     inner.add(txn, keyOfTier, object);
                 }
 
@@ -128,7 +121,7 @@ implements Strata.Storage, Serializable
                 leaf.setNextLeafKey(new Bento.Address(in.getLong(), in.getInt()));
                 for (int i = 0; i < size; i++)
                 {
-                    leaf.add(txn, reader.read(in));
+                    leaf.add(txn, schema.getReader().read(in));
                 }
 
                 mapOfTiers.put(box, new WeakMapValue(box, leaf, mapOfTiers, queue));
@@ -163,14 +156,14 @@ implements Strata.Storage, Serializable
 
             if (branch.isMinimal())
             {
-                for (int j = 0; j < recordSize; j++)
+                for (int j = 0; j < schema.getRecordSize(); j++)
                 {
                     out.put((byte) 0);
                 }
             }
             else
             {
-                writer.write(out, branch.getPivot());
+                schema.getWriter().write(out, branch.getPivot());
             }
         }
 
@@ -203,7 +196,7 @@ implements Strata.Storage, Serializable
 
         for (int i = 0; i < leaf.getSize(); i++)
         {
-            writer.write(out, structure.getObjectKey(leaf.get(i)));
+            schema.getWriter().write(out, structure.getObjectKey(leaf.get(i)));
         }
 
         // for (int i = leaf.getSize(); i < structure.getSize(); i++)
@@ -254,7 +247,7 @@ implements Strata.Storage, Serializable
 
     public Strata.Storage.Schema getSchema()
     {
-        return new Schema(reader, writer, recordSize);
+        return new Schema(schema);
     }
 
     private synchronized void collect()
@@ -262,7 +255,7 @@ implements Strata.Storage, Serializable
         WeakMapValue reference = null;
         while ((reference = (WeakMapValue) queue.poll()) != null)
         {
-            ((Queueable) reference).dequeue();
+            reference.dequeue();
         }
     }
 
@@ -285,20 +278,20 @@ implements Strata.Storage, Serializable
 
         private Writer writer;
 
-        private int size;
+        private int recordSize;
 
         public Schema()
         {
             this.reader = new BentoAddressReader();
             this.writer = new BentoAddressWriter();
-            this.size = Bento.ADDRESS_SIZE;
+            this.recordSize = Bento.ADDRESS_SIZE;
         }
 
-        public Schema(Reader reader, Writer writer, int recordSize)
+        public Schema(Schema schema)
         {
-            this.reader = reader;
-            this.writer = writer;
-            this.size = recordSize;
+            this.reader = schema.reader;
+            this.writer = schema.writer;
+            this.recordSize = schema.recordSize;
         }
 
         public void setReader(Reader reader)
@@ -323,12 +316,12 @@ implements Strata.Storage, Serializable
 
         public int getRecordSize()
         {
-            return size;
+            return recordSize;
         }
 
-        public void setSize(int size)
+        public void setSize(int recordSize)
         {
-            this.size = size;
+            this.recordSize = recordSize;
         }
 
         public Storage newStorage()
