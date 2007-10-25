@@ -68,6 +68,11 @@ implements Serializable
         this.rootKey = root.getKey();
     }
 
+    public Schema getSchema()
+    {
+        return new Schema(structure.getSchema());
+    }
+
     public Query query(Object txn)
     {
         return new Query(txn, this, new HashMap());
