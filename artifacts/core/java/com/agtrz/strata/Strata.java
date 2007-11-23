@@ -2384,11 +2384,6 @@ implements Serializable
 
         public Cursor find(Comparable[] fields)
         {
-            return isNullKey() ? getNullCursor() : getFindCursor(fields);
-        }
-
-        private Cursor getFindCursor(Comparable[] fields)
-        {
             Sync previous = new NullSync();
             InnerTier tier = getRoot();
             for (;;)
@@ -2422,27 +2417,7 @@ implements Serializable
             }
         }
 
-        private synchronized boolean isNullKey()
-        {
-            return strata.structure.getStorage().isKeyNull(strata.rootKey);
-        }
-
-        private Cursor getNullCursor()
-        {
-            LeafTier leaf = new LeafTier(strata.structure, null);
-            leaf.setNextLeafKey(strata.structure.getStorage().getNullKey());
-            try
-            {
-                leaf.getReadWriteLock().readLock().acquire();
-            }
-            catch (InterruptedException e)
-            {
-                throw new Danger(e, "interrupted");
-            }
-            return new Cursor(strata.structure, txn, leaf, 0);
-        }
-
-        private Cursor getFirstCursor()
+        public Cursor first()
         {
             Branch branch = null;
             InnerTier tier = getRoot();
@@ -2477,11 +2452,6 @@ implements Serializable
             }
             previous.release();
             return new Cursor(strata.structure, txn, leaf, 0);
-        }
-
-        public Cursor first()
-        {
-            return isNullKey() ? getNullCursor() : getFirstCursor();
         }
 
         public Cursor last_UNIMPLEMENTED()
