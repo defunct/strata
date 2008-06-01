@@ -4,16 +4,22 @@ package com.agtrz.strata.bento;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 
-import com.agtrz.bento.Bento;
+import com.agtrz.pack.Pack;
 import com.agtrz.strata.Strata;
 import com.agtrz.strata.Strata.Storage;
-import com.agtrz.swag.io.SizeOf;
+import com.agtrz.swag.util.Queueable;
 import com.agtrz.swag.util.WeakMapValue;
 
 public class BentoStorage
 extends BentoStorageBase
 implements Strata.Storage, Serializable
 {
+    private static final int SIZEOF_SHORT = Short.SIZE / Byte.SIZE;
+
+    private static final int SIZEOF_INT = Integer.SIZE / Byte.SIZE;
+    
+    private static final int SIZEOF_LONG = Long.SIZE / Byte.SIZE;
+    
     private static final long serialVersionUID = 20070401L;
 
     private final Schema schema;
@@ -25,24 +31,22 @@ implements Strata.Storage, Serializable
 
     public Strata.InnerTier newInnerTier(Strata.Structure structure, Object txn, short typeOfChildren)
     {
-        Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
-        int blockSize = SizeOf.SHORT + SizeOf.INTEGER + (Bento.ADDRESS_SIZE + schema.getRecordSize()) * (structure.getSchema().getSize() + 1);
-        Bento.Address address = mutator.allocate(blockSize);
+        Pack.Mutator mutator = ((MutatorServer) txn).getMutator();
+        int blockSize = SIZEOF_SHORT + SIZEOF_INT + (SIZEOF_LONG + schema.getRecordSize()) * (structure.getSchema().getSize() + 1);
+        long address = mutator.allocate(blockSize);
         Strata.InnerTier inner = new Strata.InnerTier(structure, address, typeOfChildren);
-        Object box = address.toKey();
-        mapOfTiers.put(box, new WeakMapValue(box, inner, mapOfTiers, queue));
+        mapOfTiers.put(address, new WeakMapValue<Long, Strata.Tier>(address, inner, mapOfTiers, queue));
         return inner;
     }
 
     public Strata.LeafTier newLeafTier(Strata.Structure structure, Object txn)
     {
-        Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
-        int blockSize = SizeOf.INTEGER + (Bento.ADDRESS_SIZE * 2) + (schema.getRecordSize() * structure.getSchema().getSize());
-        Bento.Address address = mutator.allocate(blockSize);
+        Pack.Mutator mutator = ((MutatorServer) txn).getMutator();
+        int blockSize = SIZEOF_INT + (SIZEOF_LONG * 2) + (schema.getRecordSize() * structure.getSchema().getSize());
+        long address = mutator.allocate(blockSize);
         Strata.LeafTier leaf = new Strata.LeafTier(structure, address);
-        leaf.setNextLeafKey(Bento.NULL_ADDRESS);
-        Object box = address.toKey();
-        mapOfTiers.put(box, new WeakMapValue(box, leaf, mapOfTiers, queue));
+        leaf.setNextLeafKey(Pack.NULL_ADDRESS);
+        mapOfTiers.put(address, new WeakMapValue<Long, Strata.Tier>(address, leaf, mapOfTiers, queue));
         return leaf;
     }
 
@@ -50,23 +54,22 @@ implements Strata.Storage, Serializable
     {
         collect();
 
-        Bento.Address address = (Bento.Address) key;
+        long address = (Long) key;
 
-        if (address.getPosition() == 0L)
+        if (address == 0L)
         {
             return null;
         }
 
-        Object box = address.toKey();
         synchronized (this)
         {
-            Strata.InnerTier inner = (Strata.InnerTier) getCached(box);
+            Strata.InnerTier inner = (Strata.InnerTier) getCached(address);
 
             if (inner == null)
             {
-                Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
+                Pack.Mutator mutator = ((MutatorServer) txn).getMutator();
 
-                ByteBuffer in = mutator.load(address).toByteBuffer();
+                ByteBuffer in = mutator.read(address);
                 short typeOfChildren = in.getShort();
 
                 inner = new Strata.InnerTier(structure, key, typeOfChildren);
@@ -74,7 +77,7 @@ implements Strata.Storage, Serializable
                 int size = in.getInt();
                 if (size != 0)
                 {
-                    Bento.Address keyOfTier = new Bento.Address(in.getLong(), in.getInt());
+                    long keyOfTier = in.getLong();
                     inner.add(txn, keyOfTier, null);
                     for (int j = 0; j < schema.getRecordSize(); j++)
                     {
@@ -83,12 +86,12 @@ implements Strata.Storage, Serializable
                 }
                 for (int i = 1; i < size; i++)
                 {
-                    Bento.Address keyOfTier = new Bento.Address(in.getLong(), in.getInt());
+                    long keyOfTier = in.getLong();
                     Object object = schema.getReader().read(in);
                     inner.add(txn, keyOfTier, object);
                 }
 
-                mapOfTiers.put(box, new WeakMapValue(box, inner, mapOfTiers, queue));
+                mapOfTiers.put(address, new WeakMapValue<Long, Strata.Tier>(address, inner, mapOfTiers, queue));
             }
 
             return inner;
@@ -99,32 +102,30 @@ implements Strata.Storage, Serializable
     {
         collect();
 
-        Bento.Address address = (Bento.Address) key;
+        long address = (Long) key;
 
-        if (address.getPosition() == 0L)
+        if (address == 0L)
         {
             return null;
         }
 
-        Object box = address.toKey();
         synchronized (this)
         {
-            Strata.LeafTier leaf = (Strata.LeafTier) getCached(box);
+            Strata.LeafTier leaf = (Strata.LeafTier) getCached(address);
 
             if (leaf == null)
             {
-                Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
+                Pack.Mutator mutator = ((MutatorServer) txn).getMutator();
                 leaf = new Strata.LeafTier(structure, address);
-                Bento.Block block = mutator.load(address);
-                ByteBuffer in = block.toByteBuffer();
+                ByteBuffer in = mutator.read(address);
                 int size = in.getInt();
-                leaf.setNextLeafKey(new Bento.Address(in.getLong(), in.getInt()));
+                leaf.setNextLeafKey(in.getLong());
                 for (int i = 0; i < size; i++)
                 {
                     leaf.add(txn, schema.getReader().read(in));
                 }
 
-                mapOfTiers.put(box, new WeakMapValue(box, leaf, mapOfTiers, queue));
+                mapOfTiers.put(address, new WeakMapValue<Long, Strata.Tier>(address, leaf, mapOfTiers, queue));
             }
 
             return leaf;
@@ -133,10 +134,10 @@ implements Strata.Storage, Serializable
 
     public void write(Strata.Structure structure, Object txn, Strata.InnerTier inner)
     {
-        Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
+        Pack.Mutator mutator = ((MutatorServer) txn).getMutator();
 
-        Bento.Block block = mutator.load((Bento.Address) inner.getStorageData());
-        ByteBuffer out = block.toByteBuffer();
+        long address = (Long) inner.getStorageData();
+        ByteBuffer out = mutator.read(address);
 
         out.putShort(inner.getChildType());
         out.putInt(inner.getSize() + 1);
@@ -145,14 +146,13 @@ implements Strata.Storage, Serializable
         {
             Strata.Branch branch = inner.get(i);
 
-            if (!(branch.getRightKey() instanceof Bento.Address))
+            if (!(branch.getRightKey() instanceof Long))
             {
                 System.out.println(branch.getRightKey());
             }
 
-            Bento.Address addressOfChild = (Bento.Address) branch.getRightKey();
-            out.putLong(addressOfChild.getPosition());
-            out.putInt(addressOfChild.getBlockSize());
+            long addressOfChild = (Long) branch.getRightKey();
+            out.putLong(addressOfChild);
 
             if (branch.isMinimal())
             {
@@ -178,21 +178,22 @@ implements Strata.Storage, Serializable
         // }
         // }
 
-        block.write();
+        out.clear();
+        
+        mutator.write(address, out);
     }
 
     public void write(Strata.Structure structure, Object txn, Strata.LeafTier leaf)
     {
-        Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
+        Pack.Mutator mutator = ((MutatorServer) txn).getMutator();
 
-        Bento.Block block = mutator.load((Bento.Address) leaf.getStorageData());
-        ByteBuffer out = block.toByteBuffer();
-
+        long address = (Long) leaf.getStorageData();
+        ByteBuffer out = mutator.read(address);
+        
         out.putInt(leaf.getSize());
 
-        Bento.Address addressOfNext = (Bento.Address) leaf.getNextLeafKey();
-        out.putLong(addressOfNext.getPosition());
-        out.putInt(addressOfNext.getBlockSize());
+        long addressOfNext = (Long) leaf.getNextLeafKey();
+        out.putLong(addressOfNext);
 
         for (int i = 0; i < leaf.getSize(); i++)
         {
@@ -207,27 +208,29 @@ implements Strata.Storage, Serializable
         // }
         // }
 
-        block.write();
+        out.flip();
+        
+        mutator.write(address, out);
     }
 
     public void free(Strata.Structure structure, Object txn, Strata.InnerTier inner)
     {
-        Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
-        Bento.Address address = (Bento.Address) inner.getStorageData();
-        mutator.free(mutator.load(address));
+        Pack.Mutator mutator = ((MutatorServer) txn).getMutator();
+        long address = (Long) inner.getStorageData();
+        mutator.free(address);
     }
 
     public void free(Strata.Structure structure, Object txn, Strata.LeafTier leaf)
     {
-        Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
-        Bento.Address address = (Bento.Address) leaf.getStorageData();
-        mutator.free(mutator.load(address));
+        Pack.Mutator mutator = ((MutatorServer) txn).getMutator();
+        long address = (Long) leaf.getStorageData();
+        mutator.free(address);
     }
 
     public void commit(Object txn)
     {
-        Bento.Mutator mutator = ((MutatorServer) txn).getMutator();
-        mutator.getJournal().commit();
+        Pack.Mutator mutator = ((MutatorServer) txn).getMutator();
+        mutator.commit();
     }
 
     public Object getKey(Strata.Tier leaf)
@@ -237,12 +240,12 @@ implements Strata.Storage, Serializable
 
     public Object getNullKey()
     {
-        return Bento.NULL_ADDRESS;
+        return Pack.NULL_ADDRESS;
     }
 
     public boolean isKeyNull(Object object)
     {
-        return ((Bento.Address) object).getPosition() == 0L;
+        return Pack.NULL_ADDRESS == (Long) object;
     }
 
     public Strata.Storage.Schema getSchema()
@@ -252,16 +255,16 @@ implements Strata.Storage, Serializable
 
     private synchronized void collect()
     {
-        WeakMapValue reference = null;
-        while ((reference = (WeakMapValue) queue.poll()) != null)
+        Queueable reference = null;
+        while ((reference = (Queueable) queue.poll()) != null)
         {
             reference.dequeue();
         }
     }
 
-    private Object getCached(Object key)
+    private Strata.Tier getCached(Object key)
     {
-        WeakMapValue reference = (WeakMapValue) mapOfTiers.get(key);
+        WeakMapValue<Long, Strata.Tier> reference = mapOfTiers.get(key);
         if (reference != null)
         {
             return reference.get();
@@ -284,7 +287,7 @@ implements Strata.Storage, Serializable
         {
             this.reader = new BentoAddressReader();
             this.writer = new BentoAddressWriter();
-            this.recordSize = Bento.ADDRESS_SIZE;
+            this.recordSize = 8;
         }
 
         public Schema(Schema schema)
@@ -330,27 +333,27 @@ implements Strata.Storage, Serializable
         }
     }
 
-    public static MutatorServer txn(Bento.Mutator mutator)
+    public static MutatorServer txn(Pack.Mutator mutator)
     {
         return new BasicMutatorServer(mutator);
     }
 
     public interface MutatorServer
     {
-        Bento.Mutator getMutator();
+        Pack.Mutator getMutator();
     }
 
     public final static class BasicMutatorServer
     implements MutatorServer
     {
-        private Bento.Mutator mutator;
+        private Pack.Mutator mutator;
 
-        public BasicMutatorServer(Bento.Mutator mutator)
+        public BasicMutatorServer(Pack.Mutator mutator)
         {
             this.mutator = mutator;
         }
 
-        public Bento.Mutator getMutator()
+        public Pack.Mutator getMutator()
         {
             return mutator;
         }
@@ -371,9 +374,8 @@ implements Strata.Storage, Serializable
     {
         public void write(ByteBuffer out, Object object)
         {
-            Bento.Address address = (Bento.Address) object;
-            out.putLong(address.getPosition());
-            out.putInt(address.getBlockSize());
+            long address = ((Long) object).longValue();
+            out.putLong(address);
         }
     }
 
@@ -382,7 +384,7 @@ implements Strata.Storage, Serializable
     {
         public Object read(ByteBuffer in)
         {
-            return new Bento.Address(in.getLong(), in.getInt());
+            return new Long(in.getLong());
         }
     }
 }

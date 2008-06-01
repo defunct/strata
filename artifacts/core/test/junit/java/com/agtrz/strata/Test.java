@@ -80,10 +80,10 @@ public class Test
             this.fields = fields;
         }
 
-        public Comparable[] getFields(Object txn, Object object)
+        public Comparable<?>[] getFields(Object txn, Object object)
         {
-            Comparable[] incoming = (Comparable[]) object;
-            Comparable[] outgoing = new Comparable[fields];
+            Comparable<?>[] incoming = (Comparable[]) object;
+            Comparable<?>[] outgoing = new Comparable[fields];
             for (int i = 0; i < fields; i++)
             {
                 outgoing[i] = incoming[i];
