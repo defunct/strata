@@ -13,12 +13,10 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
-import EDU.oswego.cs.dl.util.concurrent.Mutex;
-import EDU.oswego.cs.dl.util.concurrent.NullSync;
-import EDU.oswego.cs.dl.util.concurrent.ReadWriteLock;
-import EDU.oswego.cs.dl.util.concurrent.ReentrantWriterPreferenceReadWriteLock;
-import EDU.oswego.cs.dl.util.concurrent.Sync;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Strata
 implements Serializable
@@ -43,20 +41,21 @@ implements Serializable
 
     private final Object rootKey;
 
-    private transient Sync writeMutex;
+    private transient Lock writeMutex;
 
     public Strata()
     {
-        this(new Schema(), null, new HashMap());
+        this(new Schema(), null, new HashMap<Object, Tier>());
     }
 
-    public Strata(Schema creator, Object txn, Map mapOfDirtyTiers)
+    public Strata(Schema creator, Object txn, Map<Object, Tier> mapOfDirtyTiers)
     {
         Storage storage = creator.getStorageSchema().newStorage();
 
         this.structure = new Structure(creator, storage);
         // FIXME Shouldn't this be zero?
-        this.writeMutex = creator.getMaxDirtyTiers() == 1 ? (Sync) new NullSync() : (Sync) new Mutex();
+//        this.writeMutex = creator.getMaxDirtyTiers() == 1 ? (Lock) new NullSync() : (Lock) new ReentrantLock();
+        this.writeMutex = new ReentrantLock();
 
         InnerTier root = storage.newInnerTier(structure, txn, LEAF);
         LeafTier leaf = storage.newLeafTier(structure, txn);
@@ -75,16 +74,23 @@ implements Serializable
 
     public Query query(Object txn)
     {
-        return new Query(txn, this, new HashMap());
+        return new Query(txn, this, new HashMap<Object, Tier>());
     }
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException
     {
         in.defaultReadObject();
-        writeMutex = structure.getSchema().getMaxDirtyTiers() == 1 ? (Sync) new NullSync() : (Sync) new Mutex();
+//        writeMutex = structure.getSchema().getMaxDirtyTiers() == 1 ? (Sync) new NullSync() : (Sync) new Mutex();
+        writeMutex = new ReentrantLock();
+    }
+    
+    @SuppressWarnings("unchecked")
+    private final static int compare(Comparable<?> left, Comparable<?> right)
+    {
+        return ((Comparable) left).compareTo(right);
     }
 
-    private final static int compare(Comparable[] left, Comparable[] right)
+    private final static int compare(Comparable<?>[] left, Comparable<?>[] right)
     {
         if (left == null)
         {
@@ -115,7 +121,7 @@ implements Serializable
             }
             else
             {
-                int compare = left[i].compareTo(right[i]);
+                int compare = compare(left[i], right[i]);
                 if (compare != 0)
                 {
                     return compare;
@@ -136,7 +142,7 @@ implements Serializable
             super(message, cause);
         }
     }
-
+    
     public final static class Schema
     implements Serializable
     {
@@ -179,7 +185,7 @@ implements Serializable
 
         public Query newQuery(Object txn)
         {
-            Map mapOfDirtyTiers = new HashMap();
+            Map<Object, Tier> mapOfDirtyTiers = new HashMap<Object, Tier>();
             Strata strata = new Strata(this, txn, mapOfDirtyTiers);
             Query query = new Query(txn, strata, mapOfDirtyTiers);
             if (mapOfDirtyTiers.size() <= getMaxDirtyTiers())
@@ -269,12 +275,12 @@ implements Serializable
             return storage;
         }
 
-        public Comparable[] getFields(Object txn, Object object)
+        public Comparable<?>[] getFields(Object txn, Object object)
         {
             return cooper.getFields(txn, schema.getFieldExtractor(), object);
         }
 
-        public Object newBucket(Comparable[] fields, Object keyOfObject)
+        public Object newBucket(Comparable<?>[] fields, Object keyOfObject)
         {
             return cooper.newBucket(fields, keyOfObject);
         }
@@ -292,7 +298,7 @@ implements Serializable
 
     public interface FieldExtractor
     {
-        public Comparable[] getFields(Object txn, Object object);
+        public Comparable<?>[] getFields(Object txn, Object object);
     }
 
     public final static class ComparableExtractor
@@ -300,14 +306,20 @@ implements Serializable
     {
         private final static long serialVersionUID = 20070402L;
 
-        public Comparable[] getFields(Object txn, Object object)
+        @SuppressWarnings("unchecked")
+        private Comparable cast(Object object)
         {
-            return new Comparable[] { (Comparable) object };
+            return (Comparable) object;
+        }
+        
+        public Comparable<?>[] getFields(Object txn, Object object)
+        {
+            return new Comparable<?>[] { cast(object) };
         }
     }
 
     public final static class CopaceticComparator
-    implements Comparator
+    implements Comparator<Object>
     {
         private final Object txn;
 
@@ -329,22 +341,22 @@ implements Serializable
     {
         public Object newBucket(Object txn, FieldExtractor fields, Object keyOfObject);
 
-        public Object newBucket(Comparable[] fields, Object keyOfObject);
+        public Object newBucket(Comparable<?>[] fields, Object keyOfObject);
 
         public Object getObjectKey(Object object);
 
-        public Comparable[] getFields(Object txn, FieldExtractor extractor, Object object);
+        public Comparable<?>[] getFields(Object txn, FieldExtractor extractor, Object object);
 
         public boolean getCacheFields();
     }
 
     private static final class Bucket
     {
-        public final Comparable[] fields;
+        public final Comparable<?>[] fields;
 
         public final Object objectKey;
 
-        public Bucket(Comparable[] fields, Object objectKey)
+        public Bucket(Comparable<?>[] fields, Object objectKey)
         {
             this.fields = fields;
             this.objectKey = objectKey;
@@ -361,12 +373,12 @@ implements Serializable
             return new Bucket(extractor.getFields(txn, keyOfObject), keyOfObject);
         }
 
-        public Object newBucket(Comparable[] fields, Object keyOfObject)
+        public Object newBucket(Comparable<?>[] fields, Object keyOfObject)
         {
             return new Bucket(fields, keyOfObject);
         }
 
-        public Comparable[] getFields(Object txn, FieldExtractor extractor, Object object)
+        public Comparable<?>[] getFields(Object txn, FieldExtractor extractor, Object object)
         {
             return ((Bucket) object).fields;
         }
@@ -392,12 +404,12 @@ implements Serializable
             return keyOfObject;
         }
 
-        public Object newBucket(Comparable[] comparables, Object keyOfObject)
+        public Object newBucket(Comparable<?>[] comparables, Object keyOfObject)
         {
             return keyOfObject;
         }
 
-        public Comparable[] getFields(Object txn, FieldExtractor extractor, Object object)
+        public Comparable<?>[] getFields(Object txn, FieldExtractor extractor, Object object)
         {
             return extractor.getFields(txn, object);
         }
@@ -442,7 +454,7 @@ implements Serializable
 
         private final Object storageData;
 
-        private final List listOfObjects;
+        private final List<Object> listOfObjects;
 
         private final Structure structure;
 
@@ -452,11 +464,11 @@ implements Serializable
         {
             this.structure = structure;
             this.storageData = storageData;
-            this.listOfObjects = new ArrayList(structure.getSchema().getSize());
+            this.listOfObjects = new ArrayList<Object>(structure.getSchema().getSize());
             // this.readWriteLock = new TracingReadWriteLock(new
             // ReentrantWriterPreferenceReadWriteLock(), getKey().toString() +
             // " " + System.currentTimeMillis());
-            this.readWriteLock = new ReentrantWriterPreferenceReadWriteLock();
+            this.readWriteLock = new ReentrantReadWriteLock();
         }
 
         public ReadWriteLock getReadWriteLock()
@@ -489,7 +501,7 @@ implements Serializable
             return keyOfNext;
         }
 
-        public ListIterator listIterator()
+        public ListIterator<Object> listIterator()
         {
             return listOfObjects.listIterator();
         }
@@ -530,7 +542,7 @@ implements Serializable
             return structure.getStorage().getLeafTier(structure, txn, getNextLeafKey());
         }
 
-        public void link(LeafTier nextLeaf, Map mapOfDirtyTiers)
+        public void link(LeafTier nextLeaf, Map<Object, Tier> mapOfDirtyTiers)
         {
             mapOfDirtyTiers.put(getKey(), this);
             mapOfDirtyTiers.put(nextLeaf.getKey(), nextLeaf);
@@ -558,7 +570,7 @@ implements Serializable
             }
         }
 
-        public Cursor find(Object txn, Comparable[] fields)
+        public Cursor find(Object txn, Comparable<?>[] fields)
         {
             for (int i = 0; i < getSize(); i++)
             {
@@ -594,8 +606,8 @@ implements Serializable
             }
 
             Object previous = null;
-            Iterator objects = listIterator();
-            Comparator comparator = new CopaceticComparator(txn, structure);
+            Iterator<Object> objects = listIterator();
+            Comparator<Object> comparator = new CopaceticComparator(txn, structure);
             while (objects.hasNext())
             {
                 Object object = objects.next();
@@ -660,7 +672,7 @@ implements Serializable
 
         private short childType;
 
-        private final List listOfBranches;
+        private final List<Branch> listOfBranches;
 
         private final ReadWriteLock readWriteLock;
 
@@ -669,11 +681,11 @@ implements Serializable
             this.structure = structure;
             this.key = key;
             this.childType = typeOfChildren;
-            this.listOfBranches = new ArrayList(structure.getSchema().getSize() + 1);
+            this.listOfBranches = new ArrayList<Branch>(structure.getSchema().getSize() + 1);
             // this.readWriteLock = new TracingReadWriteLock(new
             // ReentrantWriterPreferenceReadWriteLock(), getKey().toString() +
             // " " + System.currentTimeMillis());
-            this.readWriteLock = new ReentrantWriterPreferenceReadWriteLock();
+            this.readWriteLock = new ReentrantReadWriteLock();
         }
 
         public ReadWriteLock getReadWriteLock()
@@ -731,7 +743,7 @@ implements Serializable
             return (Branch) listOfBranches.remove(index);
         }
 
-        public ListIterator listIterator()
+        public ListIterator<Branch> listIterator()
         {
             return listOfBranches.listIterator();
         }
@@ -741,10 +753,10 @@ implements Serializable
             return (Branch) listOfBranches.get(index);
         }
 
-        public Branch find(Object txn, Comparable[] fields)
+        public Branch find(Object txn, Comparable<?>[] fields)
         {
-            Iterator branches = listIterator();
-            Branch candidate = (Branch) branches.next();
+            Iterator<Branch> branches = listIterator();
+            Branch candidate = branches.next();
             while (branches.hasNext())
             {
                 Branch branch = (Branch) branches.next();
@@ -760,7 +772,7 @@ implements Serializable
         public int getIndexOfTier(Object keyOfTier)
         {
             int index = 0;
-            Iterator branches = listIterator();
+            Iterator<Branch> branches = listIterator();
             while (branches.hasNext())
             {
                 Branch branch = (Branch) branches.next();
@@ -793,8 +805,8 @@ implements Serializable
             Object previous = null;
             Object lastLeftmost = null;
 
-            Comparator comparator = new CopaceticComparator(txn, structure);
-            Iterator branches = listIterator();
+            Comparator<Object> comparator = new CopaceticComparator(txn, structure);
+            Iterator<Branch> branches = listIterator();
             boolean isMinimal = true;
             while (branches.hasNext())
             {
@@ -905,83 +917,83 @@ implements Serializable
         }
     }
 
-    private final static class TracingSync
-    implements Sync
-    {
-        private final Sync sync;
-
-        private final String key;
-
-        public TracingSync(Sync sync, String key)
-        {
-            this.sync = sync;
-            this.key = key;
-        }
-
-        public void acquire() throws InterruptedException
-        {
-            System.out.println("Sync acquire (" + key + ")");
-            sync.acquire();
-        }
-
-        public boolean attempt(long timeout) throws InterruptedException
-        {
-            System.out.println("Sync attempt (" + key + ")");
-            return sync.attempt(timeout);
-        }
-
-        public void release()
-        {
-            System.out.println("Sync release (" + key + ")");
-            sync.release();
-        }
-    }
-
-    public final static class TracingReadWriteLock
-    implements ReadWriteLock
-    {
-        private final ReadWriteLock readWriteLock;
-
-        private final String key;
-
-        public TracingReadWriteLock(ReadWriteLock readWriteLock, String key)
-        {
-            this.readWriteLock = readWriteLock;
-            this.key = key;
-        }
-
-        public Sync readLock()
-        {
-            return new TracingSync(readWriteLock.readLock(), "read , " + key);
-        }
-
-        public Sync writeLock()
-        {
-            return new TracingSync(readWriteLock.writeLock(), "write, " + key);
-        }
-    }
-
+//    private final static class TracingSync
+//    implements Sync
+//    {
+//        private final Sync sync;
+//
+//        private final String key;
+//
+//        public TracingSync(Sync sync, String key)
+//        {
+//            this.sync = sync;
+//            this.key = key;
+//        }
+//
+//        public void acquire() throws InterruptedException
+//        {
+//            System.out.println("Sync acquire (" + key + ")");
+//            sync.acquire();
+//        }
+//
+//        public boolean attempt(long timeout) throws InterruptedException
+//        {
+//            System.out.println("Sync attempt (" + key + ")");
+//            return sync.attempt(timeout);
+//        }
+//
+//        public void release()
+//        {
+//            System.out.println("Sync release (" + key + ")");
+//            sync.release();
+//        }
+//    }
+//
+//    public final static class TracingReadWriteLock
+//    implements ReadWriteLock
+//    {
+//        private final ReadWriteLock readWriteLock;
+//
+//        private final String key;
+//
+//        public TracingReadWriteLock(ReadWriteLock readWriteLock, String key)
+//        {
+//            this.readWriteLock = readWriteLock;
+//            this.key = key;
+//        }
+//
+//        public Sync readLock()
+//        {
+//            return new TracingSync(readWriteLock.readLock(), "read , " + key);
+//        }
+//
+//        public Sync writeLock()
+//        {
+//            return new TracingSync(readWriteLock.writeLock(), "write, " + key);
+//        }
+//    }
+//
     private final static class Mutation
     {
         public final Structure structure;
 
         public final Object txn;
 
-        public final Comparable[] fields;
+        public final Comparable<?>[] fields;
 
         public final Deletable deletable;
 
-        public final LinkedList listOfLevels = new LinkedList();
+        public final LinkedList<Level> listOfLevels = new LinkedList<Level>();
 
-        public final Map mapOfVariables = new HashMap();
+        public final Map<Object, Object> mapOfVariables = new HashMap<Object, Object>();
 
-        public final Map mapOfDirtyTiers;
+        public final Map<Object, Tier> mapOfDirtyTiers;
 
         public LeafOperation leafOperation;
 
         public final Object bucket;
 
-        public Mutation(Structure structure, Object txn, Map mapOfDirtyTiers, Object bucket, Comparable[] fields, Deletable deletable)
+        public Mutation(Structure structure, Object txn, Map<Object, Tier> mapOfDirtyTiers, Object bucket, Comparable<?>[] fields, Deletable deletable)
         {
             this.structure = structure;
             this.txn = txn;
@@ -993,14 +1005,14 @@ implements Serializable
 
         public void rewind(int leaveExclusive)
         {
-            Iterator levels = listOfLevels.iterator();
+            Iterator<Level>levels = listOfLevels.iterator();
             int size = listOfLevels.size();
             boolean unlock = true;
 
             for (int i = 0; i < size - leaveExclusive; i++)
             {
                 Level level = (Level) levels.next();
-                Iterator operations = level.listOfOperations.iterator();
+                Iterator<Operation> operations = level.listOfOperations.iterator();
                 while (operations.hasNext())
                 {
                     Operation operation = (Operation) operations.next();
@@ -1030,10 +1042,10 @@ implements Serializable
 
         public void shift()
         {
-            Iterator levels = listOfLevels.iterator();
+            Iterator<Level> levels = listOfLevels.iterator();
             while (listOfLevels.size() > 3 && levels.hasNext())
             {
-                Level level = (Level) levels.next();
+                Level level = levels.next();
                 if (level.listOfOperations.size() != 0)
                 {
                     break;
@@ -1044,7 +1056,7 @@ implements Serializable
             }
         }
 
-        public Comparable[] getFields(Object key)
+        public Comparable<?>[] getFields(Object key)
         {
             return structure.getFields(txn, key);
         }
@@ -1052,7 +1064,7 @@ implements Serializable
 
     private interface LockExtractor
     {
-        public Sync getSync(ReadWriteLock readWriteLock);
+        public Lock getSync(ReadWriteLock readWriteLock);
 
         public boolean isExeclusive();
     }
@@ -1060,7 +1072,7 @@ implements Serializable
     private final static class ReadLockExtractor
     implements LockExtractor
     {
-        public Sync getSync(ReadWriteLock readWriteLock)
+        public Lock getSync(ReadWriteLock readWriteLock)
         {
             return readWriteLock.readLock();
         }
@@ -1074,7 +1086,7 @@ implements Serializable
     private final static class WriteLockExtractor
     implements LockExtractor
     {
-        public Sync getSync(ReadWriteLock readWriteLock)
+        public Lock getSync(ReadWriteLock readWriteLock)
         {
             return readWriteLock.writeLock();
         }
@@ -1239,8 +1251,8 @@ implements Serializable
             levelOfChild.lockAndAdd(leaf);
             if (leaf.getSize() == mutation.structure.getSchema().getSize())
             {
-                Comparable[] first = mutation.getFields(leaf.get(0));
-                Comparable[] last = mutation.getFields(leaf.get(leaf.getSize() - 1));
+                Comparable<?>[] first = mutation.getFields(leaf.get(0));
+                Comparable<?>[] last = mutation.getFields(leaf.get(leaf.getSize() - 1));
                 if (compare(first, last) == 0)
                 {
                     int compare = compare(mutation.fields, first);
@@ -1370,7 +1382,7 @@ implements Serializable
                 int greater = odd ? middle + 1 : middle;
 
                 int partition = -1;
-                Comparable[] candidate = mutation.getFields(leaf.get(middle));
+                Comparable<?>[] candidate = mutation.getFields(leaf.get(middle));
                 for (int i = 0; partition == -1 && i < middle; i++)
                 {
                     if (compare(candidate, mutation.getFields(leaf.get(lesser))) != 0)
@@ -1425,7 +1437,7 @@ implements Serializable
 
                 Object bucket = mutation.bucket;
 
-                ListIterator objects = leaf.listIterator();
+                ListIterator<Object> objects = leaf.listIterator();
                 while (objects.hasNext())
                 {
                     Object before = objects.next();
@@ -1581,8 +1593,8 @@ implements Serializable
         {
             if (search != null && branch.getPivot() != null && !mutation.mapOfVariables.containsKey(LEFT_LEAF))
             {
-                Comparable[] searchFields = mutation.getFields(search);
-                Comparable[] pivotFields = mutation.getFields(branch.getPivot());
+                Comparable<?>[] searchFields = mutation.getFields(search);
+                Comparable<?>[] pivotFields = mutation.getFields(branch.getPivot());
                 return compare(searchFields, pivotFields) == 0;
             }
             return false;
@@ -1621,7 +1633,7 @@ implements Serializable
                 return true;
             }
 
-            List listToMerge = new ArrayList();
+            List<InnerTier> listToMerge = new ArrayList<InnerTier>();
 
             int index = parent.getIndexOfTier(child.getKey());
             if (index != 0)
@@ -1673,9 +1685,9 @@ implements Serializable
         {
             private final InnerTier parent;
 
-            private final List listToMerge;
+            private final List<InnerTier> listToMerge;
 
-            public Merge(InnerTier parent, List listToMerge)
+            public Merge(InnerTier parent, List<InnerTier> listToMerge)
             {
                 this.parent = parent;
                 this.listToMerge = listToMerge;
@@ -1750,7 +1762,7 @@ implements Serializable
             int index = parent.getIndexOfTier(branch.getRightKey());
             LeafTier previous = null;
             LeafTier leaf = null;
-            List listToMerge = new ArrayList();
+            List<LeafTier> listToMerge = new ArrayList<LeafTier>();
             if (index != 0)
             {
                 previous = (LeafTier) parent.getTier(mutation.txn, parent.get(index - 1).getRightKey());
@@ -1853,7 +1865,7 @@ implements Serializable
                 LeafTier current = leaf;
                 SEARCH: do
                 {
-                    Iterator objects = leaf.listIterator();
+                    Iterator<Object> objects = leaf.listIterator();
                     while (objects.hasNext())
                     {
                         count++;
@@ -2012,9 +2024,9 @@ implements Serializable
     {
         public LockExtractor getSync;
 
-        public final LinkedList listOfLockedTiers = new LinkedList();
+        public final LinkedList<Tier> listOfLockedTiers = new LinkedList<Tier>();
 
-        public final LinkedList listOfOperations = new LinkedList();
+        public final LinkedList<Operation> listOfOperations = new LinkedList<Operation>();
 
         public Level(boolean exclusive)
         {
@@ -2039,56 +2051,42 @@ implements Serializable
 
         public void lock(Tier tier)
         {
-            try
-            {
-                getSync.getSync(tier.getReadWriteLock()).acquire();
-            }
-            catch (InterruptedException e)
-            {
-                new Danger(e, "interrupted");
-            }
+            getSync.getSync(tier.getReadWriteLock()).lock();
         }
 
         public void release(Tier tier)
         {
-            getSync.getSync(tier.getReadWriteLock()).release();
+            getSync.getSync(tier.getReadWriteLock()).unlock();
         }
 
         public void release()
         {
-            Iterator lockedTiers = listOfLockedTiers.iterator();
+            Iterator<Tier> lockedTiers = listOfLockedTiers.iterator();
             while (lockedTiers.hasNext())
             {
                 Tier tier = (Tier) lockedTiers.next();
-                getSync.getSync(tier.getReadWriteLock()).release();
+                getSync.getSync(tier.getReadWriteLock()).unlock();
             }
         }
 
         public void releaseAndClear()
         {
-            Iterator lockedTiers = listOfLockedTiers.iterator();
+            Iterator<Tier> lockedTiers = listOfLockedTiers.iterator();
             while (lockedTiers.hasNext())
             {
                 Tier tier = (Tier) lockedTiers.next();
-                getSync.getSync(tier.getReadWriteLock()).release();
+                getSync.getSync(tier.getReadWriteLock()).unlock();
             }
             listOfLockedTiers.clear();
         }
 
         private void exclusive()
         {
-            Iterator lockedTiers = listOfLockedTiers.iterator();
+            Iterator<Tier> lockedTiers = listOfLockedTiers.iterator();
             while (lockedTiers.hasNext())
             {
                 Tier tier = (Tier) lockedTiers.next();
-                try
-                {
-                    tier.getReadWriteLock().writeLock().acquire();
-                }
-                catch (InterruptedException e)
-                {
-                    throw new Danger(e, "interrupted");
-                }
+                tier.getReadWriteLock().writeLock().lock();
             }
             getSync = new WriteLockExtractor();
         }
@@ -2097,19 +2095,12 @@ implements Serializable
         {
             if (getSync.isExeclusive())
             {
-                Iterator lockedTiers = listOfLockedTiers.iterator();
+                Iterator<Tier> lockedTiers = listOfLockedTiers.iterator();
                 while (lockedTiers.hasNext())
                 {
                     Tier tier = (Tier) lockedTiers.next();
-                    try
-                    {
-                        tier.getReadWriteLock().readLock().acquire();
-                    }
-                    catch (InterruptedException e)
-                    {
-                        throw new Danger(e, "interrupted");
-                    }
-                    tier.getReadWriteLock().writeLock().release();
+                    tier.getReadWriteLock().readLock().lock();
+                    tier.getReadWriteLock().writeLock().unlock();
                 }
                 getSync = new ReadLockExtractor();
             }
@@ -2165,11 +2156,11 @@ implements Serializable
     {
         private final Object txn;
 
-        private final Map mapOfDirtyTiers;
+        private final Map<Object, Tier> mapOfDirtyTiers;
 
         private final Strata strata;
 
-        public Query(Object txn, Strata strata, Map mapOfDirtyTiers)
+        public Query(Object txn, Strata strata, Map<Object, Tier> mapOfDirtyTiers)
         {
             this.txn = txn;
             this.mapOfDirtyTiers = mapOfDirtyTiers;
@@ -2183,7 +2174,7 @@ implements Serializable
 
         private void write()
         {
-            Iterator tiers = mapOfDirtyTiers.values().iterator();
+            Iterator<Tier> tiers = mapOfDirtyTiers.values().iterator();
             while (tiers.hasNext())
             {
                 Tier tier = (Tier) tiers.next();
@@ -2222,14 +2213,7 @@ implements Serializable
         {
             if (mapOfDirtyTiers.size() == 0)
             {
-                try
-                {
-                    strata.writeMutex.acquire();
-                }
-                catch (InterruptedException e)
-                {
-                    new Danger(e, "unable.to.lock.for.write");
-                }
+                strata.writeMutex.lock();
             }
 
             Storage storage = strata.structure.getStorage();
@@ -2241,7 +2225,7 @@ implements Serializable
                     {
                         if (mapOfDirtyTiers.size() == 0)
                         {
-                            strata.writeMutex.release();
+                            strata.writeMutex.unlock();
                         }
                         return null;
                     }
@@ -2307,11 +2291,11 @@ implements Serializable
 
             if (mutation.leafOperation.operate(mutation, levelOfChild))
             {
-                ListIterator levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
+                ListIterator<Level> levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
                 while (levels.hasPrevious())
                 {
                     Level level = (Level) levels.previous();
-                    ListIterator operations = level.listOfOperations.listIterator(level.listOfOperations.size());
+                    ListIterator<Operation> operations = level.listOfOperations.listIterator(level.listOfOperations.size());
                     while (operations.hasPrevious())
                     {
                         Operation operation = (Operation) operations.previous();
@@ -2325,7 +2309,7 @@ implements Serializable
                 }
             }
 
-            ListIterator levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
+            ListIterator<Level> levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
             while (levels.hasPrevious())
             {
                 Level level = (Level) levels.previous();
@@ -2334,7 +2318,7 @@ implements Serializable
 
             if (mapOfDirtyTiers.size() == 0)
             {
-                strata.writeMutex.release();
+                strata.writeMutex.unlock();
             }
 
             return mutation.mapOfVariables.get(RESULT);
@@ -2342,7 +2326,7 @@ implements Serializable
 
         public void insert(Object keyOfObject)
         {
-            Comparable[] fields = strata.structure.getSchema().getFieldExtractor().getFields(txn, keyOfObject);
+            Comparable<?>[] fields = strata.structure.getSchema().getFieldExtractor().getFields(txn, keyOfObject);
             Object bucket = strata.structure.newBucket(fields, keyOfObject);
             Mutation mutation = new Mutation(strata.structure, txn, mapOfDirtyTiers, bucket, fields, null);
             generalized(mutation, new SplitRoot(), new SplitInner(), new InnerNever(), new LeafInsert());
@@ -2350,11 +2334,11 @@ implements Serializable
 
         public Object remove(Object keyOfObject)
         {
-            Comparable[] fields = strata.structure.getSchema().getFieldExtractor().getFields(txn, keyOfObject);
+            Comparable<?>[] fields = strata.structure.getSchema().getFieldExtractor().getFields(txn, keyOfObject);
             return remove(fields, ANY);
         }
 
-        public Object remove(Comparable[] fields, Deletable deletable)
+        public Object remove(Comparable<?>[] fields, Deletable deletable)
         {
             Mutation mutation = new Mutation(strata.structure, txn, mapOfDirtyTiers, null, fields, deletable);
             do
@@ -2382,35 +2366,22 @@ implements Serializable
             return find(strata.structure.getSchema().getFieldExtractor().getFields(txn, keyOfObject));
         }
 
-        public Cursor find(Comparable[] fields)
+        public Cursor find(Comparable<?>[] fields)
         {
-            Sync previous = new NullSync();
+            Lock previous = new ReentrantLock();
+            previous.lock();
             InnerTier tier = getRoot();
             for (;;)
             {
-                try
-                {
-                    tier.getReadWriteLock().readLock().acquire();
-                }
-                catch (InterruptedException e)
-                {
-                    throw new Danger(e, "interrupted");
-                }
-                previous.release();
+                tier.getReadWriteLock().readLock().lock();
+                previous.unlock();
                 previous = tier.getReadWriteLock().readLock();
                 Branch branch = tier.find(txn, fields);
                 if (tier.getChildType() == LEAF)
                 {
                     LeafTier leaf = strata.structure.getStorage().getLeafTier(strata.structure, txn, branch.getRightKey());
-                    try
-                    {
-                        leaf.getReadWriteLock().readLock().acquire();
-                    }
-                    catch (InterruptedException e)
-                    {
-                        throw new Danger(e, "interrupted");
-                    }
-                    previous.release();
+                    leaf.getReadWriteLock().readLock().lock();
+                    previous.unlock();
                     return leaf.find(txn, fields);
                 }
                 tier = (InnerTier) tier.getTier(txn, branch.getRightKey());
@@ -2421,18 +2392,12 @@ implements Serializable
         {
             Branch branch = null;
             InnerTier tier = getRoot();
-            Sync previous = new NullSync();
+            Lock previous = new ReentrantLock();
+            previous.lock();
             for (;;)
             {
-                try
-                {
-                    tier.getReadWriteLock().readLock().acquire();
-                }
-                catch (InterruptedException e)
-                {
-                    throw new Danger(e, "interrupted");
-                }
-                previous.release();
+                tier.getReadWriteLock().readLock().lock();
+                previous.unlock();
                 previous = tier.getReadWriteLock().readLock();
                 branch = tier.get(0);
                 if (tier.getChildType() == LEAF)
@@ -2442,15 +2407,8 @@ implements Serializable
                 tier = (InnerTier) tier.getTier(txn, branch.getRightKey());
             }
             LeafTier leaf = (LeafTier) tier.getTier(txn, branch.getRightKey());
-            try
-            {
-                leaf.getReadWriteLock().readLock().acquire();
-            }
-            catch (InterruptedException e)
-            {
-                throw new Danger(e, "interrupted");
-            }
-            previous.release();
+            leaf.getReadWriteLock().readLock().lock();
+            previous.unlock();
             return new Cursor(strata.structure, txn, leaf, 0);
         }
 
@@ -2458,18 +2416,12 @@ implements Serializable
         {
             Branch branch = null;
             InnerTier tier = getRoot();
-            Sync previous = new NullSync();
+            Lock previous = new ReentrantLock();
+            previous.lock();
             for (;;)
             {
-                try
-                {
-                    tier.getReadWriteLock().readLock().acquire();
-                }
-                catch (InterruptedException e)
-                {
-                    throw new Danger(e, "interrupted");
-                }
-                previous.release();
+                tier.getReadWriteLock().readLock().lock();
+                previous.unlock();
                 previous = tier.getReadWriteLock().readLock();
                 branch = tier.get(tier.getSize());
                 if (tier.getChildType() == LEAF)
@@ -2479,15 +2431,8 @@ implements Serializable
                 tier = (InnerTier) tier.getTier(txn, branch.getRightKey());
             }
             LeafTier leaf = strata.structure.getStorage().getLeafTier(strata.structure, txn, branch.getRightKey());
-            try
-            {
-                leaf.getReadWriteLock().readLock().acquire();
-            }
-            catch (InterruptedException e)
-            {
-                throw new Danger(e, "interrupted");
-            }
-            previous.release();
+            leaf.getReadWriteLock().readLock().lock();
+            previous.unlock();
             return new Cursor(strata.structure, txn, leaf, leaf.getSize());
         }
 
@@ -2496,7 +2441,7 @@ implements Serializable
             if (mapOfDirtyTiers.size() != 0)
             {
                 write();
-                strata.writeMutex.release();
+                strata.writeMutex.unlock();
             }
         }
 
@@ -2504,7 +2449,7 @@ implements Serializable
         {
             if (inner.getChildType() == INNER)
             {
-                Iterator branches = inner.listIterator();
+                Iterator<Branch> branches = inner.listIterator();
                 while (branches.hasNext())
                 {
                     Branch branch = (Branch) branches.next();
@@ -2513,7 +2458,7 @@ implements Serializable
             }
             else
             {
-                Iterator branches = inner.listIterator();
+                Iterator<Branch> branches = inner.listIterator();
                 while (branches.hasNext())
                 {
                     Branch branch = (Branch) branches.next();
@@ -2540,7 +2485,7 @@ implements Serializable
         public void copacetic()
         {
             // FIXME Lock.
-            Comparator comparator = new CopaceticComparator(txn, strata.structure);
+            Comparator<Object> comparator = new CopaceticComparator(txn, strata.structure);
             getRoot().copacetic(txn, new Copacetic(comparator));
             Cursor cursor = first();
             Object previous = cursor.next();
@@ -2609,15 +2554,8 @@ implements Serializable
                     throw new IllegalStateException();
                 }
                 LeafTier next = structure.getStorage().getLeafTier(structure, txn, leaf.getNextLeafKey());
-                try
-                {
-                    next.getReadWriteLock().readLock().acquire();
-                }
-                catch (InterruptedException e)
-                {
-                    throw new Danger(e, "interrupted");
-                }
-                leaf.getReadWriteLock().readLock().release();
+                next.getReadWriteLock().readLock().lock();
+                leaf.getReadWriteLock().readLock().unlock();
                 leaf = next;
                 index = 0;
             }
@@ -2633,7 +2571,7 @@ implements Serializable
         {
             if (!released)
             {
-                leaf.getReadWriteLock().readLock().release();
+                leaf.getReadWriteLock().readLock().unlock();
                 released = true;
             }
         }
@@ -2641,11 +2579,11 @@ implements Serializable
 
     public static class Copacetic
     {
-        private final Set seen;
+        private final Set<Object> seen;
 
-        private Copacetic(Comparator comparator)
+        private Copacetic(Comparator<Object> comparator)
         {
-            this.seen = new TreeSet(comparator);
+            this.seen = new TreeSet<Object>(comparator);
         }
 
         public boolean unique(Object object)

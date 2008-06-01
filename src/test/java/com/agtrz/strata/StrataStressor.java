@@ -10,20 +10,23 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Random;
 
-import com.agtrz.swag.shell.ArgumentException;
-import com.agtrz.swag.shell.CommandLine;
-import com.agtrz.swag.shell.InputFileArgument;
-import com.agtrz.swag.shell.OutputFileArgument;
-import com.agtrz.swag.util.Equator;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
+
 
 public class StrataStressor
 {
     public final static String[] ALPHABET = new String[] { "alpha", "beta", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india", "juliet", "kilo", "lima", "mike", "november", "oscar", "papa", "quebec", "romeo", "sierra", "tango", "uniform", "victor", "whisky", "x-ray", "zebra" };
+
+    @Option(name = "-r", usage = "Replay a file.")
+    private File replay;
+
+    @Option(name = "-o", usage = "Output file.")
+    private File output;
 
     private final Random random;
 
@@ -99,21 +102,12 @@ public class StrataStressor
         }
     }
 
-    public final static class CompoundComparator
-    implements Comparator
+    public final static class CompoundComparator<T>
+    implements Comparator<T>
     {
-        public int compare(Object left, Object right)
+        public int compare(T left, T right)
         {
             return ((Compound) left).getOne().compareTo(((Compound) right).getOne());
-        }
-    }
-
-    public final static class CompoundEquator
-    implements Equator
-    {
-        public boolean equals(Object left, Object right)
-        {
-            return ((Compound) left).getOne().equals(((Compound) right).getOne()) && ((Compound) left).getTwo().equals(((Compound) right).getTwo());
         }
     }
 
@@ -174,25 +168,30 @@ public class StrataStressor
             operation.operate(query);
             query.copacetic();
         }
-    }
-
+    } 
+    
     public static void main(String[] args)
     {
-        List listOfArguments = new ArrayList();
-        listOfArguments.add(new InputFileArgument("replay"));
-        listOfArguments.add(new OutputFileArgument("output", true));
-        CommandLine commandLine = null;
+        StrataStressor stressor = new StrataStressor();
+        CmdLineParser parser = new CmdLineParser(stressor);
         try
         {
-            commandLine = new CommandLine(args, listOfArguments);
+            parser.parseArgument(args);
         }
-        catch (ArgumentException e)
+        catch (CmdLineException e)
         {
-            System.out.println(e.getMessage());
-            System.exit(1);
+            System.err.println(e.getMessage());
+            System.err.println("java -jar myprogram.jar [options...] arguments...");
+            parser.printUsage(System.err);
+            return;
         }
+        stressor.execute();
+    }
+    
+    public void execute()
+    {
         File file = null;
-        if ((file = (File) commandLine.getArgumentValue("replay")) != null)
+        if ((file = replay) != null)
         {
             ObjectInputStream in = null;
             try
@@ -241,7 +240,7 @@ public class StrataStressor
         }
         else
         {
-            file = (File) commandLine.getArgumentValue("output");
+            file = output;
 
             if (file == null)
             {
