@@ -45,10 +45,10 @@ implements Serializable
 
     public Strata()
     {
-        this(new Schema(), null, new HashMap<Object, Tier>());
+        this(new Schema(), null, new HashMap<Object, Tier>(), true);
     }
 
-    public Strata(Schema creator, Object txn, Map<Object, Tier> mapOfDirtyTiers)
+    private Strata(Schema creator, Object txn, Map<Object, Tier> mapOfDirtyTiers, boolean flush)
     {
         Storage storage = creator.getStorageSchema().newStorage();
 
@@ -56,6 +56,7 @@ implements Serializable
         // FIXME Shouldn't this be zero?
 //        this.writeMutex = creator.getMaxDirtyTiers() == 1 ? (Lock) new NullSync() : (Lock) new ReentrantLock();
         this.writeMutex = new ReentrantLock();
+        this.writeMutex.lock();
 
         InnerTier root = storage.newInnerTier(structure, txn, LEAF);
         LeafTier leaf = storage.newLeafTier(structure, txn);
@@ -65,6 +66,11 @@ implements Serializable
         mapOfDirtyTiers.put(leaf.getKey(), leaf);
 
         this.rootKey = root.getKey();
+        
+        if (flush)
+        {
+            new Query(txn, this, mapOfDirtyTiers).flush();
+        }
     }
 
     public Schema getSchema()
@@ -186,9 +192,9 @@ implements Serializable
         public Query newQuery(Object txn)
         {
             Map<Object, Tier> mapOfDirtyTiers = new HashMap<Object, Tier>();
-            Strata strata = new Strata(this, txn, mapOfDirtyTiers);
+            Strata strata = new Strata(this, txn, mapOfDirtyTiers, false);
             Query query = new Query(txn, strata, mapOfDirtyTiers);
-            if (mapOfDirtyTiers.size() <= getMaxDirtyTiers())
+            if (mapOfDirtyTiers.size() >= getMaxDirtyTiers())
             {
                 query.flush();
             }
