@@ -16,9 +16,4 @@
       <attribute value="jar:file:/Users/alan/.m2/repository/com/agtrz/pack/0.1/pack-0.1-javadoc.jar!/" name="javadoc_location"/>
     </attributes>
   </classpathentry>
-  <classpathentry kind="var" path="M2_REPO/com/agtrz/swag-util/0.1/swag-util-0.1.jar" sourcepath="M2_REPO/com/agtrz/swag-util/0.1/swag-util-0.1-sources.jar">
-    <attributes>
-      <attribute value="jar:file:/Users/alan/.m2/repository/com/agtrz/swag-util/0.1/swag-util-0.1-javadoc.jar!/" name="javadoc_location"/>
-    </attributes>
-  </classpathentry>
 </classpath>
