@@ -25,7 +25,7 @@ extends TestCase
 
     public void testConstruction()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         query.insert(ALPHABET[0]);
         assertOneEquals(ALPHABET[0], query.find(ALPHABET[0]));
@@ -33,7 +33,7 @@ extends TestCase
 
     public void testSingleRemove()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         query.insert(ALPHABET[0]);
         assertOneEquals(ALPHABET[0], query.find(ALPHABET[0]));
@@ -42,7 +42,7 @@ extends TestCase
 
     public void testMultiple()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         for (int i = 0; i < 8; i++)
         {
@@ -90,7 +90,7 @@ extends TestCase
 
     public void testSplit()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         for (int i = 0; i < 9; i++)
         {
@@ -112,7 +112,7 @@ extends TestCase
 
     public void testSplitRoot()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         for (int i = 0; i < 1000; i++)
         {
@@ -145,7 +145,7 @@ extends TestCase
 
     public void testSplitRootPseudoRandom()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         int hashCode = 1;
         for (int i = 0; i < 99; i++)
@@ -182,7 +182,7 @@ extends TestCase
 
     public void testDuplicate()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         query.insert(new Integer(2));
         query.copacetic();
@@ -193,7 +193,7 @@ extends TestCase
 
     public void testUnsplittable()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         for (int i = 0; i < 5; i++)
         {
@@ -207,7 +207,7 @@ extends TestCase
 
     public void testTwoUnsplittables()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         for (int i = 0; i < 10; i++)
         {
@@ -221,7 +221,7 @@ extends TestCase
 
     public void testDuplicatesInCenter()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         int[] insert = new int[] { 1, 2, 2, 2, 3 };
 
@@ -237,7 +237,7 @@ extends TestCase
 
     public void testDuplicatesLeftOfCenter()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         int[] insert = new int[] { 1, 2, 2, 2, 3 };
 
@@ -253,7 +253,7 @@ extends TestCase
 
     public void testDuplicatesRightOfCenter()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         int[] insert = new int[] { 1, 2, 2, 2, 3 };
 
@@ -269,7 +269,7 @@ extends TestCase
 
     public void testUnsplittableRight()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         int[] insert = new int[] { 2, 2, 2, 2, 2 };
 
@@ -285,7 +285,7 @@ extends TestCase
 
     public void testLinkedUnsplittableRight()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         int[] insert = new int[] { 2, 2, 2, 2, 2, 2 };
 
@@ -300,7 +300,7 @@ extends TestCase
 
     public void testUnsplittableLeft()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         int[] insert = new int[] { 2, 2, 2, 2, 2 };
 
@@ -315,7 +315,7 @@ extends TestCase
 
     public void testUnsplittableLeftNotFirstEntry()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         int[] insert = new int[] { 5, 5, 5, 5, 5 };
 
@@ -333,7 +333,7 @@ extends TestCase
 
     public void testTraverse()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
 
         int[] insert = new int[] { 1, 2, 3, 4, 5, 6, 7, 7, 7, 8, 9 };
@@ -351,7 +351,7 @@ extends TestCase
 
     public void testRemove()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
 
         int[] insert = new int[] { 1, 2, 3, 4, 5 };
@@ -364,7 +364,7 @@ extends TestCase
 
     public void testRemoveMany()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
 
         int[] insert = new int[] { 1, 3, 5, 3, 3 };
@@ -376,7 +376,7 @@ extends TestCase
 
     public void testRemoveSplit()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
 
         int[] insert = new int[] { 2, 3, 4, 5, 6, 1 };
@@ -390,7 +390,7 @@ extends TestCase
 
     public void testRemoveSplitRightMost()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
 
         int[] insert = new int[] { 2, 3, 4, 5, 6, 1 };
@@ -403,7 +403,7 @@ extends TestCase
 
     public void testRemoveSwapKey()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
 
         for (int i = 1; i <= 100; i++)
@@ -419,7 +419,7 @@ extends TestCase
 
     public void testRemoveMergeRoot()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
 
         for (int i = 1; i <= 45; i++)
@@ -438,7 +438,7 @@ extends TestCase
 
     public void testRemoveMergeRootAndSwap()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
 
         for (int i = 1; i <= 45; i++)
@@ -461,7 +461,7 @@ extends TestCase
 
     public void testRemoveLeftMostSwapNoMerge()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
 
         for (int i = 1; i <= 45; i++)
@@ -487,7 +487,7 @@ extends TestCase
 
     public void testRemoveShift()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
 
         for (int i = 1; i <= 7; i++)
@@ -508,7 +508,7 @@ extends TestCase
 
     public void testRemoveNumbers()
     {
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
 
         query.insert(new Integer(1));

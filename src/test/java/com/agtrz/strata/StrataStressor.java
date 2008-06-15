@@ -131,7 +131,7 @@ public class StrataStressor
     public void kickTires(int count, int max, ObjectOutputStream out) throws IOException
     {
         int size = 0;
-        Strata strata = new Strata();
+        Strata strata = new Strata.Schema().newStrata(null);
         Strata.Query query = strata.query(null);
         for (int i = 0; i < count; i++)
         {
@@ -208,7 +208,7 @@ public class StrataStressor
                 System.out.print("Cannot open file: " + file.toString() + ", " + e.getMessage());
                 System.exit(1);
             }
-            Strata strata = new Strata();
+            Strata strata = new Strata.Schema().newStrata(null);
             Strata.Query query = strata.query(null);
             for (;;)
             {

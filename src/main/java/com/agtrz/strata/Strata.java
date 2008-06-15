@@ -43,12 +43,7 @@ implements Serializable
 
     private transient Lock writeMutex;
 
-    public Strata()
-    {
-        this(new Schema(), null, new HashMap<Object, Tier>(), true);
-    }
-
-    private Strata(Schema creator, Object txn, Map<Object, Tier> mapOfDirtyTiers, boolean flush)
+    private Strata(Schema creator, Object txn, Map<Object, Tier> mapOfDirtyTiers)
     {
         Storage storage = creator.getStorageSchema().newStorage();
 
@@ -66,11 +61,6 @@ implements Serializable
         mapOfDirtyTiers.put(leaf.getKey(), leaf);
 
         this.rootKey = root.getKey();
-        
-        if (flush)
-        {
-            new Query(txn, this, mapOfDirtyTiers).flush();
-        }
     }
 
     public Schema getSchema()
@@ -192,7 +182,7 @@ implements Serializable
         public Query newQuery(Object txn)
         {
             Map<Object, Tier> mapOfDirtyTiers = new HashMap<Object, Tier>();
-            Strata strata = new Strata(this, txn, mapOfDirtyTiers, false);
+            Strata strata = new Strata(this, txn, mapOfDirtyTiers);
             Query query = new Query(txn, strata, mapOfDirtyTiers);
             if (mapOfDirtyTiers.size() >= getMaxDirtyTiers())
             {
