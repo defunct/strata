@@ -563,13 +563,15 @@ extends TestCase
         query.insert(new Integer(34000));
         query.insert(new Integer(29100));
         query.insert(new Integer(29200));
+        query.copacetic();
         query.remove(new Integer(26000));
+        query.copacetic();
         query.insert(new Integer(34100));
         query.insert(new Integer(34200));
         query.insert(new Integer(34300));
         query.insert(new Integer(34400));
+        query.copacetic();
         query.remove(new Integer(27000));
-        
         query.copacetic();
     }
 

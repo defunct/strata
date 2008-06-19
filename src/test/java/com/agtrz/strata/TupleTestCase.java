@@ -17,19 +17,21 @@ public class TupleTestCase
     @Ignore @Test void api()
     {
         Bag<Person, Pair<String, String>> bag = null;
-        Bag.Extractor<Person, Pair<String, String>> lastNameFirst = new Bag.Extractor<Person, Pair<String,String>>()
+        Bag.Extractor<Person, Bag.Two<String, String>> lastNameFirst = new Bag.Extractor<Person, Bag.Two<String, String>>()
         {
-            public Pair<String, String> extract(Person person)
+            public Bag.Two<String, String> extract(Person person)
             {
-                return new Pair<String, String>(person.getLastName(), person.getFirstName());
+                return Bag.box(person.getFirstName(), person.getLastName());
             }
         };
         Person person = new Person();
-        Pair<String, String> fullName = lastNameFirst.extract(person);
+        Bag.Two<String, String> fullName = lastNameFirst.extract(person);
         bag.add(person);
         Cursor<Person> people = bag.find(new Pair<String, String>("Gutierrez", null));
         assertEquals("Gutierrez", people.next().getLastName());
         assertEquals("Gutierrez", fullName.getFirst());
+        Bag.Two<String, String> two = Bag.box("Hello", "World");
+        assertEquals(two.getFirst(), "Hello");
     }
 }
 

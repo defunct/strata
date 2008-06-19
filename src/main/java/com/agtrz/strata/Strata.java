@@ -148,7 +148,9 @@ implements Serializable
 
         private FieldExtractor extractor;
 
-        private int size;
+        private int leafSize;
+        
+        private int innerSize;
 
         private boolean cacheFields;
 
@@ -158,7 +160,8 @@ implements Serializable
         {
             this.storageSchema = new ArrayListStorage.Schema();
             this.extractor = new ComparableExtractor();
-            this.size = 5;
+            this.leafSize = 5;
+            this.innerSize = 5;
             this.cacheFields = false;
             this.maxDirtyTiers = 0;
         }
@@ -167,7 +170,8 @@ implements Serializable
         {
             this.storageSchema = creator.storageSchema;
             this.extractor = creator.extractor;
-            this.size = creator.size;
+            this.leafSize = creator.leafSize;
+            this.innerSize = creator.innerSize;
             this.cacheFields = creator.cacheFields;
             this.maxDirtyTiers = creator.maxDirtyTiers;
         }
@@ -221,14 +225,30 @@ implements Serializable
             return cacheFields;
         }
 
-        public void setSize(int size)
+        public void setInnerSize(int innerSize)
         {
-            this.size = size;
+            this.innerSize = innerSize;
+        }
+        
+        public void setLeafSize(int leafSize)
+        {
+            this.leafSize = leafSize;
         }
 
-        public int getSize()
+        public void setSize(int size)
         {
-            return size;
+            setInnerSize(size);
+            setLeafSize(size);
+        }
+        
+        public int getInnerSize()
+        {
+            return innerSize;
+        }
+
+        public int getLeafSize()
+        {
+            return leafSize;
         }
 
         public void setMaxDirtyTiers(int maxDirtyTiers)
@@ -460,7 +480,7 @@ implements Serializable
         {
             this.structure = structure;
             this.storageData = storageData;
-            this.listOfObjects = new ArrayList<Object>(structure.getSchema().getSize());
+            this.listOfObjects = new ArrayList<Object>(structure.getSchema().getLeafSize());
             // this.readWriteLock = new TracingReadWriteLock(new
             // ReentrantWriterPreferenceReadWriteLock(), getKey().toString() +
             // " " + System.currentTimeMillis());
@@ -549,7 +569,7 @@ implements Serializable
 
         public void append(Mutation mutation, Level levelOfLeaf)
         {
-            if (getSize() == structure.getSchema().getSize())
+            if (getSize() == structure.getSchema().getLeafSize())
             {
                 LeafTier nextLeaf = getNextAndLock(mutation, levelOfLeaf);
                 if (null == nextLeaf || compare(mutation.fields, mutation.getFields(nextLeaf.get(0))) != 0)
@@ -596,7 +616,7 @@ implements Serializable
                 throw new IllegalStateException();
             }
 
-            if (getSize() > structure.getSchema().getSize())
+            if (getSize() > structure.getSchema().getLeafSize())
             {
                 throw new IllegalStateException();
             }
@@ -613,7 +633,9 @@ implements Serializable
                 }
                 previous = object;
             }
-            if (!structure.getStorage().isKeyNull(getNextLeafKey()) && comparator.compare(get(getSize() - 1), getNext(txn).get(0)) == 0 && structure.getSchema().getSize() != getSize() && comparator.compare(get(0), get(getSize() - 1)) != 0)
+            if (!structure.getStorage().isKeyNull(getNextLeafKey())
+                && comparator.compare(get(getSize() - 1), getNext(txn).get(0)) == 0
+                && structure.getSchema().getLeafSize() != getSize() && comparator.compare(get(0), get(getSize() - 1)) != 0)
             {
                 throw new IllegalStateException();
             }
@@ -677,7 +699,7 @@ implements Serializable
             this.structure = structure;
             this.key = key;
             this.childType = typeOfChildren;
-            this.listOfBranches = new ArrayList<Branch>(structure.getSchema().getSize() + 1);
+            this.listOfBranches = new ArrayList<Branch>(structure.getSchema().getInnerSize());
             // this.readWriteLock = new TracingReadWriteLock(new
             // ReentrantWriterPreferenceReadWriteLock(), getKey().toString() +
             // " " + System.currentTimeMillis());
@@ -706,7 +728,7 @@ implements Serializable
 
         public int getSize()
         {
-            return listOfBranches.size() - 1;
+            return listOfBranches.size();
         }
 
         public void setChildType(short childType)
@@ -793,7 +815,7 @@ implements Serializable
                 throw new IllegalStateException();
             }
 
-            if (getSize() > structure.getSchema().getSize())
+            if (getSize() > structure.getSchema().getInnerSize())
             {
                 throw new IllegalStateException();
             }
@@ -1486,7 +1508,7 @@ implements Serializable
     {
         public boolean test(Mutation mutation, Level levelOfRoot, InnerTier root)
         {
-            return mutation.structure.getSchema().getSize() == root.getSize();
+            return mutation.structure.getSchema().getInnerSize() == root.getSize();
         }
 
         public void operation(Mutation mutation, Level levelOfRoot, InnerTier root)
@@ -1509,8 +1531,8 @@ implements Serializable
                 Storage storage = mutation.structure.getStorage();
                 InnerTier left = storage.newInnerTier(mutation.structure, mutation.txn, root.getChildType());
                 InnerTier right = storage.newInnerTier(mutation.structure, mutation.txn, root.getChildType());
-                int partition = (root.getSize() + 1) / 2;
-                int fullSize = root.getSize() + 1;
+                int partition = root.getSize() / 2;
+                int fullSize = root.getSize();
                 for (int i = 0; i < partition; i++)
                 {
                     left.add(root.remove(0));
@@ -1547,7 +1569,7 @@ implements Serializable
             Branch branch = parent.find(mutation.txn, mutation.fields);
             InnerTier child = (InnerTier) parent.getTier(mutation.txn, branch.getRightKey());
             levelOfChild.lockAndAdd(child);
-            if (child.getSize() == mutation.structure.getSchema().getSize())
+            if (child.getSize() == mutation.structure.getSchema().getInnerSize())
             {
                 levelOfParent.listOfOperations.add(new Split(parent, child));
                 return true;
@@ -1573,9 +1595,9 @@ implements Serializable
                 Storage storage = mutation.structure.getStorage();
 
                 InnerTier right = storage.newInnerTier(mutation.structure, mutation.txn, child.getChildType());
-                int partition = (child.getSize() + 1) / 2;
+                int partition = child.getSize() / 2;
 
-                while (partition <= child.getSize())
+                while (partition < child.getSize())
                 {
                     right.add(child.remove(partition));
                 }
@@ -1609,7 +1631,7 @@ implements Serializable
             LeafTier leaf = (LeafTier) parent.getTier(mutation.txn, branch.getRightKey());
             levelOfChild.getSync = new WriteLockExtractor();
             levelOfChild.lockAndAdd(leaf);
-            if (leaf.getSize() == mutation.structure.getSchema().getSize())
+            if (leaf.getSize() == mutation.structure.getSchema().getLeafSize())
             {
                 Comparable<?>[] first = mutation.getFields(leaf.get(0));
                 Comparable<?>[] last = mutation.getFields(leaf.get(leaf.getSize() - 1));
@@ -1838,6 +1860,9 @@ implements Serializable
         }
     }
 
+    /**
+     * Logic for deleting the 
+     */
     private final static class DeleteRoot
     implements RootDecision
     {
@@ -1847,7 +1872,7 @@ implements Serializable
             {
                 InnerTier first = (InnerTier) root.getTier(mutation.txn, root.get(0).getRightKey());
                 InnerTier second = (InnerTier) root.getTier(mutation.txn, root.get(1).getRightKey());
-                return first.getSize() + second.getSize() == mutation.structure.getSchema().getSize();
+                return first.getSize() + second.getSize() == mutation.structure.getSchema().getInnerSize();
             }
             return false;
         }
@@ -1875,7 +1900,7 @@ implements Serializable
                 }
 
                 InnerTier child = (InnerTier) root.getTier(mutation.txn, root.remove(0).getRightKey());
-                while (child.getSize() != -1)
+                while (child.getSize() != 0)
                 {
                     root.add(child.remove(0));
                 }
@@ -1946,9 +1971,114 @@ implements Serializable
         }
     }
 
+    /**
+     * A decision that determines whether to merge two inner tiers into one
+     * tier or else to delete an inner tier that has only one child tier but
+     * is either the only child tier or its siblings are already full.
+     * <h3>Only Children</h3>
+     * <p>
+     * It is possible that an inner tier may have only one child leaf or inner
+     * tier. This occurs in the case where the siblings of of inner tier are
+     * at capacity. A merge occurs when two children are combined. The nodes
+     * from the child to the right are combined with the nodes from the child
+     * to the left. The parent branch that referenced the right child is
+     * deleted. 
+     * <p>
+     * If it is the case that a tier is next to full siblings, as leaves are
+     * deleted from that tier, it will not be a candidate to merge with a
+     * sibling until it reaches a size of one. At that point, it could merge
+     * with a sibling if a deletion were to cause its size to reach zero.
+     * <p>
+     * However, the single child of that tier has no siblings with which it
+     * can merge. A tier with a single child cannot reach a size of zero by
+     * merging.
+     * <p>
+     * If were where to drain the subtree of an inner tier with a single child
+     * of every leaf, we would merge its leaf tiers and merge its inner tiers
+     * until we had subtree that consisted solely of inner tiers with one
+     * child and a leaf with one item. At that point, when we delete the last
+     * item, we need to delete the chain of tiers with only children.
+     * <p>
+     * We deleting any child that is size of one that cannot merge with a
+     * sibling. Deletion means freeing the child and removing the branch that
+     * references it.
+     * <p>
+     * The only leaf child will not have a sibling with which it can merge,
+     * however. We won't be able to copy leaf items from a right leaf to a
+     * left leaf. This means we won't be able to update the linked list of
+     * leaves, unless we go to the left of the only child. But, going to the
+     * left of the only child requires knowing that we must go to the left.
+     * <p>
+     * We are not going to know which left to take the first time down,
+     * though. The actual pivot is not based on the number of children. It
+     * might be above the point where the list of only children begins. As
+     * always, it is a pivot whose value matches the first item in the
+     * leaf, in this case the only item in the leaf.
+     * <p>
+     * Here's how it works.
+     * <p>
+     * On the way down, we look for a branch that has an inner tier that is
+     * size of one. If so, we set a flag in the mutator to note that we are
+     * now deleting.
+     * <p>
+     * If we encouter an inner tier has more than one child on the way down we
+     * are not longer in the deleting state.
+     * <p>
+     * When we reach the leaf, if it has a size of one and we are in the
+     * deleting state, then we look in the mutator for a left leaf variable
+     * and an is left most flag. More on those later as neither are set.
+     * <p>
+     * We tell the mutator that we have a last item and that the action has
+     * failed, by setting the fail action. Failure means we try again.
+     * <p>
+     * On the retry, as we desecend the tree, we have the last item variable
+     * set in the mutator. 
+     * <p>
+     * Note that we are descending the tree again. Because we are a concurrent
+     * data structure, the structure of the tree may change. I'll get to that.
+     * For now, let's assume that it has not changed.
+     * <p>
+     * If it has not changed, then we are going to encouter a pivot that has
+     * our last item. When we encouter this pivot, we are going to go left.
+     * Going left means that we descend to the child of the branch before the
+     * branch of the pivot. We then follow each rightmost branch of each inner
+     * tier until we reach the right most leaf. That leaf is the leaf before
+     * the leaf that is about to be removed. We store this in the mutator.
+     * <p>
+     * Of course, the leaf to be removed may be the left most leaf in the
+     * entire data structure. In that case, we set a variable named left most
+     * in the mutator.
+     * <p>
+     * When we go left, we lock every inner tier and the leaf tier exclusive,
+     * to prevent it from being changed by another query in another thread.
+     * We always lock from left to right.
+     * <p>
+     * Now we continue our desecnet. Eventually, we reach out chain of inner
+     * tiers with only one child. That chain may only be one level deep, but
+     * there will be such a chain.
+     * <p>
+     * Now we can add a remove leaf operation to the list of operations in the
+     * parent level. This operation will link the next leaf of the left leaf
+     * to the next leaf of the remove leaf, reserving our linked list of
+     * leaves. It will take place after the normal remove operation, so that
+     * if the remove operation fails (because the item to remove does not
+     * actually exist) then the leave removal does not occur.
+     * <p>
+     * I revisted this logic after a year and it took me a while to convince
+     * myself that it was not a misunderstanding on my earlier self's part,
+     * that these linked lists of otherwise empty tiers are a natural
+     * occurance.
+     * <p>
+     * The could be addressed by linking the inner tiers and thinking harder,
+     * but that would increase the size of the project.
+     */
     private final static class MergeInner
     implements Decision
     {
+        /**
+         * Determine if we are deleting a final leaf in a child and therefore
+         * need to travel to the left.
+         */
         private boolean lockLeft(Mutation mutation, Branch branch, Object search)
         {
             if (search != null && branch.getPivot() != null && !mutation.mapOfVariables.containsKey(LEFT_LEAF))
@@ -1960,7 +2090,8 @@ implements Serializable
             return false;
         }
 
-        public boolean test(Mutation mutation, Level levelOfParent, Level levelOfChild, InnerTier parent)
+        public boolean test(Mutation mutation, Level levelOfParent,
+                            Level levelOfChild, InnerTier parent)
         {
             Branch branch = parent.find(mutation.txn, mutation.fields);
             InnerTier child = (InnerTier) parent.getTier(mutation.txn, branch.getRightKey());
@@ -1977,14 +2108,14 @@ implements Serializable
                 {
                     inner = storage.getInnerTier(mutation.structure, mutation.txn, inner.get(index).getRightKey());
                     levelOfParent.lockAndAdd(inner);
-                    index = inner.getSize();
+                    index = inner.getSize() - 1;
                 }
                 LeafTier leaf = storage.getLeafTier(mutation.structure, mutation.txn, inner.get(index).getRightKey());
                 levelOfParent.lockAndAdd(leaf);
                 mutation.mapOfVariables.put(LEFT_LEAF, leaf);
             }
 
-            if (child.getSize() == 0)
+            if (child.getSize() == 1)
             {
                 if (!mutation.mapOfVariables.containsKey(DELETING))
                 {
@@ -2002,7 +2133,7 @@ implements Serializable
                 InnerTier left = (InnerTier) parent.getTier(mutation.txn, parent.get(index - 1).getRightKey());
                 levelOfChild.lockAndAdd(left);
                 levelOfChild.lockAndAdd(child);
-                if (left.getSize() + child.getSize() <= mutation.structure.getSchema().getSize())
+                if (left.getSize() + child.getSize() <= mutation.structure.getSchema().getInnerSize())
                 {
                     listToMerge.add(left);
                     listToMerge.add(child);
@@ -2014,11 +2145,11 @@ implements Serializable
                 levelOfChild.lockAndAdd(child);
             }
 
-            if (listToMerge.isEmpty() && index != parent.getSize())
+            if (listToMerge.isEmpty() && index != parent.getSize() - 1)
             {
                 InnerTier right = (InnerTier) parent.getTier(mutation.txn, parent.get(index + 1).getRightKey());
                 levelOfChild.lockAndAdd(right);
-                if (child.getSize() + right.getSize() <= mutation.structure.getSchema().getSize())
+                if ((child.getSize() + right.getSize() - 1) == mutation.structure.getSchema().getInnerSize())
                 {
                     listToMerge.add(child);
                     listToMerge.add(right);
@@ -2063,7 +2194,7 @@ implements Serializable
                 Branch branch = parent.remove(index);
 
                 right.get(0).setPivot(branch.getPivot());
-                while (right.getSize() != -1)
+                while (right.getSize() != 0)
                 {
                     left.add(right.remove(0));
                 }
@@ -2097,8 +2228,12 @@ implements Serializable
             public void operate(Mutation mutation)
             {
                 int index = parent.getIndexOfTier(child.getKey());
+
                 parent.remove(index);
-                parent.get(0).setPivot(null);
+                if (parent.getSize() != 0)
+                {
+                    parent.get(0).setPivot(null);
+                }
 
                 mutation.mapOfDirtyTiers.remove(child.getKey());
                 mutation.structure.getStorage().free(mutation.structure, mutation.txn, child);
@@ -2127,28 +2262,28 @@ implements Serializable
             if (index != 0)
             {
                 previous = (LeafTier) parent.getTier(mutation.txn, parent.get(index - 1).getRightKey());
-                levelOfChild.lock(previous);
+                levelOfChild.lockAndAdd(previous);
                 leaf = (LeafTier) parent.getTier(mutation.txn, branch.getRightKey());
-                levelOfChild.lock(leaf);
+                levelOfChild.lockAndAdd(leaf);
                 int capacity = previous.getSize() + leaf.getSize();
-                if (capacity <= mutation.structure.getSchema().getSize() + 1)
+                if (capacity <= mutation.structure.getSchema().getLeafSize() + 1)
                 {
                     listToMerge.add(previous);
                     listToMerge.add(leaf);
                 }
                 else
                 {
-                    levelOfChild.release(previous);
+                    levelOfChild.unlockAndRemove(previous);
                 }
             }
 
             if (leaf == null)
             {
                 leaf = (LeafTier) parent.getTier(mutation.txn, branch.getRightKey());
-                levelOfChild.lock(leaf);
+                levelOfChild.lockAndAdd(leaf);
             }
 
-            if (leaf.getSize() == 1 && parent.getSize() == 0 && mutation.mapOfVariables.containsKey(DELETING))
+            if (leaf.getSize() == 1 && parent.getSize() == 1 && mutation.mapOfVariables.containsKey(DELETING))
             {
                 LeafTier left = (LeafTier) mutation.mapOfVariables.get(LEFT_LEAF);
                 if (left == null)
@@ -2162,29 +2297,30 @@ implements Serializable
                 mutation.leafOperation = new Remove(leaf);
                 return true;
             }
-            else if (listToMerge.isEmpty() && index != parent.getSize())
+            else if (listToMerge.isEmpty() && index != parent.getSize() - 1)
             {
                 LeafTier next = (LeafTier) parent.getTier(mutation.txn, parent.get(index + 1).getRightKey());
-                levelOfChild.lock(next);
+                levelOfChild.lockAndAdd(next);
                 int capacity = next.getSize() + leaf.getSize();
-                if (capacity <= mutation.structure.getSchema().getSize() + 1)
+                if (capacity <= mutation.structure.getSchema().getLeafSize() + 1)
                 {
                     listToMerge.add(leaf);
                     listToMerge.add(next);
                 }
                 else
                 {
-                    levelOfChild.release(next);
+                    levelOfChild.unlockAndRemove(next);
                 }
             }
+
             if (listToMerge.isEmpty())
             {
                 if (leaf == null)
                 {
+                    // FIXME This is dead code.
                     leaf = (LeafTier) parent.getTier(mutation.txn, branch.getRightKey());
-                    levelOfChild.lock(leaf);
+                    levelOfChild.lockAndAdd(leaf);
                 }
-                levelOfChild.add(leaf);
                 mutation.leafOperation = new Remove(leaf);
             }
             else
@@ -2197,8 +2333,6 @@ implements Serializable
                 }
                 LeafTier left = (LeafTier) listToMerge.get(0);
                 LeafTier right = (LeafTier) listToMerge.get(1);
-                levelOfChild.add(left);
-                levelOfChild.add(right);
                 levelOfParent.listOfOperations.add(new Merge(parent, left, right));
                 mutation.leafOperation = new Remove(leaf);
             }
@@ -2266,7 +2400,7 @@ implements Serializable
                 }
                 while (current != null && compare(mutation.fields, mutation.getFields(current.get(0))) == 0);
 
-                if (mutation.mapOfVariables.containsKey(RESULT) && count == found && current.getSize() == mutation.structure.getSchema().getSize() - 1 && compare(mutation.fields, mutation.getFields(current.get(current.getSize() - 1))) == 0)
+                if (mutation.mapOfVariables.containsKey(RESULT) && count == found && current.getSize() == mutation.structure.getSchema().getLeafSize() - 1 && compare(mutation.fields, mutation.getFields(current.get(current.getSize() - 1))) == 0)
                 {
                     for (;;)
                     {
@@ -2326,7 +2460,7 @@ implements Serializable
                 {
                     left.addBucket(right.remove(0));
                 }
-
+                // FIXME Get last leaf. 
                 left.setNextLeafKey(right.getNextLeafKey());
 
                 mutation.mapOfDirtyTiers.remove(right.getKey());
@@ -2384,7 +2518,7 @@ implements Serializable
     {
         public LockExtractor getSync;
 
-        public final LinkedList<Tier> listOfLockedTiers = new LinkedList<Tier>();
+        public final Map<Object, Tier> mapOfLockedTiers = new HashMap<Object, Tier>();
 
         public final LinkedList<Operation> listOfOperations = new LinkedList<Operation>();
 
@@ -2393,35 +2527,38 @@ implements Serializable
             this.getSync = exclusive ? (LockExtractor) new WriteLockExtractor() : (LockExtractor) new ReadLockExtractor();
         }
 
-        public ReadWriteLock getReadWriteLock()
-        {
-            return (ReadWriteLock) listOfLockedTiers.getFirst();
-        }
-
         public void lockAndAdd(Tier tier)
         {
-            lock(tier);
-            add(tier);
+            lock_(tier);
+            add_(tier);
         }
-
-        public void add(Tier tier)
+        
+        public void unlockAndRemove(Tier tier)
         {
-            listOfLockedTiers.add(tier);
+            assert mapOfLockedTiers.containsKey(tier.getKey());
+            
+            mapOfLockedTiers.remove(tier.getKey());
+            unlock_(tier);
         }
 
-        public void lock(Tier tier)
+        public void add_(Tier tier)
+        {
+            mapOfLockedTiers.put(tier.getKey(), tier);
+        }
+
+        public void lock_(Tier tier)
         {
             getSync.getSync(tier.getReadWriteLock()).lock();
         }
 
-        public void release(Tier tier)
+        public void unlock_(Tier tier)
         {
             getSync.getSync(tier.getReadWriteLock()).unlock();
         }
 
         public void release()
         {
-            Iterator<Tier> lockedTiers = listOfLockedTiers.iterator();
+            Iterator<Tier> lockedTiers = mapOfLockedTiers.values().iterator();
             while (lockedTiers.hasNext())
             {
                 Tier tier = (Tier) lockedTiers.next();
@@ -2431,18 +2568,18 @@ implements Serializable
 
         public void releaseAndClear()
         {
-            Iterator<Tier> lockedTiers = listOfLockedTiers.iterator();
+            Iterator<Tier> lockedTiers = mapOfLockedTiers.values().iterator();
             while (lockedTiers.hasNext())
             {
                 Tier tier = (Tier) lockedTiers.next();
                 getSync.getSync(tier.getReadWriteLock()).unlock();
             }
-            listOfLockedTiers.clear();
+            mapOfLockedTiers.clear();
         }
 
         private void exclusive()
         {
-            Iterator<Tier> lockedTiers = listOfLockedTiers.iterator();
+            Iterator<Tier> lockedTiers = mapOfLockedTiers.values().iterator();
             while (lockedTiers.hasNext())
             {
                 Tier tier = (Tier) lockedTiers.next();
@@ -2455,7 +2592,7 @@ implements Serializable
         {
             if (getSync.isExeclusive())
             {
-                Iterator<Tier> lockedTiers = listOfLockedTiers.iterator();
+                Iterator<Tier> lockedTiers = mapOfLockedTiers.values().iterator();
                 while (lockedTiers.hasNext())
                 {
                     Tier tier = (Tier) lockedTiers.next();
@@ -2483,7 +2620,7 @@ implements Serializable
                 release();
                 // TODO Use Release and Clear.
                 levelOfChild.release();
-                levelOfChild.listOfLockedTiers.clear();
+                levelOfChild.mapOfLockedTiers.clear();
                 exclusive();
                 levelOfChild.exclusive();
                 return true;
@@ -2491,7 +2628,7 @@ implements Serializable
             else if (!levelOfChild.getSync.isExeclusive())
             {
                 levelOfChild.release();
-                levelOfChild.listOfLockedTiers.clear();
+                levelOfChild.mapOfLockedTiers.clear();
                 levelOfChild.exclusive();
                 return true;
             }

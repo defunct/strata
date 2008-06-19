@@ -96,7 +96,7 @@ public class Viewer
             }
 
             Strata.LeafTier leaf = (Strata.LeafTier) node.tier;
-            int size = structure.getSchema().getSize();
+            int size = structure.getSchema().getLeafSize();
             if (index == size)
             {
                 Strata.LeafTier next = storage.getLeafTier(structure, null, leaf.getNextLeafKey());
@@ -154,7 +154,7 @@ public class Viewer
                 return false;
             }
             Strata.LeafTier leaf = (Strata.LeafTier) tier;
-            int size = structure.getSchema().getSize();
+            int size = structure.getSchema().getLeafSize();
             if (leaf.getSize() == size && leaf.get(0).equals(leaf.get(size - 1)))
             {
                 return true;
@@ -180,7 +180,7 @@ public class Viewer
 
                 return count;
             }
-            return (node.tier instanceof Strata.InnerTier) ? node.tier.getSize() + 1 : node.tier.getSize();
+            return node.tier.getSize();
         }
 
         public int getIndexOfChild(Object parent, Object child)
