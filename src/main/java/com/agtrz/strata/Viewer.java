@@ -178,9 +178,9 @@ public class Viewer
                 }
                 while (leaf != null && previous.get(0).equals(leaf.get(0)));
 
-                return count + 1;
+                return count;
             }
-            return node.tier.getSize() + 1;
+            return (node.tier instanceof Strata.InnerTier) ? node.tier.getSize() + 1 : node.tier.getSize();
         }
 
         public int getIndexOfChild(Object parent, Object child)
@@ -224,7 +224,7 @@ public class Viewer
             {
                 this.root = inner;
             }
-            if (structure == null)
+            if (this.structure == null)
             {
                 this.structure = structure;
             }
@@ -242,6 +242,10 @@ public class Viewer
             if (root == null)
             {
                 root = inner;
+            }
+            if (structure == null)
+            {
+                this.structure = structure;
             }
             return inner;
         }
@@ -268,15 +272,22 @@ public class Viewer
 
         public Strata.Storage.Schema getSchema()
         {
-            return new Schema();
+            return new Schema(this);
         }
 
         public final static class Schema
         implements Strata.Storage.Schema
         {
+            private final TreeModelStorage storage;
+            
+            public Schema(TreeModelStorage storage)
+            {
+                this.storage = storage;
+            }
+
             public Storage newStorage()
             {
-                return new TreeModelStorage();
+                return storage;
             }
         }
 

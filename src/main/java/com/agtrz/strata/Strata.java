@@ -969,6 +969,370 @@ implements Serializable
 //        }
 //    }
 //
+
+    /**
+     * A strategy for both caching dirty tiers in order to writing them out to
+     * storage in a batch as well as for locking the Strata for exclusive
+     * insert and delete.
+     */
+    interface TierCache
+    {
+        /**
+         * Determines if the tier cache will invoke the commit method of the
+         * storage implementation after the tier cache writes a set of dirty
+         * tiers.
+         *
+         * @return True if the tier cache will auto commit.
+         */
+        public boolean isAutoCommit();
+        
+        /**
+         * Sets whether the tier cache will invoke the commit method of the
+         * storage implementation after the tier cache writes a set of dirty
+         * tiers.
+         *
+         * @param autoCommit If true the tier cache will auto commit.
+         */
+        public void setAutoCommit(boolean autoCommit);
+        
+        /**
+         * Lock the Strata exclusive for inserts and deletes. This does not
+         * prevent other threads from reading the Strata.
+         */
+        public void lock();
+        
+        /**
+         * A noop implementation of storage synchronization called before an
+         * insert or delete of an object from the strata.
+         */
+        public void begin();
+        
+        /**
+         * Record a tier as dirty in the tier cache.
+         */
+        public void dirty(Storage storage, Object txn, Tier tier);
+        
+        /**
+         * A noop implementation of storage synchronization called after an
+         * insert or delete of an object from the strata.
+         *
+         * @param storage The storage strategy.
+         * @param txn A storage specific state object.
+         */
+        public void end(Storage storage, Object txn);
+        
+        /**
+         * Since the cache is always empty, this method merely calls the
+         * commit method of the storage strategy.
+         *
+         * @param storage The storage strategy.
+         * @param txn A storage specific state object.
+         */
+        public void force(Storage storage, Object txn);
+        
+        /**
+         * Lock the Strata for exclusive inserts and deletes. This does not
+         * prevent other threads from reading the Strata.
+         */
+        public void unlock();
+        
+        /**
+         * Create a new tier cache based on this prototype tier cache
+         * instance. This is part of a prototype construction pattern.
+         *
+         * @return A new tier cache based on this prototype instance.
+         */
+        public TierCache newTierCache();
+    }
+    
+    /**
+     * A tier cache for in memory storage applications that merely implements
+     * the ability to lock the common structure. This implementation
+     * immediately calls the write method of the storage implementation when a
+     * page is passed to the {@link NullTierCache#dirty dirty()} method. If
+     * auto commit is true, the commit method of the storage strategy is
+     * called immediately thereafter.
+     * <p>
+     * The auto commit property will retain the value set, but it does not
+     * actually effect the behavior of storage.
+     */
+    public static class EmptyTierCache
+    implements TierCache
+    {
+        /**
+         * A lock instance that will exclusivly lock the Strata for insert and
+         * delete. This lock instance is common to all tier caches generated
+         * by the tier cache prototype.
+         */
+        protected final Lock lock;
+        
+        /**
+         * A count of the number of times the lock method was called on this
+         * tier cache instance.
+         */
+        protected int lockCount;
+        
+        /** 
+         * If true the tier cache will invoke the commit method of the storage
+         * implementation after the tier cache writes a set of dirty tiers.
+         */
+        private boolean autoCommit;
+
+        /**
+         * Create an empty tier cache with 
+         */
+        public EmptyTierCache(Lock lock)
+        {
+            this.lock = lock;
+        }
+
+        /**
+         * Determines if the tier cache will invoke the commit method of the
+         * storage implementation after the tier cache writes a set of dirty
+         * tiers.
+         *
+         * @return True if the tier cache will auto commit.
+         */
+        public boolean isAutoCommit()
+        {
+            return autoCommit;
+        }
+        
+        /**
+         * Sets whether the tier cache will invoke the commit method of the
+         * storage implementation after the tier cache writes a set of dirty
+         * tiers.
+         *
+         * @param autoCommit If true the tier cache will auto commit.
+         */
+        public void setAutoCommit(boolean autoCommit)
+        {
+            this.autoCommit = autoCommit;
+        }
+        
+        /**
+         * Lock the Strata exclusive for iinserts and deletes. This does not
+         * prevent other threads from reading the Strata.
+         */
+        public void lock()
+        {
+            if (lockCount == 0)
+            {
+                lock.lock();
+            }
+            lockCount++;
+        }
+
+        /**
+         * A noop implementation of storage synchronization called before an
+         * insert or delete of an object from the strata.
+         */
+        public void begin()
+        {
+        }
+
+        /**
+         * For the empty tier cache, this method immediately writes the dirty
+         * tier to storage and commits the write if auto commit is enabled.
+         *
+         * @param storage The storage strategy.
+         * @param txn A storage specific state object.
+         * @param tier The dirty tier.
+         */
+        public void dirty(Storage storage, Object txn, Tier tier)
+        {
+            tier.write(txn);
+            if (isAutoCommit())
+            {
+                storage.commit(txn);
+            }
+        }
+        
+        /**
+         * A noop implementation of storage synchronization called after an
+         * insert or delete of an object from the strata.
+         *
+         * @param storage The storage strategy.
+         * @param txn A storage specific state object.
+         */
+        public void end(Storage storage, Object txn)
+        {
+        }
+          
+        /**
+         * Since the cache is always empty, this method merely calls the
+         * commit method of the storage strategy.
+         *
+         * @param storage The storage strategy.
+         * @param txn A storage specific state object.
+         */
+        public void force(Storage storage, Object txn)
+        {
+            storage.commit(txn);
+        }
+        
+        /**
+         * Lock the Strata for exclusive inserts and deletes. This does not
+         * prevent other threads from reading the Strata.
+         */
+        public void unlock()
+        {
+            lockCount--;
+            if (lockCount == 0)
+            {
+                lock.unlock();
+            }
+        }
+
+        /**
+         * Returns a new empty tier cache built from this prototype empty tier
+         * cache. This will be a new empty tier cache that references the same
+         * exclusive lock on the Strata.
+         *
+         * @return A new tier cache based on this prototype instance.
+         */
+        public TierCache newTierCache()
+        {
+            return new EmptyTierCache(lock);
+        }
+    }
+    
+    static class AbstractTierCache
+    extends EmptyTierCache
+    {
+        protected final Map<Object, Tier> mapOfDirtyTiers;
+        
+        protected final int max;
+
+        private boolean autoCommit;
+        
+        public AbstractTierCache(Lock lock, Map<Object, Tier> mapOfDirtyTiers, int max)
+        {
+            super(lock);
+            this.mapOfDirtyTiers = mapOfDirtyTiers;
+            this.max = max;
+        }
+        
+        public boolean isAutoCommit()
+        {
+            return autoCommit;
+        }
+        
+        public void setAutoCommit(boolean autoCommit)
+        {
+            this.autoCommit = autoCommit;
+        }
+
+        public void add(Tier tier)
+        {
+            synchronized (mapOfDirtyTiers)
+            {
+                mapOfDirtyTiers.put(tier.getKey(), tier);
+            }
+        }
+        
+        protected void save(Storage storage, Object txn, boolean force)
+        {
+            synchronized (mapOfDirtyTiers)
+            {
+                if (force || mapOfDirtyTiers.size() >= max)
+                {
+                    Iterator<Tier> tiers = mapOfDirtyTiers.values().iterator();
+                    while (tiers.hasNext())
+                    {
+                        Tier tier = (Tier) tiers.next();
+                        tier.write(txn);
+                    }
+                    mapOfDirtyTiers.clear();
+
+                    if (force || isAutoCommit())
+                    {
+                        storage.commit(txn);
+                    }
+                }
+            }
+        }
+        
+        public void force(Storage storage, Object txn)
+        {
+            save(storage, txn, true);
+        }
+    }
+     
+    
+    public static class PerQueryTierCache
+    extends AbstractTierCache
+    {
+        private final Lock lock;
+        
+        public PerQueryTierCache(Lock lock, int max)
+        {
+            super(lock, new HashMap<Object, Tier>(), max);
+            this.lock = lock;
+        }
+        
+        public void begin()
+        {
+            if (mapOfDirtyTiers.size() == 0)
+            {
+                lock();
+            }
+        }
+        
+        public void end(Storage storage, Object txn)
+        {
+            save(storage, txn, false);
+            if (mapOfDirtyTiers.size() == 0)
+            {
+                unlock();
+            }
+        }
+        
+        public TierCache newTierCache()
+        {
+            return new PerQueryTierCache(lock, max);
+        }
+    }
+    
+    public static class CommonTierCache
+    extends AbstractTierCache
+    {
+        private final ReadWriteLock readWriteLock;
+        public CommonTierCache(ReadWriteLock readWriteLock, int max)
+        {
+            super(readWriteLock.writeLock(), new HashMap<Object, Tier>(), max);
+            this.readWriteLock = readWriteLock;
+        }
+        
+        private CommonTierCache(ReadWriteLock readWriteLock, Map<Object, Tier> mapOfDirtyTiers, int max)
+        {
+            super(readWriteLock.writeLock(), mapOfDirtyTiers, max);
+            this.readWriteLock = readWriteLock;
+        }
+        
+        public void begin()
+        {
+            if (lockCount == 0)
+            {
+                readWriteLock.readLock().lock();
+            }
+        }
+        
+        public void end(Storage storage, Object txn)
+        {
+            save(storage, txn, false);
+            if (lockCount == 0)
+            {
+                readWriteLock.readLock().unlock();
+            }
+        }
+        
+        public TierCache newTierCache()
+        {
+            return new CommonTierCache(readWriteLock, mapOfDirtyTiers, max);
+        }
+    }
+    
     private final static class Mutation
     {
         public final Structure structure;
@@ -1605,6 +1969,7 @@ implements Serializable
 
             if (lockLeft(mutation, branch, search))
             {
+                // We have encountered a request to search for a replace
                 Storage storage = mutation.structure.getStorage();
                 int index = parent.getIndexOfTier(child.getKey()) - 1;
                 InnerTier inner = parent;
@@ -1660,7 +2025,7 @@ implements Serializable
                 }
             }
 
-            if (!listToMerge.isEmpty())
+            if (listToMerge.size() != 0)
             {
                 if (mutation.mapOfVariables.containsKey(DELETING))
                 {
@@ -1799,7 +2164,6 @@ implements Serializable
             }
             else if (listToMerge.isEmpty() && index != parent.getSize())
             {
-
                 LeafTier next = (LeafTier) parent.getTier(mutation.txn, parent.get(index + 1).getRightKey());
                 levelOfChild.lock(next);
                 int capacity = next.getSize() + leaf.getSize();
@@ -1931,7 +2295,7 @@ implements Serializable
 
         public final class Fail
         implements LeafOperation
-        {
+        {public Fail() { }
             public boolean operate(Mutation mutation, Level levelOfLeaf)
             {
                 return false;
@@ -2205,8 +2569,32 @@ implements Serializable
             }
         }
 
-        private Object generalized(Mutation mutation, RootDecision initial, Decision subsequent, Decision swap, Decision penultimate)
+        /**
+         * Both {@link #insert inert()} and {@link #remove remove()}  use this
+         * generalized mutation method that implements locking the proper
+         * tiers during the descent of the tree to find the leaf to mutate.
+         * <p>
+         * This generalized mutation will insert or remove a single item.
+         *
+         * @param mutation An object that maintains the state of this insert
+         * or delete.
+         * @param initial A decision to split or merge the root.
+         * @param subsequent A decision to split, merge or delete an inner
+         * tier that is not the root tier.
+         * @param swap For remove, determine if the object removed is an inner
+         * tier pivot and needs to be swapped.
+         * @param penultimate A decision about the both the inner tier that
+         * references leaves and the leaf tier itself, whether to split, merge
+         * or delete the leaf, the insert or delete action to take on the
+         * leaf, or whether to restart the descent.
+         */
+        private Object generalized(Mutation mutation, RootDecision initial,
+            Decision subsequent, Decision swap, Decision penultimate)
         {
+            // TODO Replace this with our caching pattern.
+
+            // Inform the tier cache that we are about to perform a mutation
+            // of the tree.
             if (mapOfDirtyTiers.size() == 0)
             {
                 strata.writeMutex.lock();
@@ -2215,6 +2603,7 @@ implements Serializable
             Storage storage = strata.structure.getStorage();
             synchronized (this)
             {
+                // FIXME Not going to happen. Right?
                 if (storage.isKeyNull(strata.rootKey))
                 {
                     if (mutation.deletable != null)
@@ -2229,8 +2618,6 @@ implements Serializable
                     InnerTier root = storage.newInnerTier(strata.structure, txn, LEAF);
                     LeafTier leaf = storage.newLeafTier(strata.structure, txn);
                     root.add(new Branch(leaf.getKey(), null));
-
-                    // strata.rootKey = root.getKey();
 
                     mapOfDirtyTiers.put(root.getKey(), root);
                     mapOfDirtyTiers.put(leaf.getKey(), leaf);
@@ -2320,6 +2707,8 @@ implements Serializable
             return mutation.mapOfVariables.get(RESULT);
         }
 
+        // FIXME Rename add.
+        // FIXME Key of object?
         public void insert(Object keyOfObject)
         {
             Comparable<?>[] fields = strata.structure.getSchema().getFieldExtractor().getFields(txn, keyOfObject);
@@ -2334,6 +2723,8 @@ implements Serializable
             return remove(fields, ANY);
         }
 
+        // TODO Where do I actually use deletable? Makes sense, though. A
+        // condition to choose which to delete.
         public Object remove(Comparable<?>[] fields, Deletable deletable)
         {
             Mutation mutation = new Mutation(strata.structure, txn, mapOfDirtyTiers, null, fields, deletable);
@@ -2362,7 +2753,8 @@ implements Serializable
             return find(strata.structure.getSchema().getFieldExtractor().getFields(txn, keyOfObject));
         }
 
-        public Cursor find(Comparable<?>[] fields)
+        // Here is where I get the power of not using comparator.
+        public Cursor find(Comparable<?>... fields)
         {
             Lock previous = new ReentrantLock();
             previous.lock();
