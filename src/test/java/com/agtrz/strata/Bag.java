@@ -13,8 +13,7 @@ public abstract class Bag<O, E extends Comparable<? super E>>
     {
         return new Two<A, B>(first, second);
     }
-    
-    
+
     public static class Two<A extends Comparable<? super A>, B extends Comparable<? super B>>
     implements Comparable<Two<A, B>>
     {

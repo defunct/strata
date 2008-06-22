@@ -37,20 +37,21 @@ import javax.swing.event.TreeModelListener;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 
-import com.agtrz.strata.Strata.Storage;
-
 public class Viewer
 {
     private final static class TreeNode
     {
-        public final Strata.Tier tier;
+        public final Strata.Tier<?> tier;
 
         public final String text;
+        
+        public final long type;
 
-        public TreeNode(Strata.Tier tier, String text)
+        public TreeNode(Strata.Tier<?> tier, String text, long type)
         {
             this.tier = tier;
             this.text = text;
+            this.type = type;
         }
 
         public String toString()
@@ -59,18 +60,26 @@ public class Viewer
         }
     }
 
-    private final static class TreeModelStorage
-    implements TreeModel, Strata.Storage
+    private final static class StrataTreeModel
+    implements TreeModel
     {
         private final static long serialVersionUID = 20070613L;
 
-        private final Strata.Storage storage = new ArrayListStorage();
+        private final Strata.Store<Strata.Branch> innerStorage;
+        
+        private final Strata.Store<Object> leafStorage;
 
         private final EventListenerList listOfListeners = new EventListenerList();
 
         private Strata.Structure structure;
 
-        private Strata.Tier root;
+        private Strata.Tier<Strata.Branch> root;
+        
+        public StrataTreeModel(Strata.Store<Strata.Branch> innerStorage, Strata.Store<Object> leafStorage, Strata strata)
+        {
+            this.innerStorage = innerStorage;
+            this.leafStorage = leafStorage;
+        }
 
         public void addTreeModelListener(TreeModelListener listener)
         {
@@ -82,25 +91,26 @@ public class Viewer
             listOfListeners.remove(TreeModelListener.class, listener);
         }
 
+        @SuppressWarnings("unchecked")
         public Object getChild(Object parent, int index)
         {
             TreeNode node = (TreeNode) parent;
 
-            if (node.tier instanceof Strata.InnerTier)
+            if (node.type == Strata.INNER)
             {
-                Strata.InnerTier inner = (Strata.InnerTier) node.tier;
+                Strata.InnerTier inner = new Strata.InnerTier((Strata.Tier<Strata.Branch>) node.tier);
                 Strata.Branch branch = (Strata.Branch) inner.get(index);
-                Strata.Tier tier = inner.getTier(null, branch.getRightKey());
+                Strata.Tier<Strata.Branch> tier = innerStorage.getTier(null, branch.getRightKey());
                 Object pivot = branch.getPivot();
-                return new TreeNode(tier, pivot == null ? "<" : pivot.toString());
+                return new TreeNode(tier, pivot == null ? "<" : pivot.toString(), (short) inner.getChildType());
             }
 
-            Strata.LeafTier leaf = (Strata.LeafTier) node.tier;
+            Strata.LeafTier leaf = new Strata.LeafTier((Strata.Tier<Object>) node.tier);
             int size = structure.getSchema().getLeafSize();
             if (index == size)
             {
-                Strata.LeafTier next = storage.getLeafTier(structure, null, leaf.getNextLeafKey());
-                if (next != null && next.getSize() != 0 && next.get(0).equals(leaf.get(0)))
+                Strata.LeafTier next = new Strata.LeafTier(leafStorage.getTier(null, leaf.getNextLeafKey()));
+                if (next != null && next.getTier().size() != 0 && next.get(0).equals(leaf.get(0)))
                 {
                     return next.get(0) + " [" + index + "]";
                 }
@@ -113,16 +123,16 @@ public class Viewer
                 while (offset >= size)
                 {
                     offset -= size;
-                    leaf = storage.getLeafTier(structure, null, leaf.getNextLeafKey());
+                    leaf = new Strata.LeafTier(leafStorage.getTier(null, leaf.getNextLeafKey()));
                 }
-                if (leaf == null || !leaf.get(0).equals(object) || leaf.getSize() == offset)
+                if (leaf == null || !leaf.get(0).equals(object) || leaf.getTier().size() == offset)
                 {
                     return "<";
                 }
                 return leaf.get(0) + " [" + index + "]";
             }
 
-            if (index == leaf.getSize())
+            if (index == leaf.getTier().size())
             {
                 return "<";
             }
@@ -136,7 +146,7 @@ public class Viewer
 
             if (offset == index)
             {
-                if (index + 1 != leaf.getSize() && object.equals(leaf.get(index + 1)))
+                if (index + 1 != leaf.getTier().size() && object.equals(leaf.get(index + 1)))
                 {
                     return object + " [0]";
                 }
@@ -147,40 +157,47 @@ public class Viewer
             return leaf.get(index) + " [" + (index - offset) + "]";
         }
 
-        private boolean linkedLeaves(Strata.Tier tier)
+        @SuppressWarnings("unchecked")
+        private boolean linkedLeaves(TreeNode node)
         {
-            if (tier instanceof Strata.InnerTier)
+            if (node.type == Strata.INNER)
             {
                 return false;
             }
-            Strata.LeafTier leaf = (Strata.LeafTier) tier;
+            Strata.LeafTier leaf = new Strata.LeafTier((Strata.Tier<Object>) node.tier);
             int size = structure.getSchema().getLeafSize();
-            if (leaf.getSize() == size && leaf.get(0).equals(leaf.get(size - 1)))
+            if (leaf.getTier().size() == size && leaf.get(0).equals(leaf.get(size - 1)))
             {
                 return true;
             }
             return false;
         }
+        
+        @SuppressWarnings("unchecked")
+        private Strata.LeafTier wrapLeaf(TreeNode node)
+        {
+            return new Strata.LeafTier((Strata.Tier<Object>) node.tier);
+        }
 
         public int getChildCount(Object object)
         {
             TreeNode node = (TreeNode) object;
-            if (linkedLeaves(node.tier))
+            if (linkedLeaves(node))
             {
-                Strata.LeafTier leaf = (Strata.LeafTier) node.tier;
+                Strata.LeafTier leaf = wrapLeaf(node);
                 Strata.LeafTier previous;
                 int count = 0;
                 do
                 {
-                    count += leaf.getSize();
+                    count += leaf.getTier().size();
                     previous = leaf;
-                    leaf = storage.getLeafTier(structure, null, leaf.getNextLeafKey());
+                    leaf = new Strata.LeafTier(leafStorage.getTier(null, leaf.getNextLeafKey()));
                 }
                 while (leaf != null && previous.get(0).equals(leaf.get(0)));
 
                 return count;
             }
-            return node.tier.getSize();
+            return node.tier.size();
         }
 
         public int getIndexOfChild(Object parent, Object child)
@@ -190,7 +207,7 @@ public class Viewer
 
         public Object getRoot()
         {
-            return new TreeNode(root, null);
+            return new TreeNode(root, null, Strata.INNER);
         }
 
         public boolean isLeaf(Object object)
@@ -208,112 +225,13 @@ public class Viewer
             TreeModelListener[] listeners = (TreeModelListener[]) listOfListeners.getListeners(TreeModelListener.class);
             for (int i = 0; i < listeners.length; i++)
             {
-                listeners[i].treeStructureChanged(new TreeModelEvent(this, new Object[] { root }));
+                listeners[i].treeStructureChanged(new TreeModelEvent(this, new Object[] { new TreeNode(root, null, Strata.INNER) }));
             }
         }
 
         public void reset()
         {
             root = null;
-        }
-
-        public Strata.InnerTier newInnerTier(Strata.Structure structure, Object txn, short typeOfChildren)
-        {
-            Strata.InnerTier inner = storage.newInnerTier(structure, txn, typeOfChildren);
-            if (root == null)
-            {
-                this.root = inner;
-            }
-            if (this.structure == null)
-            {
-                this.structure = structure;
-            }
-            return inner;
-        }
-
-        public Strata.LeafTier newLeafTier(Strata.Structure structure, Object txn)
-        {
-            return storage.newLeafTier(structure, txn);
-        }
-
-        public Strata.InnerTier getInnerTier(Strata.Structure structure, Object txn, Object key)
-        {
-            Strata.InnerTier inner = storage.getInnerTier(structure, txn, key);
-            if (root == null)
-            {
-                root = inner;
-            }
-            if (structure == null)
-            {
-                this.structure = structure;
-            }
-            return inner;
-        }
-
-        public Strata.LeafTier getLeafTier(Strata.Structure structure, Object txn, Object key)
-        {
-            return storage.getLeafTier(structure, txn, key);
-        }
-
-        public Object getKey(Strata.Tier tier)
-        {
-            return storage.getKey(tier);
-        }
-
-        public Object getNullKey()
-        {
-            return storage.getNullKey();
-        }
-
-        public boolean isKeyNull(Object object)
-        {
-            return storage.isKeyNull(object);
-        }
-
-        public Strata.Storage.Schema getSchema()
-        {
-            return new Schema(this);
-        }
-
-        public final static class Schema
-        implements Strata.Storage.Schema
-        {
-            private final TreeModelStorage storage;
-            
-            public Schema(TreeModelStorage storage)
-            {
-                this.storage = storage;
-            }
-
-            public Storage newStorage()
-            {
-                return storage;
-            }
-        }
-
-        public void write(Strata.Structure structure, Object txn, Strata.InnerTier inner)
-        {
-            storage.write(structure, txn, inner);
-        }
-
-        public void write(Strata.Structure structure, Object txn, Strata.LeafTier leaf)
-        {
-            storage.write(structure, txn, leaf);
-        }
-
-        public void free(Strata.Structure structure, Object txn, Strata.InnerTier inner)
-        {
-            storage.free(structure, txn, inner);
-        }
-
-        public void free(Strata.Structure structure, Object txn, Strata.LeafTier leaf)
-        {
-            storage.free(structure, txn, leaf);
-        }
-
-        public void commit(Object txn)
-        {
-            storage.commit(txn);
         }
     }
 
@@ -440,7 +358,7 @@ public class Viewer
                 strataCozy.setSize(((Integer) number.getValue()).intValue());
             }
 
-            TreeModelStorage model = (TreeModelStorage) tree.getModel();
+            StrataTreeModel model = (StrataTreeModel) tree.getModel();
             model.fire();
 
             int i = 0;
@@ -454,28 +372,25 @@ public class Viewer
 
     private final static class StrataCozy
     {
-        private TreeModelStorage storage;
-
         private Strata strata;
 
         private int size;
 
-        public StrataCozy(int size)
+        public StrataCozy(JTree tree, int size)
         {
-            this.storage = new TreeModelStorage();
             setSize(size);
         }
 
         public void setSize(int size)
         {
-            storage.reset();
+            strata.query(null).destroy();
 
             Strata.Schema creator = new Strata.Schema();
 
             creator.setSize(size);
 
             // FIXME Broken.
-            creator.setStorage(storage.getSchema());
+            creator.setStorageSchema(new ArrayListStorage.Schema<Object>());
 
             this.size = size;
             this.strata = creator.newStrata(null);
@@ -494,11 +409,6 @@ public class Viewer
         public Strata getStrata()
         {
             return strata;
-        }
-
-        public TreeModel getTreeModel()
-        {
-            return storage;
         }
     }
 
@@ -574,7 +484,7 @@ public class Viewer
                 }
             }
 
-            TreeModelStorage model = (TreeModelStorage) tree.getModel();
+            StrataTreeModel model = (StrataTreeModel) tree.getModel();
             model.fire();
 
             int i = 0;
@@ -639,7 +549,7 @@ public class Viewer
 
             add.operate(number);
 
-            TreeModelStorage model = (TreeModelStorage) tree.getModel();
+            StrataTreeModel model = (StrataTreeModel) tree.getModel();
             model.fire();
 
             int i = 0;
@@ -672,7 +582,7 @@ public class Viewer
             TreePath selPath = tree.getPathForLocation(event.getX(), event.getY());
             if (selRow != -1 && event.getClickCount() == 2)
             {
-                TreeModelStorage model = (TreeModelStorage) tree.getModel();
+                StrataTreeModel model = (StrataTreeModel) tree.getModel();
                 Object object = selPath.getLastPathComponent();
                 if (model.isLeaf(object) && !"<".equals(object))
                 {
@@ -714,7 +624,6 @@ public class Viewer
 
         frame.setLayout(new BorderLayout());
 
-        StrataCozy strataCozy = new StrataCozy(2);
 
         JPanel panel = new JPanel();
 
@@ -729,7 +638,8 @@ public class Viewer
 
         frame.add(panel, BorderLayout.NORTH);
 
-        JTree tree = new JTree(strataCozy.getTreeModel());
+        JTree tree = new JTree();
+        StrataCozy strataCozy = new StrataCozy(tree, 2);
         Operation remove = new Remove(strataCozy, actions, tests);
         tree.addMouseListener(new RemoveNumber(tree, remove));
         tree.setRootVisible(false);

@@ -1,79 +1,105 @@
 /* Copyright Alan Gutierrez 2006 */
 package com.agtrz.strata;
 
-import com.agtrz.strata.Strata.Storage;
-
-public class ArrayListStorage
-implements Strata.Storage
+public class ArrayListStorage<T>
+implements Strata.Storage<T>
 {
     private static final long serialVersionUID = 20070208L;
-
-    public Strata.InnerTier getInnerTier(Strata.Structure structure, Object txn, Object key)
+    
+    private final ArrayStore<Strata.Branch> innerStore;
+    
+    private final ArrayStore<T> leafStore;
+    
+    public ArrayListStorage(Strata.Structure structure)
     {
-        return (Strata.InnerTier) key;
+        this.innerStore = new ArrayStore<Strata.Branch>(structure, structure.getSchema().getInnerSize());
+        this.leafStore = new ArrayStore<T>(structure, structure.getSchema().getLeafSize());
     }
-
-    public Strata.LeafTier getLeafTier(Strata.Structure structure, Object txn, Object key)
+    
+    public Strata.Store<Strata.Branch> getBranchStore()
     {
-        return (Strata.LeafTier) key;
+        return innerStore;
     }
-
-    public Strata.InnerTier newInnerTier(Strata.Structure structure, Object storage, short typeOfChildren)
+    
+    public Strata.Store<T> getLeafStore()
     {
-        return new Strata.InnerTier(structure, null, typeOfChildren);
+        return leafStore;
     }
-
-    public Strata.LeafTier newLeafTier(Strata.Structure structure, Object storage)
+    
+    public Strata.Storage.Schema<T> newSchema()
     {
-        return new Strata.LeafTier(structure, null);
+        return null;
     }
-
-    public void write(Strata.Structure structure, Object txn, Strata.InnerTier inner)
-    {
-    }
-
-    public void write(Strata.Structure structure, Object txn, Strata.LeafTier leaf)
-    {
-    }
-
-    public void free(Strata.Structure structure, Object txn, Strata.InnerTier inner)
-    {
-    }
-
-    public void free(Strata.Structure structure, Object txn, Strata.LeafTier leaf)
-    {
-    }
-
+    
     public void commit(Object txn)
     {
     }
 
-    public Object getKey(Strata.Tier leaf)
+    public final static class ArrayListKey<T>
+    implements Strata.Identifier<T>
     {
-        return leaf;
-    }
-
-    public boolean isKeyNull(Object object)
-    {
-        return object == null;
-    }
-
-    public Object getNullKey()
-    {
-        return null;
-    }
-
-    public Strata.Storage.Schema getSchema()
-    {
-        return new Schema();
-    }
-
-    public final static class Schema
-    implements Strata.Storage.Schema
-    {
-        public Storage newStorage()
+        public Object getKey(Strata.Tier<T> tier)
         {
-            return new ArrayListStorage();
+            return tier;
+        }
+
+        public Object getNullKey()
+        {
+            return null;
+        }
+
+        public boolean isKeyNull(Object object)
+        {
+            return object == null;
+        }
+    }
+
+    public final static class Schema<T>
+    implements Strata.Storage.Schema<T>
+    {
+        public Strata.Storage<T> newStorage(Strata.Structure structure, Object txn)
+        {
+            return new ArrayListStorage<T>(structure);
+        }
+    }
+
+    public final static class ArrayStore<T>
+    implements Strata.Store<T>
+    {
+        private static final long serialVersionUID = 1L;
+
+        private final int size;
+
+        private final Strata.Structure structure;
+
+        public ArrayStore(Strata.Structure structure, int size)
+        {
+            this.size = size;
+            this.structure = structure;
+        }
+
+        public Strata.Identifier<T> getIdentifier()
+        {
+            return new ArrayListKey<T>();
+        }
+        
+        @SuppressWarnings("unchecked")
+        public Strata.Tier<T> getTier(Object txn, Object key)
+        {
+            return (Strata.Tier<T>) key;
+        }
+
+        public Strata.Tier<T> newTier(Object storage)
+        {
+            return new Strata.Tier<T>(structure, new ArrayListKey<T>(), null, size);
+        }
+
+        public void write(Object txn, Strata.Tier<T> tier)
+        {
+        }
+
+        public void free(Object txn, Strata.Tier<T> tier)
+        {
         }
     }
 }

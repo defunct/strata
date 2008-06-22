@@ -57,14 +57,14 @@ extends TestCase
         query.copacetic();
     }
 
-    private static void assertOneEquals(Object object, Strata.Cursor cursor)
+    private static void assertOneEquals(Object object, Strata.Cursor<Object> cursor)
     {
         assertTrue(cursor.hasNext());
         assertEquals(object.toString(), cursor.next().toString());
         cursor.release();
     }
 
-    private static void assertEquals(int count, Object object, Strata.Cursor cursor)
+    private static void assertEquals(int count, Object object, Strata.Cursor<Object> cursor)
     {
         for (int i = 0; i < count; i++)
         {
@@ -339,7 +339,7 @@ extends TestCase
         int[] insert = new int[] { 1, 2, 3, 4, 5, 6, 7, 7, 7, 8, 9 };
         assertInsert(query, insert);
 
-        Strata.Cursor cursor = query.first();
+        Strata.Cursor<Object> cursor = query.first();
         for (int i = 0; i < insert.length; i++)
         {
             assertTrue(cursor.hasNext());
