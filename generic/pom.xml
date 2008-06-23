@@ -4,11 +4,11 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.agtrz</groupId>
-    <artifactId>strata</artifactId>
+    <artifactId>strata-generic</artifactId>
     <packaging>jar</packaging>
     <version>0.1</version>
 
-    <name>strata</name>
+    <name>strata-generic</name>
     <description>A B-Tree.</description>
 
     <organization>

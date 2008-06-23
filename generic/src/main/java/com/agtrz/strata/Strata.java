@@ -3195,7 +3195,7 @@ implements Serializable
                 inner.getTier().getReadWriteLock().readLock().lock();
                 previous.unlock();
                 previous = inner.getTier().getReadWriteLock().readLock();
-                Branch branch = inner.find(navigator, fields);
+                Branch branch = inner.find(navigator.getTxn(), fields);
                 if (inner.getChildType() == LEAF)
                 {
                     LeafTier leaf = navigator.getLeafTier(branch.getRightKey());

@@ -1,9 +1,9 @@
 /* Copyright Alan Gutierrez 2006 */
 package com.agtrz.strata;
 
-public interface Extractor<O, E extends Comparable<? super E>>
+public interface CursorWrapper<T, B>
 {
-    E extract(O o);
+    public Cursor<T> wrap(Cursor<B> cursor);
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */
