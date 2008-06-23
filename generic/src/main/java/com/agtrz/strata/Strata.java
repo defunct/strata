@@ -187,7 +187,7 @@ implements Serializable
 
         public Schema()
         {
-            this.storageSchema = new ArrayListStorage.Schema<Object>();
+            this.storageSchema = null;
             this.extractor = new ComparableExtractor();
             this.leafSize = 5;
             this.innerSize = 5;
