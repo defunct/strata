@@ -1262,7 +1262,10 @@ public class Strata
     private final static class SwapKey<B, A, X>
     implements Decision<B, A, X>
     {
-        public boolean test(Mutation<B, A, X> mutation, Level<B, A, X> levelOfParent, Level<B, A, X> levelOfChild, InnerTier<B, A> parent)
+        public boolean test(Mutation<B, A, X> mutation,
+                            Level<B, A, X> levelOfParent,
+                            Level<B, A, X> levelOfChild,
+                            InnerTier<B, A> parent)
         {
             Branch<B, A> branch = parent.find(mutation.comparable);
             if (branch.getPivot() != null && mutation.comparable.compareTo(branch.getPivot()) == 0)
@@ -1655,7 +1658,10 @@ public class Strata
     private final static class LeafRemove<B, A, X>
     implements Decision<B, A, X>
     {
-        public boolean test(Mutation<B, A, X> mutation, Level<B, A, X> levelOfParent, Level<B, A, X> levelOfChild, InnerTier<B, A> parent)
+        public boolean test(Mutation<B, A, X> mutation,
+                            Level<B, A, X> levelOfParent,
+                            Level<B, A, X> levelOfChild,
+                            InnerTier<B, A> parent)
         {
             levelOfChild.getSync = new WriteLockExtractor();
             Branch<B, A> branch = parent.find(mutation.comparable);
@@ -1926,7 +1932,6 @@ public class Strata
         }
     }
 
-
     public final static class CoreCursor<B, A, X>
     implements Cursor<B>
     {
@@ -2054,7 +2059,12 @@ public class Strata
         
         private TierCache<B, A, X> cache;
 
-        private void testInnerTier(Mutation<B, A, X> mutation, Decision<B, A, X> subsequent, Decision<B, A, X> swap, Level<B, A, X> levelOfParent, Level<B, A, X> levelOfChild, InnerTier<B, A> parent, int rewind)
+        private void testInnerTier(Mutation<B, A, X> mutation,
+                                   Decision<B, A, X> subsequent,
+                                   Decision<B, A, X> swap,
+                                   Level<B, A, X> levelOfParent,
+                                   Level<B, A, X> levelOfChild,
+                                   InnerTier<B, A> parent, int rewind)
         {
             boolean tiers = subsequent.test(mutation, levelOfParent, levelOfChild, parent);
             boolean keys = swap.test(mutation, levelOfParent, levelOfChild, parent);
