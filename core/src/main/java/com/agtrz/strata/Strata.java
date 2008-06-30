@@ -108,12 +108,12 @@ implements Serializable
     }
     
     @SuppressWarnings("unchecked")
-    private final static int compare(Comparable<?> left, Comparable<?> right)
+    private final static int compare(Object left, Object right)
     {
         return ((Comparable) left).compareTo(right);
     }
 
-    private final static int compare(Comparable<?>[] left, Comparable<?>[] right)
+    private final static int compare(Object[] left, Object[] right)
     {
         if (left == null)
         {
@@ -620,7 +620,7 @@ implements Serializable
             }
         }
 
-        public Cursor<Object> find(Navigator navigator, Comparable<?>[] fields)
+        public Cursor<Object> find(Navigator navigator, Object[] fields)
         {
             for (int i = 0; i < tier.size(); i++)
             {
@@ -769,7 +769,7 @@ implements Serializable
             return tier.get(index);
         }
 
-        public Branch find(Object txn, Comparable<?>[] fields)
+        public Branch find(Object txn, Object fields)
         {
             Iterator<Branch> branches = listIterator();
             Branch candidate = branches.next();
@@ -3184,8 +3184,25 @@ implements Serializable
             return find(strata.structure.getSchema().getFieldExtractor().getFields(navigator.getTxn(), keyOfObject));
         }
 
+        /**
+         * Java eliminated a modicum of type safety with this implementation
+         * of comparable. Now that Java has generics, many Javans have decided
+         * too, that Java no longer needs arrays. This method used to take
+         * an array of comparables. Since I have to cast the objects anyway,
+         * I've removed event the type checking for the comparable. It is
+         * an expression of the frustration I feel for this language that
+         * wants to become a language that does many things poorly and nothing
+         * well. An array of Comparable<?> is confusing. The typing is missing.
+         * I'm going down to object. The moment you call this method with
+         * incorrect comprable parameters, is the moment that it fails, so
+         * test.
+         * 
+         * @param fields A partial or full set of fields to compare to the
+         * fields extracted from this strata.
+         * @return
+         */
         // Here is where I get the power of not using comparator.
-        public Cursor<Object> find(Comparable<?>... fields)
+        public Cursor<Object> match(Object... fields)
         {
             Lock previous = new ReentrantLock();
             previous.lock();
