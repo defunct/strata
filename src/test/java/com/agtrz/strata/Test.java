@@ -71,7 +71,7 @@ public class Test
     }
 
     public final static class StringArrayExtractor
-    implements Strata.FieldExtractor
+    implements Strata.Extractor
     {
         private final int fields;
 
@@ -80,7 +80,7 @@ public class Test
             this.fields = fields;
         }
 
-        public Comparable<?>[] getFields(Object txn, Object object)
+        public void extract(Object txn, Object object, Strata.Record record)
         {
             Comparable<?>[] incoming = (Comparable[]) object;
             Comparable<?>[] outgoing = new Comparable[fields];
@@ -88,7 +88,7 @@ public class Test
             {
                 outgoing[i] = incoming[i];
             }
-            return outgoing;
+            record.columns(outgoing);
         }
     }
 }

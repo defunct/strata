@@ -113,7 +113,7 @@ implements Serializable
         return ((Comparable) left).compareTo(right);
     }
 
-    private final static int compare(Object[] left, Object[] right)
+    private final static int compare(Comparable<?>[] left, Comparable<?>[] right)
     {
         if (left == null)
         {
@@ -173,7 +173,7 @@ implements Serializable
 
         private Storage.Schema<Object> storageSchema;
 
-        private FieldExtractor extractor;
+        private Extractor extractor;
 
         private short cacheType;
 
@@ -239,12 +239,12 @@ implements Serializable
             this.storageSchema = storageSchema;
         }
         
-        public void setFieldExtractor(FieldExtractor extractor)
+        public void setFieldExtractor(Extractor extractor)
         {
             this.extractor = extractor;
         }
 
-        public FieldExtractor getFieldExtractor()
+        public Extractor getFieldExtractor()
         {
             return extractor;
         }
@@ -338,25 +338,50 @@ implements Serializable
         }
     }
 
-    public interface FieldExtractor
+    public interface Extractor
     {
-        public Comparable<?>[] getFields(Object txn, Object object);
+        public void extract(Object txn, Object object, Record record);
+    }
+    
+    public interface Record
+    {
+        public void columns(Comparable<?>... comparables);
+    }
+    
+    private final static class CoreRecord
+    implements Record
+    {
+        private Comparable<?>[] comparables;
+
+        public void columns(Comparable<?>... comparables)
+        {
+            this.comparables = comparables;
+        }
+        
+        public Comparable<?>[] getComparables()
+        {
+            return comparables;
+        }
     }
 
     public final static class ComparableExtractor
-    implements FieldExtractor, Serializable
+    implements Extractor, Serializable
     {
         private final static long serialVersionUID = 20070402L;
 
         @SuppressWarnings("unchecked")
         private Comparable cast(Object object)
         {
+            if (!(object instanceof Comparable<?>))
+            {
+                System.out.println(object.getClass());
+            }
             return (Comparable) object;
         }
         
-        public Comparable<?>[] getFields(Object txn, Object object)
+        public void extract(Object txn, Object object, Record record)
         {
-            return new Comparable<?>[] { cast(object) };
+            record.columns(cast(object));
         }
     }
 
@@ -381,13 +406,13 @@ implements Serializable
 
     public interface Cooper
     {
-        public Object newBucket(Object txn, FieldExtractor fields, Object keyOfObject);
+        public Object newBucket(Object txn, Extractor fields, Object keyOfObject);
 
         public Object newBucket(Comparable<?>[] fields, Object keyOfObject);
 
         public Object getObjectKey(Object object);
 
-        public Comparable<?>[] getFields(Object txn, FieldExtractor extractor, Object object);
+        public Comparable<?>[] getFields(Object txn, Extractor extractor, Object object);
 
         public boolean getCacheFields();
     }
@@ -410,9 +435,11 @@ implements Serializable
     {
         private final static long serialVersionUID = 20070402L;
 
-        public Object newBucket(Object txn, FieldExtractor extractor, Object keyOfObject)
+        public Object newBucket(Object txn, Extractor extractor, Object object)
         {
-            return new Bucket(extractor.getFields(txn, keyOfObject), keyOfObject);
+            CoreRecord record = new CoreRecord();
+            extractor.extract(txn, object, record);
+            return new Bucket(record.getComparables(), object);
         }
 
         public Object newBucket(Comparable<?>[] fields, Object keyOfObject)
@@ -420,7 +447,7 @@ implements Serializable
             return new Bucket(fields, keyOfObject);
         }
 
-        public Comparable<?>[] getFields(Object txn, FieldExtractor extractor, Object object)
+        public Comparable<?>[] getFields(Object txn, Extractor extractor, Object object)
         {
             return ((Bucket) object).fields;
         }
@@ -441,7 +468,7 @@ implements Serializable
     {
         private final static long serialVersionUID = 20070402L;
 
-        public Object newBucket(Object txn, FieldExtractor extractor, Object keyOfObject)
+        public Object newBucket(Object txn, Extractor extractor, Object keyOfObject)
         {
             return keyOfObject;
         }
@@ -451,9 +478,11 @@ implements Serializable
             return keyOfObject;
         }
 
-        public Comparable<?>[] getFields(Object txn, FieldExtractor extractor, Object object)
+        public Comparable<?>[] getFields(Object txn, Extractor extractor, Object object)
         {
-            return extractor.getFields(txn, object);
+            CoreRecord record = new CoreRecord();
+            extractor.extract(txn, object, record);
+            return record.getComparables();
         }
 
         public Object getObjectKey(Object object)
@@ -620,7 +649,7 @@ implements Serializable
             }
         }
 
-        public Cursor<Object> find(Navigator navigator, Object[] fields)
+        public Cursor<Object> find(Navigator navigator, Comparable<?>[] fields)
         {
             for (int i = 0; i < tier.size(); i++)
             {
@@ -769,7 +798,7 @@ implements Serializable
             return tier.get(index);
         }
 
-        public Branch find(Object txn, Object fields)
+        public Branch find(Object txn, Comparable<?>[] fields)
         {
             Iterator<Branch> branches = listIterator();
             Branch candidate = branches.next();
@@ -3142,16 +3171,18 @@ implements Serializable
         // FIXME Key of object?
         public void insert(Object keyOfObject)
         {
-            Comparable<?>[] fields = strata.structure.getSchema().getFieldExtractor().getFields(navigator.getTxn(), keyOfObject);
-            Object bucket = strata.structure.newBucket(fields, keyOfObject);
-            Mutation mutation = new Mutation(navigator, cache, bucket, fields, null);
+            CoreRecord record = new CoreRecord();
+            strata.structure.getSchema().getFieldExtractor().extract(navigator.getTxn(), keyOfObject, record);
+            Object bucket = strata.structure.newBucket(record.getComparables(), keyOfObject);
+            Mutation mutation = new Mutation(navigator, cache, bucket, record.getComparables(), null);
             generalized(mutation, new SplitRoot(), new SplitInner(), new InnerNever(), new LeafInsert());
         }
 
         public Object remove(Object keyOfObject)
         {
-            Comparable<?>[] fields = strata.structure.getSchema().getFieldExtractor().getFields(navigator.getTxn(), keyOfObject);
-            return remove(fields, ANY);
+            CoreRecord record = new CoreRecord();
+            strata.structure.getSchema().getFieldExtractor().extract(navigator.getTxn(), keyOfObject, record);
+            return remove(record.getComparables(), ANY);
         }
 
         // TODO Where do I actually use deletable? Makes sense, though. A
@@ -3179,9 +3210,11 @@ implements Serializable
             return removed;
         }
 
-        public Cursor<Object> find(Object keyOfObject)
+        public Cursor<Object> find(Object object)
         {
-            return find(strata.structure.getSchema().getFieldExtractor().getFields(navigator.getTxn(), keyOfObject));
+            CoreRecord record = new CoreRecord();
+            strata.structure.getSchema().getFieldExtractor().extract(navigator.getTxn(), object, record);
+            return find(record.getComparables());
         }
 
         /**
@@ -3202,7 +3235,7 @@ implements Serializable
          * @return
          */
         // Here is where I get the power of not using comparator.
-        public Cursor<Object> match(Object... fields)
+        public Cursor<Object> find(Comparable<?>... fields)
         {
             Lock previous = new ReentrantLock();
             previous.lock();
