@@ -345,7 +345,7 @@ implements Serializable
     
     public interface Record
     {
-        public void columns(Comparable<?>... comparables);
+        public void fields(Comparable<?>... comparables);
     }
     
     private final static class CoreRecord
@@ -353,7 +353,7 @@ implements Serializable
     {
         private Comparable<?>[] comparables;
 
-        public void columns(Comparable<?>... comparables)
+        public void fields(Comparable<?>... comparables)
         {
             this.comparables = comparables;
         }
@@ -381,7 +381,7 @@ implements Serializable
         
         public void extract(Object txn, Object object, Record record)
         {
-            record.columns(cast(object));
+            record.fields(cast(object));
         }
     }
 

@@ -88,7 +88,7 @@ public class Test
             {
                 outgoing[i] = incoming[i];
             }
-            record.columns(outgoing);
+            record.fields(outgoing);
         }
     }
 }
