@@ -15,11 +15,81 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class Strata
+public class Strata<T, X>
 {
-    public interface Extractor<T, F extends Comparable<? super F>, X>
+    
+    @SuppressWarnings("unchecked")
+    private final static int compare(Object left, Object right)
     {
-        F extract(X txn, T object);
+        return ((Comparable) left).compareTo(right);
+    }
+
+    private final static int compare(Comparable<?>[] left, Comparable<?>[] right)
+    {
+        if (left == null)
+        {
+            if (right == null)
+            {
+                throw new IllegalStateException();
+            }
+            return -1;
+        }
+        else if (right == null)
+        {
+            return 1;
+        }
+
+        int count = Math.min(left.length, right.length);
+        for (int i = 0; i < count; i++)
+        {
+            if (left[i] == null)
+            {
+                if (right[i] != null)
+                {
+                    return -1;
+                }
+            }
+            else if (right[i] == null)
+            {
+                return 1;
+            }
+            else
+            {
+                int compare = compare(left[i], right[i]);
+                if (compare != 0)
+                {
+                    return compare;
+                }
+            }
+        }
+
+        return left.length - right.length;
+    }
+
+    public interface Record
+    {
+        public void fields(Comparable<?>... fields);
+    }
+    
+    private final static class CoreRecord
+    implements Record
+    {
+        private Comparable<?>[] fields;
+
+        public void fields(Comparable<?>... fields)
+        {
+            this.fields = fields;
+        }
+        
+        public Comparable<?>[] getFields()
+        {
+            return fields;
+        }
+    }
+    
+    public interface Extractor<T, X>
+    {
+        public void extract(X txn, T object, Record record);
     }
     
     public interface TierBuilder<H, T>
@@ -29,62 +99,64 @@ public class Strata
         public void append(T object);
     }
     
-    public interface Cooper<T, F extends Comparable<? super F>, B, X>
+    public interface Cooper<T, B, X>
     {
-        public B newBucket(X txn, Extractor<T, F, X> extract, T object);
+        public B newBucket(X txn, Extractor<T, X> extract, T object);
 
-        public B newBucket(F fields, T object);
+        public B newBucket(Comparable<?>[] fields, T object);
 
         public T getObject(B bucket);
 
-        public F getFields(X txn, Extractor<T, F, X> extractor, B bucket);
+        public Comparable<?>[] getFields(X txn, Extractor<T, X> extractor, B bucket);
         
         public Cursor<T> wrap(Cursor<B> cursor);
 
         public boolean getCacheFields();
     }
     
-    public final class Bucket<T, F extends Comparable<? super F>>
+    public final static class Bucket<T>
     {
-        public final F fields;
+        public final Comparable<?>[] fields;
 
         public final T object;
 
-        public Bucket(F fields, T object)
+        public Bucket(Comparable<?>[] fields, T object)
         {
             this.fields = fields;
             this.object = object;
         }
     }
 
-    public class BucketCooper<T, F extends Comparable<? super F>, B, X>
-    implements Cooper<T, F, Bucket<T, F>, X>, Serializable
+    public static class BucketCooper<T, X>
+    implements Cooper<T, Bucket<T>, X>, Serializable
     {
         private final static long serialVersionUID = 20070402L;
 
-        public Bucket<T, F> newBucket(X txn, Extractor<T, F, X> extractor, T object)
+        public Bucket<T> newBucket(X txn, Extractor<T, X> extractor, T object)
         {
-            return new Bucket<T, F>(extractor.extract(txn, object), object);
+            CoreRecord record = new CoreRecord();
+            extractor.extract(txn, object, record);
+            return new Bucket<T>(record.getFields(), object);
         }
 
-        public Bucket<T, F> newBucket(F fields, T object)
+        public Bucket<T> newBucket(Comparable<?>[] fields, T object)
         {
-            return new Bucket<T, F>(fields, object);
+            return new Bucket<T>(fields, object);
         }
 
-        public F getFields(X txn, Extractor<T, F, X> extractor, Bucket<T, F> bucket)
+        public Comparable<?>[] getFields(X txn, Extractor<T, X> extractor, Bucket<T> bucket)
         {
             return bucket.fields;
         }
 
-        public T getObject(Bucket<T, F> bucket)
+        public T getObject(Bucket<T> bucket)
         {
             return bucket.object;
         }
         
-        public Cursor<T> wrap(Cursor<Bucket<T, F>> cursor)
+        public Cursor<T> wrap(Cursor<Bucket<T>> cursor)
         {
-            return new BucketCursor<T, F, Bucket<T, F>, X>(cursor);
+            return new BucketCursor<T, Bucket<T>, X>(cursor);
         }
 
         public boolean getCacheFields()
@@ -93,39 +165,36 @@ public class Strata
         }
     }
 
-    public final static class LookupCooper<T, F extends Comparable<? super F>, B, X>
-    implements Cooper<T, F, B, X>, Serializable
+    public final static class LookupCooper<T, X>
+    implements Cooper<T, T, X>, Serializable
     {
         private final static long serialVersionUID = 20070402L;
 
-        @SuppressWarnings("unchecked")
-        public B newBucket(X txn, Extractor<T, F, X> extract, T object)
+        public T newBucket(X txn, Extractor<T, X> extract, T object)
         {
-            return (B) object;
+            return object;
         }
 
-        @SuppressWarnings("unchecked")
-        public B newBucket(F fields, T object)
+        public T newBucket(Comparable<?>[] fields, T object)
         {
-            return (B) object;
+            return object;
         }
 
-        @SuppressWarnings("unchecked")
-        public F getFields(X txn, Extractor<T, F, X> extractor, B object)
+        public Comparable<?>[] getFields(X txn, Extractor<T, X> extractor, T object)
         {
-            return extractor.extract(txn, (T) object);
+            CoreRecord record = new CoreRecord();
+            extractor.extract(txn, object, record);
+            return record.getFields();
         }
 
-        @SuppressWarnings("unchecked")
-        public T getObject(B object)
+        public T getObject(T object)
         {
-            return (T) object;
+            return object;
         }
         
-        @SuppressWarnings("unchecked")
-        public Cursor<T> wrap(Cursor<B> cursor)
+        public Cursor<T> wrap(Cursor<T> cursor)
         {
-            return (Cursor<T>) cursor;
+            return cursor;
         }
 
         public boolean getCacheFields()
@@ -134,21 +203,20 @@ public class Strata
         }
     }
 
-    public final static class BucketComparable<T, F extends Comparable<? super F>, B, X>
+    public final static class BucketComparable<T, B, X>
     implements Comparable<B>
     {
-        private Cooper<T, F, B, X> cooper;
+        private Cooper<T, B, X> cooper;
 
-        private Extractor<T, F, X> extractor;
+        private Extractor<T, X> extractor;
 
         private X txn;
 
-        private F fields;
+        private Comparable<?>[] fields;
 
         public int compareTo(B bucket)
         {
-            F toFields = cooper.getFields(txn, extractor, bucket);
-            return fields.compareTo(toFields);
+            return compare(fields, cooper.getFields(txn, extractor, bucket));
         }
     }
 
@@ -360,6 +428,30 @@ public class Strata
         public boolean isNull(A address);
         
         public A getNull();
+    }
+    
+    private final static class NullAllocator<B>
+    implements Allocator<B, Object>
+    {
+        public Object allocate(InnerTier<B, Object> inner)
+        {
+            return null;
+        }
+        
+        public Object allocate(LeafTier<B, Object> leaf)
+        {
+            return null;
+        }
+        
+        public boolean isNull(Object address)
+        {
+            return address == null;
+        }
+        
+        public Object getNull()
+        {
+            return null;
+        }
     }
 
     public static class Navigator<B, A, X>
@@ -925,14 +1017,13 @@ public class Strata
             }
         }
         
-        public void write(Object txn)
+        public void write(X txn)
         {
             Iterator<Tier<B, A>> tiers = mapOfTiers.values().iterator();
             while (tiers.hasNext())
             {
                 Tier<B, A> tier = tiers.next();
-                tier.getAddress();
-//                tier.write(store);
+                store.write(txn, tier.getAddress(), null, null);
             }
 
             mapOfTiers.clear();
@@ -1188,18 +1279,43 @@ public class Strata
         public InnerTier<B, A> getInnerTier(A address);
     }
     
-    private final static class StorageTierPool<B, A, X>
+    private final static class StorageTierPool<T, A, X, B>
     implements TierPool<B, A, X>
     {
-        private final Storage<B, A, X> storage;
+        private final Map<A, InnerTier<B, A>> mapOfInnerTiers = null;
         
-        public StorageTierPool(Storage<B, A, X> storage)
+        private final Storage<T, A, X> storage;
+        
+        private final Extractor<T, X> extractor;
+        
+        private final Cooper<T, B, X> cooper;
+        
+        public StorageTierPool(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor)
         {
             this.storage = storage;
+            this.cooper = cooper;
+            this.extractor = extractor;
         }
         
         public InnerTier<B, A> getInnerTier(A address)
         {
+            InnerTier<B, A> inner = null;
+            
+            synchronized (this)
+            {
+                inner = mapOfInnerTiers.get(address);
+                if (inner == null)
+                {
+                    inner = new InnerTier<B, A>();
+                    List<Branch<T, A>> listOfBranches = new ArrayList<Branch<T,A>>(); 
+                    short childType = storage.getBranchStore().load(null, address, listOfBranches);
+                    inner.setChildType(childType == 1 ? ChildType.INNER : ChildType.LEAF);
+                    for (Branch<T, A> branch : listOfBranches)
+                    {
+                        inner.add(new Branch<B, A>(cooper.newBucket(null, extractor, branch.getPivot()), branch.getRightKey()));
+                    }
+                }
+            }
             return null;
         }
         
@@ -1207,6 +1323,12 @@ public class Strata
         {
             return null;
         }
+    }
+    
+    public static <T, A, X, B> TierPool<B, A, X> newCachingTierPool(
+    Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor)
+    {
+        return new StorageTierPool<T, A, X, B>(storage, cooper, extractor);
     }
     
     private final static class ObjectReferenceTierPool<B, A, X>
@@ -1238,54 +1360,44 @@ public class Strata
         
         private LeafTier<B, A> leftLeaf;
         
-        private final int innerSize;
-        
-        private final int leafSize;
-        
-        public Addresser<A> addresser;
-        
         public final Comparable<B> comparable;
 
         public final Deletable<B> deletable;
 
         public final LinkedList<Level<B, A, X>> listOfLevels = new LinkedList<Level<B, A, X>>();
 
-        public final TierWriter<B, A, X> writer;
-
         public LeafOperation<B, A, X> leafOperation;
 
         public final B bucket;
+        
+        private final Structure<B, A, X> structure;
 
         public Mutation(Navigator<B, A, X> navigator,
-                        TierWriter<B, A, X> writer,
+                        Structure<B, A, X> structure,
                         B bucket,
                         Comparable<B> comparable,
-                        Deletable<B> deletable,
-                        int innerSize,
-                        int leafSize)
+                        Deletable<B> deletable)
         {
             super(navigator);
-            this.writer = writer;
             this.comparable = comparable;
             this.deletable = deletable;
             this.bucket = bucket;
-            this.leafSize = leafSize;
-            this.innerSize = innerSize;
+            this.structure = structure;
         }
         
         public TierWriter<B, A, X> getWriter()
         {
-            return writer;
+            return structure.getWriter();
         }
 
         public int getInnerSize()
         {
-            return innerSize;
+            return structure.getInnerSize();
         }
         
         public int getLeafSize()
         {
-            return leafSize;
+            return structure.getLeafSize();
         }
         
         public B getResult()
@@ -1666,7 +1778,7 @@ public class Strata
 
             private boolean endOfList(Mutation<B, A, X> mutation, LeafTier<B, A> last)
             {
-                return mutation.addresser.isNull(last.getNext()) || mutation.newComparable(last.getNext(mutation).get(0)).compareTo(last.get(0)) != 0;
+                return mutation.getAllocator().isNull(last.getNext()) || mutation.newComparable(last.getNext(mutation).get(0)).compareTo(last.get(0)) != 0;
             }
 
             public boolean operate(Mutation<B, A, X> mutation, Level<B, A, X> levelOfLeaf)
@@ -2603,10 +2715,10 @@ public class Strata
         }
     }
 
-    public class BucketCursor<T, F extends Comparable<? super F>, B, X>
+    public final static class BucketCursor<T, B, X>
     implements Cursor<T>
     {
-        public Cooper<T, F, B, X> cooper;
+        public Cooper<T, B, X> cooper;
 
         private Cursor<B> cursor;
 
@@ -2634,54 +2746,38 @@ public class Strata
         public Cursor<T> wrap(Cursor<B> cursor);
     }
 
-    public interface Query<T, F extends Comparable<? super F>>
+    public interface Query<T>
     {
         public void add(T object);
         
-        public Cursor<T> find(F fields);
+        public Cursor<T> find(Comparable<?>... fields);
     }
     
-    public interface Transaction<T, F extends Comparable<? super F>, X>
-    extends Query<T, F>
+    public interface Transaction<T, X>
+    extends Query<T>
     {
-        public Tree<T, F, X> getTree();
+        public Tree<T, X> getTree();
     }
 
-    public final static class CoreQuery<T, F extends Comparable<? super F>, A, X, B>
-    implements Transaction<T, F, X>
+    public final static class CoreQuery<T, A, X, B>
+    implements Transaction<T, X>
     {
-        private final Schema<T, F, A, X, B> schema;
-        
-        private final Tree<T, F, X> tree;
+        private final CoreTree<T, A, X, B> tree;
         
         private final A root;
         
-        private final Cooper<T, F, B, X> cooper;
-        
-        private final Extractor<T, F, X> extractor;
-        
         private final Navigator<B, A, X> navigator;
-
-        private final TierWriter<B, A, X> writer;
         
-        public CoreQuery(Schema<T, F, A, X, B> schema,
-                         Tree<T, F, X> tree,
+        public CoreQuery(CoreTree<T, A, X, B> tree,
                          A root,
-                         Navigator<B, A, X> navigator,
-                         Cooper<T, F, B, X> cooper,
-                         Extractor<T, F, X> extractor,
-                         TierWriter<B, A, X> writer)
+                         Navigator<B, A, X> navigator)
         {
-            this.schema = schema;
             this.tree = tree;
             this.root = root;
-            this.cooper = cooper;
-            this.extractor = extractor;
             this.navigator = navigator;
-            this.writer = writer;
         }
         
-        public Tree<T, F, X> getTree()
+        public Tree<T, X> getTree()
         {
             return tree;
         }
@@ -2823,19 +2919,20 @@ public class Strata
         
         public void add(T object)
         {
-            F fields = extractor.extract(navigator.getTxn(), object);
-            B bucket = cooper.newBucket(fields, object);
-            BucketComparable<T, F, B, X> comparable  = new BucketComparable<T, F, B, X>();
-            Mutation<B, A, X> mutation = new Mutation<B, A, X>(navigator, writer, bucket, comparable, null, schema.getInnerSize(), schema.getLeafSize());
+            CoreRecord record = new CoreRecord();
+            tree.getExtractor().extract(navigator.getTxn(), object, record);
+            B bucket = tree.getCooper().newBucket(record.getFields(), object);
+            BucketComparable<T, B, X> comparable  = new BucketComparable<T, B, X>();
+            Mutation<B, A, X> mutation = new Mutation<B, A, X>(navigator, tree, bucket, comparable, null);
             generalized(mutation, new SplitRoot<B, A, X>(), new SplitInner<B, A, X>(), new InnerNever<B, A, X>(), new LeafInsert<B, A, X>());
         }
 
         // TODO Where do I actually use deletable? Makes sense, though. A
         // condition to choose which to delete.
-        public Object remove(F fields, Deletable<B> deletable)
+        public Object remove(Deletable<B> deletable, Comparable<?>... fields)
         {
-            BucketComparable<T, F, B, X> comparable  = new BucketComparable<T, F, B, X>();
-            Mutation<B, A, X> mutation = new Mutation<B, A, X>(navigator, writer, null, comparable, deletable, schema.getInnerSize(), schema.getLeafSize());
+            BucketComparable<T, B, X> comparable  = new BucketComparable<T, B, X>();
+            Mutation<B, A, X> mutation = new Mutation<B, A, X>(navigator, tree, null, comparable, deletable);
             do
             {
                 mutation.listOfLevels.clear();
@@ -2856,12 +2953,12 @@ public class Strata
         }
 
         // Here is where I get the power of not using comparator.
-        public Cursor<T> find(F fields)
+        public Cursor<T> find(Comparable<?>... fields)
         {
             Lock previous = new ReentrantLock();
             previous.lock();
             InnerTier<B, A> inner = getRoot();
-            Comparable<B> comparator = new BucketComparable<T, F, B, X>();
+            Comparable<B> comparator = new BucketComparable<T, B, X>();
             for (;;)
             {
                 inner.getReadWriteLock().readLock().lock();
@@ -2873,44 +2970,189 @@ public class Strata
                     LeafTier<B, A> leaf = navigator.getLeafTier(branch.getRightKey());
                     leaf.getReadWriteLock().readLock().lock();
                     previous.unlock();
-                    return cooper.wrap(leaf.find(comparator));
+                    return tree.getCooper().wrap(leaf.find(comparator));
                 }
                 inner = navigator.getInnerTier(branch.getRightKey());
             }
         }
     }
 
-    public interface Tree<T, F extends Comparable<? super F>, X>
+    public interface Tree<T, X>
     {
-        public Query<T, F> query(X txn);
+        public Query<T> query(X txn);
     }
     
-    public final static class CoreTree<T, F extends Comparable<? super F>, A, X, B>
-    implements Tree<T, F, X>
+    interface Structure<B, A, X>
     {
-        private final Cooper<T, F, B, X> cooper;
+        public int getInnerSize();
         
-        private final Extractor<T, F, X> extractor;
+        public int getLeafSize();
         
-        private final Schema<T, F, A, X, B> schema;
+        public TierWriter<B, A, X> getWriter();
+    }
+    
+    public final static class CoreTree<T, A, X, B>
+    implements Tree<T, X>, Structure<B, A, X>
+    {
+        private int innerSize;
         
-        public CoreTree(Schema<T, F, A, X, B> schema,
-                        Cooper<T, F, B, X> cooper,
-                        Extractor<T, F, X> extractor)
+        private int leafSize;
+
+        private TierPool<B, A, X> pool;
+        
+        private TierWriter<B, A, X> writer;
+        
+        private Allocator<B, A> allocator;
+        
+        private final Cooper<T, B, X> cooper;
+        
+        private final Extractor<T, X> extractor;
+        
+        public CoreTree(int innerSize,
+                        int leafSize,
+                        StorageBuilder newStorage,
+                        Cooper<T, B, X> cooper,
+                        Extractor<T, X> extractor)
         {
-            this.schema = schema;
+            BAX<B, A, X> bax = new BAX<B, A, X>();
+            this.innerSize = innerSize;
+            this.leafSize = leafSize;
+            this.pool = newStorage.newTierPool(bax);
+            this.writer = newStorage.newTierWriter(bax);
+            this.allocator = newStorage.newAllocator(bax);
             this.cooper = cooper;
             this.extractor = extractor;
         }
 
-        public Transaction<T, F, X> query(X txn)
+        public Transaction<T, X> query(X txn)
         {
             Navigator<B, A, X> navigator = new Navigator<B, A, X>(null);
-            return new CoreQuery<T, F, A, X, B>(schema, this, null, navigator, cooper, extractor, null);
+            return new CoreQuery<T, A, X, B>(this, null, navigator);
+        }
+        
+        public int getInnerSize()
+        {
+            return innerSize;
+        }
+        
+        public int getLeafSize()
+        {
+            return leafSize;
+        }
+        
+        public Allocator<B, A> getAllocator()
+        {
+            return allocator;
+        }
+        
+        public TierPool<B, A, X> getPool()
+        {
+            return pool;
+        }
+        
+        public TierWriter<B, A, X> getWriter()
+        {
+            return writer;
+        }
+        
+        public Cooper<T, B, X> getCooper()
+        {
+            return cooper;
+        }
+        
+        public Extractor<T, X> getExtractor()
+        {
+            return extractor;
         }
     }
     
-    public final static class Schema<T, F extends Comparable<? super F>, A, X, B>
+    private interface TreeBuilder
+    {
+        public <T, A, X> Tree<T, X> newTree(StorageBuilder newStorage, Extractor<T, X> extractor, Class<A> addressClass);
+    }
+    
+    private static class LookupTreeBuilder
+    implements TreeBuilder
+    {
+        public <T, A, X> Tree<T, X> newTree(StorageBuilder newStorage, Extractor<T, X> extractor, Class<A> addressClass)
+        {
+            return null;
+        }
+    }
+    
+    private static final class BAX<B, A, X>
+    {
+    }
+    
+    private static class BucketTreeBuilder
+    implements TreeBuilder
+    {
+        public <T, A, X> Tree<T, X> newTree(
+            StorageBuilder newStorage, Extractor<T, X> extractor,
+            Class<A> addressClass)
+        {
+            Cooper<T, Bucket<T> , X> cooper = new BucketCooper<T, X>();
+            CoreTree<T, A, X, Bucket<T>> tree = new CoreTree<T, A, X, Bucket<T>>(0, 0, newStorage, cooper, extractor); 
+            return tree;
+        }
+    }
+    
+    private interface StorageBuilder
+    {
+        public <T, X> Tree<T, X> newTree(TreeBuilder builder, Extractor<T, X> extractor, int innerSize, int leafSize);
+        
+        public <B, A, X> Allocator<B, A> newAllocator(BAX<B, A, X> bax);
+        
+        public <B, A, X> TierPool<B, A, X> newTierPool(BAX<B, A, X> bax);
+        
+        public <B, A, X> TierWriter<B, A, X> newTierWriter(BAX<B, A, X> bax);
+    }
+
+    public final static class CoreSchema2<T, A, X>
+    implements Schema<T, X> 
+    {
+        private int innerSize;
+        
+        private int leafSize;
+        
+        private TreeBuilder newTree = new LookupTreeBuilder();
+        
+        private Extractor<T, X> extractor = null;
+        
+        private StorageBuilder newStorage;
+        
+        public CoreSchema2(StorageBuilder newStorage)
+        {
+            this.newStorage = newStorage;
+        }
+        
+        public void setInnerSize(int innerSize)
+        {
+            this.innerSize = innerSize;
+        }
+        
+        public void setLeafSize(int leafSize)
+        {
+            this.leafSize = leafSize;
+        }
+        
+        public void setCacheFields(boolean cacheFields)
+        {
+            this.newTree = new BucketTreeBuilder();
+        }
+        
+        public void setExtractor(Extractor<T, X> extractor)
+        {
+            this.extractor = extractor;
+        }
+        
+        public Tree<T, X> newTree()
+        {
+            return newStorage.newTree(newTree, extractor, innerSize, leafSize);
+        }
+    }
+    
+    public final static class CoreSchema<T, A, X, B>
     implements Serializable
     {
         private static final long serialVersionUID = 1L;
@@ -2919,22 +3161,14 @@ public class Strata
         
         private int leafSize;
         
-        private TierPool<B, A, X> pool;
-        
         private TierWriter<B, A, X> writer;
         
         private Allocator<B, A> allocator;
         
-        private Cooper<T, F, B, X> cooper;
-        
-        private Extractor<T, F, X> extractor;
-        
-        public Schema()
+        public CoreSchema()
         {
             this.leafSize = 5;
             this.innerSize = 5;
-            this.pool = new ObjectReferenceTierPool<B, A, X>();
-            this.writer = new PerQueryTierCache<T, B, A, X>(null, 1);
         }
         
         public int getInnerSize()
@@ -2957,7 +3191,7 @@ public class Strata
             this.leafSize = leafSize;
         }
         
-        public Transaction<T, F, X> newTransaction(X txn)
+        public Transaction<T, X> newTransaction(X txn)
         {
             writer.begin();
             
@@ -2974,11 +3208,59 @@ public class Strata
             
             root.add(new Branch<B, A>(null, leaf.getAddress()));
 
-            Navigator<B, A, X> navigator = new Navigator<B, A, X>(txn, allocator,pool);
-            CoreTree<T, F, A, X, B> tree = new CoreTree<T, F, A, X, B>(this, cooper, extractor);
-            CoreQuery<T, F, A, X, B> query = new CoreQuery<T, F, A, X, B>(this, tree, root.getAddress(), navigator, cooper, extractor, writer);
+//            Navigator<B, A, X> navigator = new Navigator<B, A, X>(txn, allocator,pool);
+//            CoreTree<T, A, X, B> tree = new CoreTree<T, A, X, B>(innerSize, leafSize, 
+//            CoreQuery<T, A, X, B> query = new CoreQuery<T, A, X, B>(this, tree, root.getAddress(), navigator, cooper, extractor, writer);
             
-            return query;
+            return null;
+        }
+    }
+    
+    public interface Schema<T, X>
+    {
+        public void setInnerSize(int size);
+        
+        public void setLeafSize(int size);
+        
+        public void setCacheFields(boolean cacheFields);
+        
+        public void setExtractor(Extractor<T, X> extractor);
+        
+        public Tree<T, X> newTree();
+    }
+    
+    public static <T, A, X> Schema<T, X> newSchema(Storage<T, A, X> storage)
+    {
+        return null;
+    }
+    
+    public static <T> Schema<T, Object> newInMemoryTree(Class<T> klass)
+    {
+        return new CoreSchema2<T, Object, Object>(new InMemoryStoreBuilder());
+    }
+    
+    private final static class InMemoryStoreBuilder
+    implements StorageBuilder
+    {
+        public <T, X> Tree<T, X> newTree(TreeBuilder newTree, Extractor<T, X> extractor, int innerSize, int leafSize)
+        {
+            return newTree.newTree(this, extractor, Object.class);
+        }
+        
+        @SuppressWarnings("unchecked")
+        public <B, A, X> Allocator<B, A> newAllocator(BAX<B, A, X> bax)
+        {
+            return (Strata.Allocator<B, A>) new NullAllocator<B>();
+        }
+        
+        public <B, A, X> TierPool<B, A, X> newTierPool(BAX<B, A, X> bax)
+        {
+            return new ObjectReferenceTierPool<B, A, X>();
+        }
+        
+        public <B, A, X> TierWriter<B, A, X> newTierWriter(BAX<B, A, X> bax)
+        {
+            return new EmptyTierCache<B, A, X>();
         }
     }
 }
