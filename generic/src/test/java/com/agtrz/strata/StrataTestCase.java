@@ -9,7 +9,7 @@ public class StrataTestCase
 {
     @Test public void create()
     {
-        Strata.Schema<Integer, Object> schema = Strata.newInMemoryTree(Integer.class);
+        Strata.Schema<Integer, Object> schema = null;
         schema.setInnerSize(5);
         schema.setLeafSize(7);
         schema.setCacheFields(true);

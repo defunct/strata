@@ -481,40 +481,77 @@ public class Strata
         public LeafStore<T, A, X> getLeafStore();
         
         public void commit(X txn);
+        
+        public A getNull();
+        
+        public boolean isNull(A address);
     }
     
     public interface Allocator<B, A, X>
     {
-        public A allocate(X txn, InnerTier<B, A> inner);
+        public A allocate(X txn, InnerTier<B, A> inner, int size);
         
-        public A allocate(X txn, LeafTier<B, A> leaf);
+        public A allocate(X txn, LeafTier<B, A> leaf, int size);
         
         public boolean isNull(A address);
         
         public A getNull();
     }
     
-    private final static class NullAllocator<B>
-    implements Allocator<B, Object, Object>
+    private final static class NullAllocator<B, A, X>
+    implements Allocator<B, A, X>
     {
-        public Object allocate(Object txn, InnerTier<B, Object> inner)
+        @SuppressWarnings("unchecked")
+        public A allocate(X txn, InnerTier<B, A> inner, int size)
         {
-            return null;
+            return (A) inner;
         }
         
-        public Object allocate(Object txn, LeafTier<B, Object> leaf)
+        @SuppressWarnings("unchecked")
+        public A allocate(X txn, LeafTier<B, A> leaf, int size)
         {
-            return null;
+            return (A) leaf;
         }
         
-        public boolean isNull(Object address)
+        public boolean isNull(A address)
         {
             return address == null;
         }
         
-        public Object getNull()
+        public A getNull()
         {
             return null;
+        }
+    }
+    
+    private final static class StorageAllocator<T, B, A, X>
+    implements Allocator<B, A, X>
+    {
+        private Storage<T, A, X> storage;
+        
+        public StorageAllocator(Storage<T, A, X> storage)
+        {
+            this.storage = storage;
+        }
+        
+        public A allocate(X txn, Strata.InnerTier<B,A> inner, int size)
+        {
+            return storage.getInnerStore().allocate(txn, size);
+        }
+        
+        public A allocate(X txn, Strata.LeafTier<B,A> leaf, int size)
+        {
+            return storage.getLeafStore().allocate(txn, size);
+        }
+        
+        public A getNull()
+        {
+            return storage.getNull();
+        }
+        
+        public boolean isNull(A address)
+        {
+            return storage.isNull(address);
         }
     }
 
@@ -1487,6 +1524,8 @@ public class Strata
     private final static class Mutation<B, A, X>
     extends Navigator<B, A, X>
     {
+        private StrataBuilder builder;
+        
         private boolean onlyChild;
         
         private boolean deleting;
@@ -1590,7 +1629,7 @@ public class Strata
         public InnerTier<B, A> newInnerTier(ChildType childType)
         {
             InnerTier<B, A> inner = new InnerTier<B, A>();
-            inner.setAddress(getAllocator().allocate(getTxn(), inner));
+            inner.setAddress(getAllocator().allocate(getTxn(), inner, builder.getInnerSize()));
             inner.setChildType(childType);
             return inner;
         }
@@ -1598,7 +1637,7 @@ public class Strata
         public LeafTier<B, A> newLeafTier()
         {
             LeafTier<B, A> leaf = new LeafTier<B, A>();
-            leaf.setAddress(getAllocator().allocate(getTxn(), leaf));
+            leaf.setAddress(getAllocator().allocate(getTxn(), leaf, builder.getLeafSize()));
             return leaf;
         }
         
@@ -3135,11 +3174,11 @@ public class Strata
         
         private int leafSize;
 
-        private TierPool<B, A, X> pool;
+        private final TierPool<B, A, X> pool;
         
-        private TierWriter<B, A, X> writer;
+        private final TierWriter<B, A, X> writer;
         
-        private Allocator<B, A, X> allocator;
+        private final Allocator<B, A, X> allocator;
         
         private final Cooper<T, B, X> cooper;
         
@@ -3147,16 +3186,17 @@ public class Strata
         
         public CoreTree(int innerSize,
                         int leafSize,
-                        StorageBuilder newStorage,
                         Cooper<T, B, X> cooper,
-                        Extractor<T, X> extractor)
+                        Extractor<T, X> extractor,
+                        TierWriter<B, A, X> writer,
+                        Allocator<B, A, X> allocator,
+                        TierPool<B, A, X> pool)
         {
-            BAX<B, A, X> bax = new BAX<B, A, X>();
             this.innerSize = innerSize;
             this.leafSize = leafSize;
-            this.pool = newStorage.newTierPool(bax);
-            this.writer = newStorage.newTierWriter(bax);
-            this.allocator = newStorage.newAllocator(bax);
+            this.pool = pool;
+            this.writer = writer;
+            this.allocator = allocator;
             this.cooper = cooper;
             this.extractor = extractor;
         }
@@ -3205,90 +3245,99 @@ public class Strata
     
     public interface TreeBuilder
     {
-        public <T, A, X> Tree<T, X> newTree(StorageBuilder newStorage, Extractor<T, X> extractor, Class<A> addressClass);
+        public <T, A, X> Tree<T, X> newTree(StrataBuilder builder, Strategist strategies,
+            Storage<T, A, X> storage, Extractor<T, X> extractor);
     }
     
     private static class LookupTreeBuilder
     implements TreeBuilder
     {
-        public <T, A, X> Tree<T, X> newTree(StorageBuilder newStorage, Extractor<T, X> extractor, Class<A> addressClass)
+        public <T, A, X> Tree<T, X> newTree(StrataBuilder builder, Strategist strategies,
+            Storage<T, A, X> storage, Extractor<T, X> extractor)
         {
-            return null;
-        }
-    }
-    
-    public static final class BAX<B, A, X>
-    {
-    }
-    
-    private static class BucketTreeBuilder
-    implements TreeBuilder
-    {
-        public <T, A, X> Tree<T, X> newTree(
-            StorageBuilder newStorage, Extractor<T, X> extractor,
-            Class<A> addressClass)
-        {
-            Cooper<T, Bucket<T> , X> cooper = new BucketCooper<T, X>();
-            CoreTree<T, A, X, Bucket<T>> tree = new CoreTree<T, A, X, Bucket<T>>(0, 0, newStorage, cooper, extractor); 
+            Cooper<T, T, X> cooper = new LookupCooper<T, X>();
+            BTAX<T, T, A, X> btax = new BTAX<T, T, A, X>(storage);
+            Allocator<T, A, X> allocator = strategies.newAllocator(btax);
+            TierPool<T, A, X> pool = strategies.newTierPool(btax);
+            TierWriter<T, A, X> writer = strategies.newTierWriter(btax);
+            CoreTree<T, A, X, T> tree = new CoreTree<T, A, X, T>(builder.getInnerSize(), builder.getLeafSize(), cooper, extractor, writer, allocator, pool); 
             return tree;
         }
     }
     
-    public interface StorageBuilder
+    public static final class BTAX<B, T, A, X>
     {
-        public <T, X> Tree<T, X> newTree(TreeBuilder builder, Extractor<T, X> extractor, int innerSize, int leafSize);
+        public Storage<T, A, X> storage;
         
-        public <B, A, X> Allocator<B, A, X> newAllocator(BAX<B, A, X> bax);
-        
-        public <B, A, X> TierPool<B, A, X> newTierPool(BAX<B, A, X> bax);
-        
-        public <B, A, X> TierWriter<B, A, X> newTierWriter(BAX<B, A, X> bax);
-    }
-
-    public final static class CoreSchema2<T, A, X>
-    implements Schema<T, X> 
-    {
-        private int innerSize;
-        
-        private int leafSize;
-        
-        private TreeBuilder newTree = new LookupTreeBuilder();
-        
-        private Extractor<T, X> extractor = null;
-        
-        private StorageBuilder newStorage;
-        
-        public CoreSchema2(StorageBuilder newStorage)
+        public BTAX(Storage<T, A, X> storage)
         {
-            this.newStorage = newStorage;
-        }
-        
-        public void setInnerSize(int innerSize)
-        {
-            this.innerSize = innerSize;
-        }
-        
-        public void setLeafSize(int leafSize)
-        {
-            this.leafSize = leafSize;
-        }
-        
-        public void setCacheFields(boolean cacheFields)
-        {
-            this.newTree = new BucketTreeBuilder();
-        }
-        
-        public void setExtractor(Extractor<T, X> extractor)
-        {
-            this.extractor = extractor;
-        }
-        
-        public Tree<T, X> newTree()
-        {
-            return newStorage.newTree(newTree, extractor, innerSize, leafSize);
+            this.storage = storage;
         }
     }
     
+    public static class BucketTreeBuilder
+    implements TreeBuilder
+    {
+        public <T, A, X> Tree<T, X> newTree(StrataBuilder builder, Strategist strategies,
+            Storage<T, A, X> storage, Extractor<T, X> extractor)
+        {
+            Cooper<T, Bucket<T> , X> cooper = new BucketCooper<T, X>();
+            BTAX<Bucket<T>, T, A, X> btax = new BTAX<Bucket<T>, T, A, X>(storage);
+            Allocator<Bucket<T>, A, X> allocator = strategies.newAllocator(btax);
+            TierPool<Bucket<T>, A, X> pool = strategies.newTierPool(btax);
+            TierWriter<Bucket<T>, A, X> writer = strategies.newTierWriter(btax);
+            CoreTree<T, A, X, Bucket<T>> tree = new CoreTree<T, A, X, Bucket<T>>(builder.getInnerSize(), builder.getLeafSize(), cooper, extractor, writer, allocator, pool); 
+            return tree;
+        }
+    }
+    
+    public interface Strategist
+    {
+        public <B, T, A, X> Allocator<B, A, X> newAllocator(BTAX<B, T, A, X> btax);
+        
+        public <B, T, A, X> TierPool<B, A, X> newTierPool(BTAX<B, T, A, X> btax);
+        
+        public <B, T, A, X> TierWriter<B, A, X> newTierWriter(BTAX<B, T, A, X> btax);
+    }
+
+    public static class InMemoryStrategist
+    implements Strategist
+    {
+        public <B, T, A, X> Allocator<B, A, X> newAllocator(BTAX<B, T, A, X> btax)
+        {
+            return new NullAllocator<B, A, X>();
+        }
+        
+        public <B, T, A, X> TierPool<B, A, X> newTierPool(BTAX<B, T, A, X> btax)
+        {
+            return new ObjectReferenceTierPool<B, A, X>();
+        }
+        
+        public <B, T, A, X> TierWriter<B, A, X> newTierWriter(BTAX<B, T, A, X> btax)
+        {
+            return new EmptyTierCache<B, A, X>();
+        }
+    }
+    
+    public static class PersistantStrategist
+    implements Strategist
+    {
+        public <B, T, A, X> Allocator<B, A, X> newAllocator(BTAX<B, T, A, X> btax)
+        {
+            return new StorageAllocator<T, B, A, X>(btax.storage);
+        }
+        
+        public <B, T, A, X> TierPool<B, A, X> newTierPool(BTAX<B, T, A, X> btax)
+        {
+            return null;
+        }
+        
+        public <B, T, A, X> TierWriter<B, A, X> newTierWriter(BTAX<B, T, A, X> btax)
+        {
+            return null;
+        }
+    }
+
     public final static class CoreSchema<T, A, X, B>
     implements Serializable
     {
@@ -3334,11 +3383,11 @@ public class Strata
             
             InnerTier<B, A> root = new InnerTier<B, A>();
             root.setChildType(ChildType.LEAF);
-            root.setAddress(allocator.allocate(txn, root));
+            root.setAddress(allocator.allocate(txn, root, innerSize));
             writer.dirty(txn, root);
             
             LeafTier<B, A> leaf = new LeafTier<B, A>();
-            leaf.setAddress(allocator.allocate(txn, leaf));
+            leaf.setAddress(allocator.allocate(txn, leaf, leafSize));
             writer.dirty(txn, leaf);
 
             writer.end(txn);
@@ -3371,33 +3420,86 @@ public class Strata
         return null;
     }
     
-    public static <T> Schema<T, Object> newInMemoryTree(Class<T> klass)
+    public enum WriteCache
     {
-        return new CoreSchema2<T, Object, Object>(new InMemoryStoreBuilder());
+        NONE, PER_QUERY, PER_STRATA
     }
-    
-    private final static class InMemoryStoreBuilder
-    implements StorageBuilder
+
+    public final static class StrataBuilder
     {
-        public <T, X> Tree<T, X> newTree(TreeBuilder newTree, Extractor<T, X> extractor, int innerSize, int leafSize)
+        private boolean inMemory;
+        
+        private boolean pooled;
+        
+        private WriteCache tierCache;
+        
+        private int innerSize;
+        
+        private int leafSize;
+        
+        private TreeBuilder builder = new LookupTreeBuilder();
+        
+        public StrataBuilder()
         {
-            return newTree.newTree(this, extractor, Object.class);
+            this.inMemory = true;
+            this.tierCache = WriteCache.NONE;
         }
         
-        @SuppressWarnings("unchecked")
-        public <B, A, X> Allocator<B, A, X> newAllocator(BAX<B, A, X> bax)
+        public boolean isInMemory()
         {
-            return (Strata.Allocator<B, A, X>) new NullAllocator<B>();
+            return inMemory;
         }
         
-        public <B, A, X> TierPool<B, A, X> newTierPool(BAX<B, A, X> bax)
+        public void setInMemory(boolean inMemory)
         {
-            return new ObjectReferenceTierPool<B, A, X>();
+            this.inMemory = inMemory;
+            setPooled(false);
         }
         
-        public <B, A, X> TierWriter<B, A, X> newTierWriter(BAX<B, A, X> bax)
+        public boolean isPooled()
         {
-            return new EmptyTierCache<B, A, X>();
+            return pooled;
+        }
+        
+        public void setPooled(boolean pooled)
+        {
+            this.pooled = pooled;
+        }
+        
+        public WriteCache getTierCache()
+        {
+            return tierCache;
+        }
+        
+        public void setTierCache(WriteCache tierCache)
+        {
+            this.tierCache = tierCache;
+        }
+        
+        public void setInnerSize(int innerSize)
+        {
+            this.innerSize = innerSize;
+        }
+        
+        public int getInnerSize()
+        {
+            return innerSize;
+        }
+
+        public void setLeafSize(int leafSize)
+        {
+            this.leafSize = leafSize;
+        }
+        
+        public int getLeafSize()
+        {
+            return leafSize;
+        }
+
+        public <T, A, X> Tree<T, X> newTree(Storage<T, A, X> storage, Extractor<T, X> extractor)
+        {
+            InMemoryStrategist strategist = new InMemoryStrategist();
+            return builder.newTree(this, strategist, storage, extractor);
         }
     }
 }
