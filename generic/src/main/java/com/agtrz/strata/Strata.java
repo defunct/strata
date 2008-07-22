@@ -2,8 +2,10 @@
 package com.agtrz.strata;
 
 import java.io.Serializable;
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.SoftReference;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -15,7 +17,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class Strata<T, X>
+public class Strata
 {
     
     @SuppressWarnings("unchecked")
@@ -101,7 +103,7 @@ public class Strata<T, X>
     
     public interface Cooper<T, B, X>
     {
-        public B newBucket(X txn, Extractor<T, X> extract, T object);
+        public B newBucket(X txn, Extractor<T, X> extractor, T object);
 
         public B newBucket(Comparable<?>[] fields, T object);
 
@@ -397,33 +399,95 @@ public class Strata<T, X>
             return null;
         }
     }
-
-    public interface Store<A, H, T, X>
-    extends Serializable
+    
+    public static final class RawTier<T, A, H>
     {
-        public A allocate(X txn);
+        private H header;
+        
+        private final List<T> objects;
+        
+        private final List<A> addresses;
+        
+        public RawTier()
+        {
+            this.objects = new ArrayList<T>();
+            this.addresses = new ArrayList<A>();
+        }
 
-        public H load(X txn, A address, Collection<T> collection);
-
-        public void write(X txn, A address, H header, Collection<T> collection);
-
+        public void addObject(T object)
+        {
+            objects.add(object);
+        }
+        
+        public List<T> getObjects()
+        {
+            return objects;
+        }
+        
+        public void addAddress(A address)
+        {
+            addresses.add(address);
+        }
+        
+        public List<A> getAddresses()
+        {
+            return addresses;
+        }
+        
+        public void setHeader(H header)
+        {
+            this.header = header;
+        }
+        
+        public H getHeader()
+        {
+            return header;
+        }
+    }
+    
+    public interface HeaderIO<H>
+    {
+        public <T, A> void write(RawTier<T, A, H> tier, Object object);
+        
+        public <T, A> void read(RawTier<T, A, H> tier, Object object);
+    }
+    
+    public interface LeafStore<T, A, X>
+    {
+        public A allocate(X txn, int size);
+        
+        public <B> LeafTier<B, A> load(X txn, A address, Cooper<T, B, X> cooper, Extractor<T, X> extractor);
+        
+        public <B> void write(X txn, LeafTier<B, A> leaf, Cooper<T, B, X> cooper, Extractor<T, X> extractor);
+        
         public void free(X txn, A address);
     }
-
+    
+    public interface InnerStore<T, A, X>
+    {
+        public A allocate(X txn, int size);
+        
+        public <B> InnerTier<B, A> load(X txn, A address, Cooper<T, B, X> cooper, Extractor<T, X> extractor);
+        
+        public <B> void write(X txn, InnerTier<B, A> inner, Cooper<T, B, X> cooper, Extractor<T, X> extractor);
+        
+        public void free(X txn, A address);
+    }
+    
     public interface Storage<T, A, X>
     {
-        public Store<A, Short, Branch<T, A>, X> getBranchStore();
-
-        public Store<A, A, T, X> getLeafStore();
+        public InnerStore<T, A, X> getInnerStore();
+        
+        public LeafStore<T, A, X> getLeafStore();
         
         public void commit(X txn);
     }
     
-    private interface Allocator<B, A>
+    public interface Allocator<B, A, X>
     {
-        public A allocate(InnerTier<B, A> inner);
+        public A allocate(X txn, InnerTier<B, A> inner);
         
-        public A allocate(LeafTier<B, A> leaf);
+        public A allocate(X txn, LeafTier<B, A> leaf);
         
         public boolean isNull(A address);
         
@@ -431,14 +495,14 @@ public class Strata<T, X>
     }
     
     private final static class NullAllocator<B>
-    implements Allocator<B, Object>
+    implements Allocator<B, Object, Object>
     {
-        public Object allocate(InnerTier<B, Object> inner)
+        public Object allocate(Object txn, InnerTier<B, Object> inner)
         {
             return null;
         }
         
-        public Object allocate(LeafTier<B, Object> leaf)
+        public Object allocate(Object txn, LeafTier<B, Object> leaf)
         {
             return null;
         }
@@ -458,11 +522,11 @@ public class Strata<T, X>
     {
         private final X txn;
         
-        private final Allocator<B, A> allocator;
+        private final Allocator<B, A, X> allocator;
         
         private TierPool<B, A, X> pool;
 
-        public Navigator(X txn, Allocator<B, A> allocator, TierPool<B, A, X> pool)
+        public Navigator(X txn, Allocator<B, A, X> allocator, TierPool<B, A, X> pool)
         {
             this.txn = txn;
             this.allocator = allocator;
@@ -485,19 +549,19 @@ public class Strata<T, X>
             return pool;
         }
        
-        public Allocator<B, A> getAllocator()
+        public Allocator<B, A, X> getAllocator()
         {
             return allocator;
         }
 
         public LeafTier<B, A> getLeafTier(A address)
         {
-            return pool.getLeafTier(address);
+            return pool.getLeafTier(txn, address);
         }
 
         public InnerTier<B, A> getInnerTier(A address)
         {
-            return null;
+            return pool.getInnerTier(txn, address);
         }
     }
 
@@ -698,7 +762,7 @@ public class Strata<T, X>
      * storage in a batch as well as for locking the Strata for exclusive
      * insert and delete.
      */
-    interface TierWriter<B, A, X>
+    public interface TierWriter<B, A, X>
     {
         /**
          * Determines if the tier cache will invoke the commit method of the
@@ -730,9 +794,37 @@ public class Strata<T, X>
          */
         public void begin();
 
-        public TierSet<Branch<B, A>, A, X> getBranchSet();
+        /**
+         * Record a tier as dirty in the tier cache.
+         *
+         * @param storage The storage strategy.
+         * @param txn A storage specific state object.
+         * @param tier The dirty tier.
+         */
+        public void dirty(X txn, InnerTier<B, A> tier);
         
-        public TierSet<B, A, X> getLeafSet();
+        /**
+         * Remove a dirty tier from the tier cache.
+         * 
+         * @param tier The tier to remove.
+         */
+        public void remove(InnerTier<B, A> tier);
+        
+        /**
+         * Record a tier as dirty in the tier cache.
+         *
+         * @param storage The storage strategy.
+         * @param txn A storage specific state object.
+         * @param tier The dirty tier.
+         */
+        public void dirty(X txn, LeafTier<B, A> tier);
+        
+        /**
+         * Remove a dirty tier from the tier cache.
+         * 
+         * @param tier The tier to remove.
+         */
+        public void remove(LeafTier<B, A> tier);
         
         /**
          * Notify the tier cache that an insert or delete has completed and
@@ -841,10 +933,6 @@ public class Strata<T, X>
          */
         private boolean autoCommit;
         
-        private final EmptyTierSet<A, Short, Branch<B, A>, X> branchTierSet;
-        
-        private final EmptyTierSet<A, A, B, X> leafTierSet;
-
         public EmptyTierCache()
         {
             this(new ReentrantLock(), true);
@@ -857,8 +945,6 @@ public class Strata<T, X>
         {
             this.lock = lock;
             this.autoCommit = autoCommit;
-            this.branchTierSet = new EmptyTierSet<A, Short, Branch<B, A>, X>();
-            this.leafTierSet = new EmptyTierSet<A, A, B, X>();
         }
         
         public void autoCommit(X txn)
@@ -910,14 +996,20 @@ public class Strata<T, X>
         {
         }
 
-        public TierSet<Branch<B, A>, A, X> getBranchSet()
+        public void dirty(X txn, InnerTier<B, A> inner)
         {
-            return branchTierSet;
         }
-        
-        public TierSet<B, A, X> getLeafSet()
+
+        public void remove(InnerTier<B, A> inner)
         {
-            return leafTierSet;
+        }
+
+        public void dirty(X txn, LeafTier<B, A> leaf)
+        {
+        }
+
+        public void remove(LeafTier<B, A> leaf)
+        {
         }
         
         /**
@@ -969,72 +1061,6 @@ public class Strata<T, X>
         }
     }
     
-    static class BasicTierSet<T, A, H, B, X, TB>
-    implements TierSet<B, A, X>
-    {
-        private final Object mutex;
-        
-        private final Store<A, H, TB, X> store;
-        
-        private final Map<Object, Tier<B, A>> mapOfTiers;
-        
-        public BasicTierSet(Store<A, H, TB, X> store, Object mutex)
-        {
-            this.store = store;
-            this.mutex = mutex;
-            this.mapOfTiers = new HashMap<Object, Tier<B, A>>();
-        }
-        
-        /**
-         * Adds dirty tier to the cache so that it can be flushed when an
-         * insert or delete completes if the maximum count of dirty tiers has
-         * been reached.
-         * 
-         * @param storage The storage strategy.
-         * @param txn A storage specific state object.
-         * @param tier The dirty tier.
-         */
-        public void dirty(X txn, Tier<B, A> tier)
-        {
-            synchronized (mutex)
-            {
-                mapOfTiers.put(tier.getAddress(), tier);
-            }
-        }
-        
-        /**
-         * Removes a dirty tier from the tier cache so that it will not be
-         * written when the cache is flushed. Always remove a tier from the
-         * dirty tier cache when you free the tier.
-         * 
-         * @param tier The tier to remove.
-         */
-        public void remove(Tier<B, A> tier)
-        {
-            synchronized (mutex)
-            {
-                mapOfTiers.remove(tier.getAddress());
-            }
-        }
-        
-        public void write(X txn)
-        {
-            Iterator<Tier<B, A>> tiers = mapOfTiers.values().iterator();
-            while (tiers.hasNext())
-            {
-                Tier<B, A> tier = tiers.next();
-                store.write(txn, tier.getAddress(), null, null);
-            }
-
-            mapOfTiers.clear();
-        }
-        
-        public int size()
-        {
-            return mapOfTiers.size();
-        }
-    }
-    
     /**
      * Keeps a synchronized map of dirty tiers with a maximum size at which
      * the tiers are written to file and flushed. Used as the base class of
@@ -1043,13 +1069,17 @@ public class Strata<T, X>
     static class AbstractTierCache<T, B, A, X>
     extends EmptyTierCache<B, A, X>
     {
+        private final Map<A, LeafTier<B, A>> leafTiers;
+        
+        private final Map<A, InnerTier<B, A>> innerTiers;
+        
         private final Storage<T, A, X> storage;
+        
+        protected final Cooper<T, B, X> cooper;
+        
+        protected final Extractor<T, X> extractor;
 
         protected final Object mutex;
-        
-        protected final TierSet<Branch<B, A>, A, X> branchTierSet;
-        
-        protected final TierSet<B, A, X> leafTierSet;
         
         /**
          * The dirty tier cache size that when reached, will cause the cache
@@ -1070,19 +1100,21 @@ public class Strata<T, X>
          * strategy is called after the dirty tiers are written.
          */
         public AbstractTierCache(Storage<T, A, X> storage,
+                                 Cooper<T, B, X> cooper,
+                                 Extractor<T, X> extractor,
                                  Lock lock,
                                  Object mutex,
-                                 TierSet<Branch<B, A>, A, X> branchTierSet,
-                                 TierSet<B, A, X> leafTierSet,
                                  int max,
                                  boolean autoCommit)
         {
             super(lock, autoCommit);
             this.storage = storage;
+            this.cooper = cooper;
+            this.extractor = extractor;
             this.mutex = mutex;
             this.max = max;
-            this.branchTierSet = branchTierSet;
-            this.leafTierSet = leafTierSet;
+            this.leafTiers = new HashMap<A, LeafTier<B,A>>();
+            this.innerTiers = new HashMap<A, InnerTier<B,A>>();
         }
 
         public void autoCommit(X txn)
@@ -1096,6 +1128,11 @@ public class Strata<T, X>
         public Storage<T, A, X> getStorage()
         {
             return storage;
+        }
+        
+        public int size()
+        {
+            return innerTiers.size() + leafTiers.size();
         }
 
         /**
@@ -1113,10 +1150,18 @@ public class Strata<T, X>
         {
             synchronized (mutex)
             {
-                if (force || branchTierSet.size() + leafTierSet.size() >= max)
+                if (force || innerTiers.size() + leafTiers.size() >= max)
                 {
-                    branchTierSet.write(txn);
-                    leafTierSet.write(txn);
+                    for (InnerTier<B, A> inner : innerTiers.values())
+                    {
+                        storage.getInnerStore().write(txn, inner, cooper, extractor);
+                    }
+                    innerTiers.clear();
+                    for (LeafTier<B, A> leaf : leafTiers.values())
+                    {
+                        storage.getLeafStore().write(txn, leaf, cooper, extractor);
+                    }
+                    leafTiers.clear();
                     if (isAutoCommit())
                     {
                         getStorage().commit(txn);
@@ -1124,6 +1169,34 @@ public class Strata<T, X>
                 }
             }
         }
+        
+        @Override
+        public void dirty(X txn, Strata.InnerTier<B,A> inner)
+        {
+            synchronized (mutex)
+            {
+                innerTiers.put(inner.getAddress(), inner);
+            }
+        }
+        
+        @Override
+        public void remove(InnerTier<B, A> inner)
+        {
+            synchronized (mutex)
+            {
+                innerTiers.remove(inner);
+            }
+        }
+        
+        @Override
+        public void dirty(X txn, Strata.LeafTier<B,A> leaf)
+        {
+            synchronized (mutex)
+            {
+                leafTiers.put(leaf.getAddress(), leaf);
+            }
+        }
+        
         
         /**
          * Empty the dirty tier cache by writing out the dirty tiers and
@@ -1160,25 +1233,23 @@ public class Strata<T, X>
          * @param max The dirty tier cache size that when reached, will cause
          * the cache to empty and the tiers to be written.
          */
-        public PerQueryTierCache(Storage<T, A, X> storage, int max)
+        public PerQueryTierCache(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor, int max)
         {
-            this(storage, new ReentrantLock(), max, true);
+            this(storage, cooper, extractor, new ReentrantLock(), max, true);
         }
         
-        private PerQueryTierCache(Storage<T, A, X> storage, Lock lock, int max, boolean autoCommit)
+        private PerQueryTierCache(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor, Lock lock, int max, boolean autoCommit)
         {
-            super(storage,
+            super(storage, cooper, extractor,
                   lock,
                   new Object(),
-                  new BasicTierSet<T, A, Short, Branch<B, A>, X, Branch<T, A>>(storage.getBranchStore(), new Object()),
-                  new BasicTierSet<T, A, A, B, X, T>(storage.getLeafStore(), new Object()),
                   max,
                   autoCommit);
         }
         
         public void begin()
         {
-            if (branchTierSet.size() + leafTierSet.size() == 0)
+            if (size() == 0)
             {
                 lock();
             }
@@ -1187,7 +1258,7 @@ public class Strata<T, X>
         public void end(X txn)
         {
             save(txn, false);
-            if (branchTierSet.size() + leafTierSet.size() == 0)
+            if (size() == 0)
             {
                 unlock();
             }
@@ -1195,7 +1266,7 @@ public class Strata<T, X>
         
         public TierWriter<B, A, X> newTierCache()
         {
-            return new PerQueryTierCache<T, B, A, X>(getStorage(), lock, max, isAutoCommit());
+            return new PerQueryTierCache<T, B, A, X>(getStorage(), cooper, extractor, lock, max, isAutoCommit());
         }
     }
     
@@ -1204,34 +1275,30 @@ public class Strata<T, X>
     {
         private final ReadWriteLock readWriteLock;
 
-        public PerStrataTierWriter(Storage<T, A, X> storage, int max)
+        public PerStrataTierWriter(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor, int max)
         {
-            this(storage, new ReentrantReadWriteLock(), new Object(), max);
+            this(storage, cooper, extractor, new ReentrantReadWriteLock(), new Object(), max);
         }
 
-        private PerStrataTierWriter(Storage<T, A, X> storage,
+        private PerStrataTierWriter(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor,
                                     ReadWriteLock readWriteLock,
                                     Object mutex,
                                     int max)
         {
-            this(storage,
+            this(storage, cooper, extractor,
                  readWriteLock,
                  mutex,
-                 new BasicTierSet<T, A, Short, Branch<B, A>, X, Branch<T, A>>(storage.getBranchStore(), mutex),
-                 new BasicTierSet<T, A, A, B, X, T>(storage.getLeafStore(), mutex),
                  max,
                  true);
         }
 
-        private PerStrataTierWriter(Storage<T, A, X> storage,
+        private PerStrataTierWriter(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor,
                                     ReadWriteLock readWriteLock,
                                     Object mutex,
-                                    TierSet<Branch<B, A>, A, X> branchTierSet,
-                                    TierSet<B, A, X> leafTierSet,
                                     int max,
                                     boolean autoCommit)
         {
-            super(storage, readWriteLock.writeLock(), mutex, branchTierSet, leafTierSet, max, autoCommit);
+            super(storage, cooper, extractor, readWriteLock.writeLock(), mutex, max, autoCommit);
             this.readWriteLock = readWriteLock;
         }
         
@@ -1254,7 +1321,7 @@ public class Strata<T, X>
         
         public TierWriter<B, A, X> newTierCache()
         {
-            return new PerStrataTierWriter<T, B, A, X>(getStorage(), readWriteLock, mutex, branchTierSet, leafTierSet, max, isAutoCommit());
+            return new PerStrataTierWriter<T, B, A, X>(getStorage(), cooper, extractor, readWriteLock, mutex, max, isAutoCommit());
         }
     }
        
@@ -1272,17 +1339,48 @@ public class Strata<T, X>
         public A getNull();
     }
 
-    private interface TierPool<B, A, X>
+    public interface TierPool<B, A, X>
     {
-        public LeafTier<B, A> getLeafTier(A address);
+        public LeafTier<B, A> getLeafTier(X txn, A address);
         
-        public InnerTier<B, A> getInnerTier(A address);
+        public InnerTier<B, A> getInnerTier(X txn, A address);
+    }
+    
+    private interface Unmappable
+    {
+        public void unmap();
+    }
+    
+    private final static class KeyedReference<A, T>
+    extends SoftReference<T> implements Unmappable
+    {
+        private final A key;
+        
+        private final Map<A, ?> map;
+        
+        public KeyedReference(A key, T object, Map<A, Reference<T>> map, ReferenceQueue<T> queue)
+        {
+            super(object, queue);
+            this.key = key;
+            this.map = map;
+        }
+        
+        public void unmap()
+        {
+            map.remove(key);
+        }
     }
     
     private final static class StorageTierPool<T, A, X, B>
     implements TierPool<B, A, X>
     {
-        private final Map<A, InnerTier<B, A>> mapOfInnerTiers = null;
+        private final ReferenceQueue<InnerTier<B, A>> innerQueue = null;
+        
+        private final ReferenceQueue<LeafTier<B, A>> leafQueue = null;
+        
+        private final Map<A, Reference<InnerTier<B, A>>> innerTiers = null;
+        
+        private final Map<A, Reference<LeafTier<B, A>>> leafTiers = null;
         
         private final Storage<T, A, X> storage;
         
@@ -1297,31 +1395,70 @@ public class Strata<T, X>
             this.extractor = extractor;
         }
         
-        public InnerTier<B, A> getInnerTier(A address)
+        private void collect()
         {
-            InnerTier<B, A> inner = null;
-            
-            synchronized (this)
+            synchronized (innerTiers)
             {
-                inner = mapOfInnerTiers.get(address);
-                if (inner == null)
+                Unmappable unmappable = null;
+                while ((unmappable = (Unmappable) innerQueue.poll()) != null)
                 {
-                    inner = new InnerTier<B, A>();
-                    List<Branch<T, A>> listOfBranches = new ArrayList<Branch<T,A>>(); 
-                    short childType = storage.getBranchStore().load(null, address, listOfBranches);
-                    inner.setChildType(childType == 1 ? ChildType.INNER : ChildType.LEAF);
-                    for (Branch<T, A> branch : listOfBranches)
-                    {
-                        inner.add(new Branch<B, A>(cooper.newBucket(null, extractor, branch.getPivot()), branch.getRightKey()));
-                    }
+                    unmappable.unmap();
                 }
             }
-            return null;
+            synchronized (leafTiers)
+            {
+                Unmappable unmappable = null;
+                while ((unmappable = (Unmappable) leafQueue.poll()) != null)
+                {
+                    unmappable.unmap();
+                }
+            }
         }
         
-        public LeafTier<B, A> getLeafTier(A address)
+        public InnerTier<B, A> getInnerTier(X txn, A address)
         {
-            return null;
+            collect();
+            
+            InnerTier<B, A> inner = null;
+            
+            synchronized (innerTiers)
+            {
+                Reference<InnerTier<B, A>> reference = innerTiers.get(address);
+                if (reference != null)
+                {
+                    inner = reference.get();
+                }
+                if (inner == null)
+                {
+                    inner = storage.getInnerStore().load(txn, address, cooper, extractor);
+                    innerTiers.put(inner.getAddress(), new KeyedReference<A, InnerTier<B,A>>(address, inner, innerTiers, innerQueue));
+                }
+            }
+
+            return inner;
+        }
+        
+        public LeafTier<B, A> getLeafTier(X txn, A address)
+        {
+            collect();
+
+            LeafTier<B, A> leaf = null;
+            
+            synchronized (leafTiers)
+            {
+                Reference<LeafTier<B, A>> reference = leafTiers.get(address);
+                if (reference != null)
+                {
+                    leaf = reference.get();
+                }
+                if (leaf == null)
+                {
+                    leaf = storage.getLeafStore().load(txn, address, cooper, extractor);
+                    leafTiers.put(leaf.getAddress(), new KeyedReference<A, LeafTier<B,A>>(address, leaf, leafTiers, leafQueue));
+                }
+            }
+
+            return leaf;
         }
     }
     
@@ -1335,13 +1472,13 @@ public class Strata<T, X>
     implements TierPool<B, A, X>
     {
         @SuppressWarnings("unchecked")
-        public InnerTier<B, A> getInnerTier(A address)
+        public InnerTier<B, A> getInnerTier(X txn, A address)
         {
             return (InnerTier<B, A>) address;
         }
         
         @SuppressWarnings("unchecked")
-        public LeafTier<B, A> getLeafTier(A address)
+        public LeafTier<B, A> getLeafTier(X txn, A address)
         {
             return (LeafTier<B, A>) address;
         }
@@ -1453,7 +1590,7 @@ public class Strata<T, X>
         public InnerTier<B, A> newInnerTier(ChildType childType)
         {
             InnerTier<B, A> inner = new InnerTier<B, A>();
-            inner.setAddress(getAllocator().allocate(inner));
+            inner.setAddress(getAllocator().allocate(getTxn(), inner));
             inner.setChildType(childType);
             return inner;
         }
@@ -1461,7 +1598,7 @@ public class Strata<T, X>
         public LeafTier<B, A> newLeafTier()
         {
             LeafTier<B, A> leaf = new LeafTier<B, A>();
-            leaf.setAddress(getAllocator().allocate(leaf));
+            leaf.setAddress(getAllocator().allocate(getTxn(), leaf));
             return leaf;
         }
         
@@ -1604,9 +1741,9 @@ public class Strata<T, X>
 
                 root.setChildType(ChildType.INNER);
 
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), root);
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), left);
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), right);
+                mutation.getWriter().dirty(mutation.getTxn(), root);
+                mutation.getWriter().dirty(mutation.getTxn(), left);
+                mutation.getWriter().dirty(mutation.getTxn(), right);
             }
 
             public boolean canCancel()
@@ -1662,9 +1799,9 @@ public class Strata<T, X>
                 int index = parent.getIndex(child.getAddress());
                 parent.add(index + 1, new Branch<B, A>(pivot, right.getAddress()));
 
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), parent);
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), child);
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), right);
+                mutation.getWriter().dirty(mutation.getTxn(), parent);
+                mutation.getWriter().dirty(mutation.getTxn(), child);
+                mutation.getWriter().dirty(mutation.getTxn(), right);
             }
 
             public boolean canCancel()
@@ -1758,9 +1895,9 @@ public class Strata<T, X>
                 }
                 inner.add(index + 1, new Branch<B, A>(right.get(0), right.getAddress()));
 
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), inner);
-                mutation.getWriter().getLeafSet().dirty(mutation.getTxn(), leaf);
-                mutation.getWriter().getLeafSet().dirty(mutation.getTxn(), right);
+                mutation.getWriter().dirty(mutation.getTxn(), inner);
+                mutation.getWriter().dirty(mutation.getTxn(), leaf);
+                mutation.getWriter().dirty(mutation.getTxn(), right);
 
                 return new InsertSorted<B, A, X>(inner).operate(mutation, levelOfLeaf);
             }
@@ -1797,9 +1934,9 @@ public class Strata<T, X>
 
                 inner.add(inner.getIndex(leaf.getAddress()) + 1, new Branch<B, A>(mutation.bucket, right.getAddress()));
 
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), inner);
-                mutation.getWriter().getLeafSet().dirty(mutation.getTxn(), leaf);
-                mutation.getWriter().getLeafSet().dirty(mutation.getTxn(), right);
+                mutation.getWriter().dirty(mutation.getTxn(), inner);
+                mutation.getWriter().dirty(mutation.getTxn(), leaf);
+                mutation.getWriter().dirty(mutation.getTxn(), right);
 
                 return new InsertSorted<B, A, X>(inner).operate(mutation, levelOfLeaf);
             }
@@ -1853,9 +1990,9 @@ public class Strata<T, X>
                 int index = inner.getIndex(leaf.getAddress());
                 inner.add(index + 1, new Branch<B, A>(right.get(0), right.getAddress()));
 
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), inner);
-                mutation.getWriter().getLeafSet().dirty(mutation.getTxn(), leaf);
-                mutation.getWriter().getLeafSet().dirty(mutation.getTxn(), right);
+                mutation.getWriter().dirty(mutation.getTxn(), inner);
+                mutation.getWriter().dirty(mutation.getTxn(), leaf);
+                mutation.getWriter().dirty(mutation.getTxn(), right);
             }
 
             public boolean canCancel()
@@ -1898,7 +2035,7 @@ public class Strata<T, X>
 
                 // FIXME Now we are writing before we are splitting. Problem.
                 // Empty cache does not work!
-                mutation.getWriter().getLeafSet().dirty(mutation.getTxn(), leaf);
+                mutation.getWriter().dirty(mutation.getTxn(), leaf);
 
                 return true;
             }
@@ -1970,9 +2107,9 @@ public class Strata<T, X>
 
                 root.setChildType(child.getChildType());
 
-                mutation.getWriter().getBranchSet().remove(child);
+                mutation.getWriter().remove(child);
 
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), root);
+                mutation.getWriter().dirty(mutation.getTxn(), root);
             }
 
             public boolean canCancel()
@@ -2015,7 +2152,7 @@ public class Strata<T, X>
                 {
                     Branch<B, A> branch = inner.find(mutation.comparable);
                     branch.setPivot(mutation.getReplacement());
-                    mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), inner);
+                    mutation.getWriter().dirty(mutation.getTxn(), inner);
                 }
             }
 
@@ -2327,9 +2464,9 @@ public class Strata<T, X>
                     left.add(right.remove(0));
                 }
 
-                mutation.getWriter().getBranchSet().remove(right);
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), parent);
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), left);
+                mutation.getWriter().remove(right);
+                mutation.getWriter().dirty(mutation.getTxn(), parent);
+                mutation.getWriter().dirty(mutation.getTxn(), left);
             }
 
             public boolean canCancel()
@@ -2361,8 +2498,8 @@ public class Strata<T, X>
                     parent.get(0).setPivot(null);
                 }
 
-                mutation.getWriter().getBranchSet().remove(child);
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), parent);
+                mutation.getWriter().remove(child);
+                mutation.getWriter().dirty(mutation.getTxn(), parent);
             }
 
             public boolean canCancel()
@@ -2519,7 +2656,7 @@ public class Strata<T, X>
                                     }
                                 }
                             }
-                            mutation.getWriter().getLeafSet().dirty(mutation.getTxn(), current);
+                            mutation.getWriter().dirty(mutation.getTxn(), current);
                             mutation.setResult(candidate);
                             break SEARCH;
                         }
@@ -2544,11 +2681,11 @@ public class Strata<T, X>
                         if (subsequent.size() == 0)
                         {
                             current.setNext(subsequent.getNext());
-                            mutation.getWriter().getLeafSet().remove(subsequent);
+                            mutation.getWriter().remove(subsequent);
                         }
                         else
                         {
-                            mutation.getWriter().getLeafSet().dirty(mutation.getTxn(), subsequent);
+                            mutation.getWriter().dirty(mutation.getTxn(), subsequent);
                         }
                         current = subsequent;
                     }
@@ -2594,9 +2731,9 @@ public class Strata<T, X>
                 // FIXME Get last leaf. 
                 left.setNext(right.getNext());
 
-                mutation.getWriter().getLeafSet().remove(right);
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), parent);
-                mutation.getWriter().getLeafSet().dirty(mutation.getTxn(), left);
+                mutation.getWriter().remove(right);
+                mutation.getWriter().dirty(mutation.getTxn(), parent);
+                mutation.getWriter().dirty(mutation.getTxn(), left);
             }
 
             public boolean canCancel()
@@ -2627,9 +2764,9 @@ public class Strata<T, X>
 
                 left.setNext(leaf.getNext());
 
-                mutation.getWriter().getLeafSet().remove(leaf);
-                mutation.getWriter().getBranchSet().dirty(mutation.getTxn(), parent);
-                mutation.getWriter().getLeafSet().dirty(mutation.getTxn(), left);
+                mutation.getWriter().remove(leaf);
+                mutation.getWriter().dirty(mutation.getTxn(), parent);
+                mutation.getWriter().dirty(mutation.getTxn(), left);
 
                 mutation.setOnlyChild(false);
             }
@@ -3002,7 +3139,7 @@ public class Strata<T, X>
         
         private TierWriter<B, A, X> writer;
         
-        private Allocator<B, A> allocator;
+        private Allocator<B, A, X> allocator;
         
         private final Cooper<T, B, X> cooper;
         
@@ -3040,7 +3177,7 @@ public class Strata<T, X>
             return leafSize;
         }
         
-        public Allocator<B, A> getAllocator()
+        public Allocator<B, A, X> getAllocator()
         {
             return allocator;
         }
@@ -3066,7 +3203,7 @@ public class Strata<T, X>
         }
     }
     
-    private interface TreeBuilder
+    public interface TreeBuilder
     {
         public <T, A, X> Tree<T, X> newTree(StorageBuilder newStorage, Extractor<T, X> extractor, Class<A> addressClass);
     }
@@ -3080,7 +3217,7 @@ public class Strata<T, X>
         }
     }
     
-    private static final class BAX<B, A, X>
+    public static final class BAX<B, A, X>
     {
     }
     
@@ -3097,11 +3234,11 @@ public class Strata<T, X>
         }
     }
     
-    private interface StorageBuilder
+    public interface StorageBuilder
     {
         public <T, X> Tree<T, X> newTree(TreeBuilder builder, Extractor<T, X> extractor, int innerSize, int leafSize);
         
-        public <B, A, X> Allocator<B, A> newAllocator(BAX<B, A, X> bax);
+        public <B, A, X> Allocator<B, A, X> newAllocator(BAX<B, A, X> bax);
         
         public <B, A, X> TierPool<B, A, X> newTierPool(BAX<B, A, X> bax);
         
@@ -3163,7 +3300,7 @@ public class Strata<T, X>
         
         private TierWriter<B, A, X> writer;
         
-        private Allocator<B, A> allocator;
+        private Allocator<B, A, X> allocator;
         
         public CoreSchema()
         {
@@ -3197,12 +3334,12 @@ public class Strata<T, X>
             
             InnerTier<B, A> root = new InnerTier<B, A>();
             root.setChildType(ChildType.LEAF);
-            root.setAddress(allocator.allocate(root));
-            writer.getBranchSet().dirty(txn, root);
+            root.setAddress(allocator.allocate(txn, root));
+            writer.dirty(txn, root);
             
             LeafTier<B, A> leaf = new LeafTier<B, A>();
-            leaf.setAddress(allocator.allocate(leaf));
-            writer.getLeafSet().dirty(txn, leaf);
+            leaf.setAddress(allocator.allocate(txn, leaf));
+            writer.dirty(txn, leaf);
 
             writer.end(txn);
             
@@ -3248,9 +3385,9 @@ public class Strata<T, X>
         }
         
         @SuppressWarnings("unchecked")
-        public <B, A, X> Allocator<B, A> newAllocator(BAX<B, A, X> bax)
+        public <B, A, X> Allocator<B, A, X> newAllocator(BAX<B, A, X> bax)
         {
-            return (Strata.Allocator<B, A>) new NullAllocator<B>();
+            return (Strata.Allocator<B, A, X>) new NullAllocator<B>();
         }
         
         public <B, A, X> TierPool<B, A, X> newTierPool(BAX<B, A, X> bax)
