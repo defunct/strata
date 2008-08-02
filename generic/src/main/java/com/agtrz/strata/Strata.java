@@ -400,58 +400,6 @@ public class Strata
         }
     }
     
-    public static final class RawTier<T, A, H>
-    {
-        private H header;
-        
-        private final List<T> objects;
-        
-        private final List<A> addresses;
-        
-        public RawTier()
-        {
-            this.objects = new ArrayList<T>();
-            this.addresses = new ArrayList<A>();
-        }
-
-        public void addObject(T object)
-        {
-            objects.add(object);
-        }
-        
-        public List<T> getObjects()
-        {
-            return objects;
-        }
-        
-        public void addAddress(A address)
-        {
-            addresses.add(address);
-        }
-        
-        public List<A> getAddresses()
-        {
-            return addresses;
-        }
-        
-        public void setHeader(H header)
-        {
-            this.header = header;
-        }
-        
-        public H getHeader()
-        {
-            return header;
-        }
-    }
-    
-    public interface HeaderIO<H>
-    {
-        public <T, A> void write(RawTier<T, A, H> tier, Object object);
-        
-        public <T, A> void read(RawTier<T, A, H> tier, Object object);
-    }
-    
     public interface LeafStore<T, A, X>
     {
         public A allocate(X txn, int size);
@@ -770,30 +718,6 @@ public class Strata
         public void autoCommit(X txn);
     }
     
-    interface TierSet<B, A, X>
-    {
-        
-        /**
-         * Record a tier as dirty in the tier cache.
-         *
-         * @param storage The storage strategy.
-         * @param txn A storage specific state object.
-         * @param tier The dirty tier.
-         */
-        public void dirty(X txn, Tier<B, A> tier);
-        
-        /**
-         * Remove a dirty tier from the tier cache.
-         * 
-         * @param tier The tier to remove.
-         */
-        public void remove(Tier<B, A> tier);
-        
-        public void write(X txn);
-        
-        public int size();
-    }
-
     /**
      * A strategy for both caching dirty tiers in order to writing them out to
      * storage in a batch as well as for locking the Strata for exclusive
@@ -899,45 +823,7 @@ public class Strata
         public TierWriter<B, A, X> newTierWriter();
     } 
     
-    public static class EmptyTierSet<A, H, B, X>
-    implements TierSet<B, A, X>
-    {
-        public EmptyTierSet()
-        {
-        }
-        
-        /**
-         * For the empty tier cache, this method immediately writes the dirty
-         * tier to storage and commits the write if auto commit is enabled.
-         *
-         * @param storage The storage strategy.
-         * @param txn A storage specific state object.
-         * @param tier The dirty tier.
-         */
-        public void dirty(X txn, Tier<B, A> tier)
-        {
-        }
-        
-        /**
-         * For the empty tier cache, this method does nothing.
-         * 
-         * @param tier The tier to remove.
-         */
-        public void remove(Tier<B, A> tier)
-        {
-        }
-        
-        public void write(X txn)
-        {
-        }
-        
-        public int size()
-        {
-            return 0;
-        }
-    }
-    
-     /**
+    /**
      * A tier cache for in memory storage applications that merely implements
      * the ability to lock the common structure. This implementation
      * immediately calls the write method of the storage implementation when a
@@ -1524,7 +1410,7 @@ public class Strata
     private final static class Mutation<B, A, X>
     extends Navigator<B, A, X>
     {
-        private StrataBuilder builder;
+        private Schema builder;
         
         private boolean onlyChild;
         
@@ -3245,14 +3131,14 @@ public class Strata
     
     public interface TreeBuilder
     {
-        public <T, A, X> Tree<T, X> newTree(StrataBuilder builder, Strategist strategies,
+        public <T, A, X> Tree<T, X> newTree(Schema builder, Strategist strategies,
             Storage<T, A, X> storage, Extractor<T, X> extractor);
     }
     
     private static class LookupTreeBuilder
     implements TreeBuilder
     {
-        public <T, A, X> Tree<T, X> newTree(StrataBuilder builder, Strategist strategies,
+        public <T, A, X> Tree<T, X> newTree(Schema builder, Strategist strategies,
             Storage<T, A, X> storage, Extractor<T, X> extractor)
         {
             Cooper<T, T, X> cooper = new LookupCooper<T, X>();
@@ -3278,7 +3164,7 @@ public class Strata
     public static class BucketTreeBuilder
     implements TreeBuilder
     {
-        public <T, A, X> Tree<T, X> newTree(StrataBuilder builder, Strategist strategies,
+        public <T, A, X> Tree<T, X> newTree(Schema builder, Strategist strategies,
             Storage<T, A, X> storage, Extractor<T, X> extractor)
         {
             Cooper<T, Bucket<T> , X> cooper = new BucketCooper<T, X>();
@@ -3338,7 +3224,7 @@ public class Strata
         }
     }
 
-    public final static class CoreSchema<T, A, X, B>
+    public final static class DeadCode<T, A, X, B>
     implements Serializable
     {
         private static final long serialVersionUID = 1L;
@@ -3351,7 +3237,7 @@ public class Strata
         
         private Allocator<B, A, X> allocator;
         
-        public CoreSchema()
+        public DeadCode()
         {
             this.leafSize = 5;
             this.innerSize = 5;
@@ -3401,31 +3287,13 @@ public class Strata
             return null;
         }
     }
-    
-    public interface Schema<T, X>
-    {
-        public void setInnerSize(int size);
-        
-        public void setLeafSize(int size);
-        
-        public void setCacheFields(boolean cacheFields);
-        
-        public void setExtractor(Extractor<T, X> extractor);
-        
-        public Tree<T, X> newTree();
-    }
-    
-    public static <T, A, X> Schema<T, X> newSchema(Storage<T, A, X> storage)
-    {
-        return null;
-    }
-    
+
     public enum WriteCache
     {
         NONE, PER_QUERY, PER_STRATA
     }
 
-    public final static class StrataBuilder
+    public final static class Schema
     {
         private boolean inMemory;
         
@@ -3439,10 +3307,13 @@ public class Strata
         
         private TreeBuilder builder = new LookupTreeBuilder();
         
-        public StrataBuilder()
+        private final Strategist strategist;
+        
+        public Schema(Strategist strategist)
         {
             this.inMemory = true;
             this.tierCache = WriteCache.NONE;
+            this.strategist = strategist;
         }
         
         public boolean isInMemory()
@@ -3498,9 +3369,14 @@ public class Strata
 
         public <T, A, X> Tree<T, X> newTree(Storage<T, A, X> storage, Extractor<T, X> extractor)
         {
-            InMemoryStrategist strategist = new InMemoryStrategist();
             return builder.newTree(this, strategist, storage, extractor);
         }
+    }
+    
+    public static Schema newInMemorySchema()
+    {
+        Schema schema = new Schema(new InMemoryStrategist());
+        return schema;
     }
 }
 
