@@ -9,7 +9,7 @@ public class StrataTestCase
 {
     @Test public void create()
     {
-        Strata.Schema schema = Strata.newInMemorySchema();
+        Strata.Schema<Integer, Object> schema = Strata.newInMemorySchema();
         schema.setInnerSize(5);
         schema.setLeafSize(7);
         Strata.Extractor<Integer, Object> extractor = new Strata.Extractor<Integer, Object>()
@@ -19,9 +19,9 @@ public class StrataTestCase
                 record.fields(object);
             }
         };
-       /* Strata.Tree<Integer, Object> tree = */ schema.newTree(null, extractor);
-//        Strata.Query<Integer> query = tree.query(null);
-//        query.add(1);
+        schema.setExtractor(extractor);
+        Strata.Transaction<Integer, Object> transaction = schema.newTransaction(null);
+        transaction.add(1);
     }
 }
 
