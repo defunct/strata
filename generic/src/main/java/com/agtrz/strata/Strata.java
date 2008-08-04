@@ -93,13 +93,6 @@ public class Strata
         public void extract(X txn, T object, Record record);
     }
     
-    public interface TierBuilder<H, T>
-    {
-        public void setHeader(H header);
-        
-        public void append(T object);
-    }
-    
     public interface Cooper<T, B, X>
     {
         public B newBucket(X txn, Extractor<T, X> extractor, T object);
@@ -115,14 +108,24 @@ public class Strata
     
     public final static class Bucket<T>
     {
-        public final Comparable<?>[] fields;
+        private final Comparable<?>[] fields;
 
-        public final T object;
+        private final T object;
 
         public Bucket(Comparable<?>[] fields, T object)
         {
             this.fields = fields;
             this.object = object;
+        }
+        
+        public Comparable<?>[] getFields()
+        {
+            return fields;
+        }
+        
+        public T getObject()
+        {
+            return object;
         }
     }
 
@@ -145,12 +148,12 @@ public class Strata
 
         public Comparable<?>[] getFields(X txn, Extractor<T, X> extractor, Bucket<T> bucket)
         {
-            return bucket.fields;
+            return bucket.getFields();
         }
 
         public T getObject(Bucket<T> bucket)
         {
-            return bucket.object;
+            return bucket.getObject();
         }
         
         public Cursor<T> wrap(Cursor<Bucket<T>> cursor)
@@ -247,8 +250,6 @@ public class Strata
         {
             return System.identityHashCode(this);
         }
-        
-//        public abstract <B2, X> void write(Storage<B2, A, X> storage);
     }
 
     public final static class LeafTier<B, A>
@@ -258,11 +259,6 @@ public class Strata
 
         private A next;
         
-        public ReadWriteLock getReadWriteLock()
-        {
-            return null;
-        }
-
         public Cursor<B> find(Comparable<B> comparable)
         {
             return null;
@@ -275,17 +271,39 @@ public class Strata
         
         public <X> LeafTier<B, A> getNextAndLock(Mutation<B, A, X> mutation, Level<B, A, X> leafLevel)
         {
+            Structure<B, A, X> structure = mutation.getStructure();
+            if (!structure.getAllocator().isNull(getNext()))
+            {
+                LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), getNext());
+                leafLevel.lockAndAdd(leaf);
+                return leaf;
+            }
             return null;
         }
         
-        public <X> LeafTier<B, A> append(Mutation<B, A, X> mutation, Level<B, A, X> leafLevel)
+        public <X> void append(Mutation<B, A, X> mutation, Level<B, A, X> leafLevel)
         {
-            return null;
+            Structure<B, A, X> structure = mutation.getStructure();
+            if (size() == structure.getLeafSize())
+            {
+                LeafTier<B, A> nextLeaf = getNextAndLock(mutation, leafLevel);
+                if (null == nextLeaf || structure.compare(mutation.getTxn(), mutation.getBucket(), nextLeaf.get(0)) != 0)
+                {
+                    nextLeaf = mutation.newLeafTier();
+                    link(mutation, nextLeaf);
+                }
+                nextLeaf.append(mutation, leafLevel);
+            }
+            else
+            {
+                add(mutation.getBucket());
+                structure.getWriter().dirty(mutation.getTxn(), this);
+            }
         }
 
         public <X> LeafTier<B, A> getNext(Mutation<B, A, X> mutation)
         {
-            return null;
+            return mutation.getStructure().getPool().getLeafTier(mutation.getTxn(), getNext());
         }
         
         public A getNext()
@@ -297,12 +315,6 @@ public class Strata
         {
             this.next = next;
         }
-
-//        public <B2, X> void write(Storage<B2, A, X> storage, X txn)
-//        {
-//            Collection<B> collection = this;
-//            storage.getLeafStore().write(txn, getAddress(), getNext(), collection);
-//        }
     }
 
     public enum ChildType
@@ -312,19 +324,19 @@ public class Strata
 
     public final static class Branch<T, A>
     {
-        private final A key;
+        private final A address;
 
         private T pivot;
 
         public Branch(T pivot, A address)
         {
-            this.key = address;
+            this.address = address;
             this.pivot = pivot;
         }
 
-        public A getRightKey()
+        public A getAddress()
         {
-            return key;
+            return address;
         }
 
         public T getPivot()
@@ -367,7 +379,7 @@ public class Strata
             while (branches.hasNext())
             {
                 Branch<B, A> branch = branches.next();
-                if (branch.getRightKey().equals(address))
+                if (branch.getAddress().equals(address))
                 {
                     return index;
                 }
@@ -383,8 +395,30 @@ public class Strata
 
         public Branch<B, A> find(Comparable<B> comparable)
         {
-            // FIXME Need to sort this one out.
-            return null;
+            int low = 1;
+            int high = size() - 1;
+            while (low < high)
+            {
+                int mid = (low + high) / 2;
+                int compare = comparable.compareTo(get(mid).getPivot());
+                if (compare > 0)
+                {
+                    low = mid + 1;
+                }
+                else
+                {
+                    high = mid;
+                }
+            }
+            if (low < size())
+            {
+                Branch<B, A> branch = get(low);
+                if (comparable.compareTo(branch.getPivot()) == 0)
+                {
+                    return branch;
+                }
+            }
+            return get(low - 1);
         }
     }
     
@@ -536,53 +570,6 @@ public class Strata
     public static AllocatorBuilder newStorageAllocatorBuilder()
     {
         return new StorageAllocatorBuilder();
-    }
-
-    public static class Navigator<B, A, X>
-    {
-        private final X txn;
-        
-        private final Allocator<B, A, X> allocator;
-        
-        private TierPool<B, A, X> pool;
-
-        public Navigator(X txn, Allocator<B, A, X> allocator, TierPool<B, A, X> pool)
-        {
-            this.txn = txn;
-            this.allocator = allocator;
-            this.pool = pool;
-        }
-
-        public Navigator(Navigator<B, A, X> navigator)
-        {
-            this.txn = navigator.txn;
-            this.allocator = navigator.allocator;
-        }
-        
-        public X getTxn()
-        {
-            return txn;
-        }
-         
-        public TierPool<B, A, X> getPool()
-        {
-            return pool;
-        }
-       
-        public Allocator<B, A, X> getAllocator()
-        {
-            return allocator;
-        }
-
-        public LeafTier<B, A> getLeafTier(A address)
-        {
-            return pool.getLeafTier(txn, address);
-        }
-
-        public InnerTier<B, A> getInnerTier(A address)
-        {
-            return pool.getInnerTier(txn, address);
-        }
     }
 
     public interface Cursor<T>
@@ -1043,7 +1030,7 @@ public class Strata
      * the tiers are written to file and flushed. Used as the base class of
      * both the per query and per strata implementations of the tier cache.
      */
-    static class AbstractTierCache<T, B, A, X>
+    static class AbstractTierCache<B, T, A, X>
     extends EmptyTierCache<B, A, X>
     {
         private final Map<A, LeafTier<B, A>> leafTiers;
@@ -1200,8 +1187,8 @@ public class Strata
      * is released. Thus, the empty map of dirty tiers is an indicator that
      * the associated query does not hold the lock on the strata.
      */
-    public static class PerQueryTierCache<T, B, A, X>
-    extends AbstractTierCache<T, B, A, X>
+    public static class PerQueryTierCache<B, T, A, X>
+    extends AbstractTierCache<B, T, A, X>
     {
         /**
          * Create a per query tier cache.
@@ -1243,12 +1230,34 @@ public class Strata
         
         public TierWriter<B, A, X> newTierCache()
         {
-            return new PerQueryTierCache<T, B, A, X>(getStorage(), cooper, extractor, lock, max, isAutoCommit());
+            return new PerQueryTierCache<B, T, A, X>(getStorage(), cooper, extractor, lock, max, isAutoCommit());
         }
     }
     
-    public static class PerStrataTierWriter<T, B, A, X>
-    extends AbstractTierCache<T, B, A, X>
+    public static final class PerQueryTierWriterBuilder
+    implements TierWriterBuilder
+    {
+        private final int max;
+        
+        public PerQueryTierWriterBuilder(int max)
+        {
+            this.max = max;
+        }
+        
+        public <B, T, A, X> TierWriter<B, A, X> newTierWriter(Build<B, T, A, X> build)
+        {
+            return new PerQueryTierCache<B, T, A, X>(build.getStorage(), build.getCooper(), build.getSchema()
+            .getExtractor(), max);
+        }
+    }
+    
+    public static TierWriterBuilder newPerQueryTierWriter(int max)
+    {
+        return new PerQueryTierWriterBuilder(max);
+    }
+
+    public static class PerStrataTierWriter<B, T, A, X>
+    extends AbstractTierCache<B, T, A, X>
     {
         private final ReadWriteLock readWriteLock;
 
@@ -1298,10 +1307,31 @@ public class Strata
         
         public TierWriter<B, A, X> newTierCache()
         {
-            return new PerStrataTierWriter<T, B, A, X>(getStorage(), cooper, extractor, readWriteLock, mutex, max, isAutoCommit());
+            return new PerStrataTierWriter<B, T, A, X>(getStorage(), cooper, extractor, readWriteLock, mutex, max, isAutoCommit());
         }
     }
        
+    public static final class PerStrataTierWriterBuilder
+    implements TierWriterBuilder
+    {
+        private final int max;
+        
+        public PerStrataTierWriterBuilder(int max)
+        {
+            this.max = max;
+        }
+
+        public <B, T, A, X> TierWriter<B, A, X> newTierWriter(Build<B, T, A, X> build)
+        {
+            return new PerStrataTierWriter<B, T, A, X>(build.getStorage(), build.getCooper(), build.getSchema().getExtractor(), max);
+        }
+    }
+    
+    public static TierWriterBuilder newPerStrataTierWriter(int max)
+    {
+        return new PerStrataTierWriterBuilder(max);
+    }
+    
     public interface Deletable<T>
     {
         public boolean deletable(T object);
@@ -1353,7 +1383,7 @@ public class Strata
         }
     }
     
-    private final static class StorageTierPool<T, A, X, B>
+    private final static class BasicTierPool<T, A, X, B>
     implements TierPool<B, A, X>
     {
         private final ReferenceQueue<InnerTier<B, A>> innerQueue = null;
@@ -1370,7 +1400,7 @@ public class Strata
         
         private final Cooper<T, B, X> cooper;
         
-        public StorageTierPool(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor)
+        public BasicTierPool(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor)
         {
             this.storage = storage;
             this.cooper = cooper;
@@ -1444,9 +1474,18 @@ public class Strata
         }
     }
     
-    public static <T, A, X, B> TierPool<B, A, X> newCachingTierPool(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor)
+    public final static class BasicTierPoolBuilder
+    implements TierPoolBuilder
     {
-        return new StorageTierPool<T, A, X, B>(storage, cooper, extractor);
+        public <B, T, A, X> TierPool<B, A, X> newTierPool(Build<B, T, A, X> build)
+        {
+            return new BasicTierPool<T, A, X, B>(build.getStorage(), build.getCooper(), build.getSchema().getExtractor());
+        }
+    }
+    
+    public static TierPoolBuilder newBasicTierPool()
+    {
+        return new BasicTierPoolBuilder();
     }
     
     private final static class ObjectReferenceTierPool<B, A, X>
@@ -1480,64 +1519,64 @@ public class Strata
     }
     
     private final static class Mutation<B, A, X>
-    extends Navigator<B, A, X>
     {
-        private int innerSize;
+        private final X txn;
+
+        private final Structure<B, A, X> structure;
         
-        private int leafSize;
+        private final B bucket;
+        
+        private final Comparable<B> _comparable;
+        
+        private final Deletable<B> deletable;
+        
+        private final LinkedList<Level<B, A, X>> listOfLevels = new LinkedList<Level<B, A, X>>();
         
         private boolean onlyChild;
         
         private boolean deleting;
-
+        
         private B result;
         
         private B replacement;
         
         private LeafTier<B, A> leftLeaf;
         
-        public final Comparable<B> comparable;
-
-        public final Deletable<B> deletable;
-
-        public final LinkedList<Level<B, A, X>> listOfLevels = new LinkedList<Level<B, A, X>>();
-
         public LeafOperation<B, A, X> leafOperation;
 
-        public final B bucket;
-        
-        private final Structure<B, A, X> structure;
-
-        public Mutation(Navigator<B, A, X> navigator,
+        public Mutation(X txn,
                         Structure<B, A, X> structure,
                         B bucket,
                         Comparable<B> comparable,
-                        Deletable<B> deletable, int innerSize, int leafSize)
+                        Deletable<B> deletable)
         {
-            super(navigator);
-            this.comparable = comparable;
+            this.txn = txn;
+            this._comparable = comparable;
             this.deletable = deletable;
             this.bucket = bucket;
             this.structure = structure;
-            this.leafSize = leafSize;
-            this.innerSize = innerSize;
         }
         
-        public TierWriter<B, A, X> getWriter()
+        public Comparable<B> getComparable()
         {
-            return structure.getWriter();
+            return _comparable;
+        }
+        
+        public X getTxn()
+        {
+            return txn;
+        }
+        
+        public B getBucket()
+        {
+            return bucket;
         }
 
-        public int getInnerSize()
+        public Structure<B, A, X> getStructure()
         {
-            return structure.getInnerSize();
+            return structure;
         }
-        
-        public int getLeafSize()
-        {
-            return structure.getLeafSize();
-        }
-        
+
         public B getResult()
         {
             return result;
@@ -1591,7 +1630,7 @@ public class Strata
         public InnerTier<B, A> newInnerTier(ChildType childType)
         {
             InnerTier<B, A> inner = new InnerTier<B, A>();
-            inner.setAddress(getAllocator().allocate(getTxn(), inner, innerSize));
+            inner.setAddress(getStructure().getAllocator().allocate(getTxn(), inner, getStructure().getInnerSize()));
             inner.setChildType(childType);
             return inner;
         }
@@ -1599,7 +1638,7 @@ public class Strata
         public LeafTier<B, A> newLeafTier()
         {
             LeafTier<B, A> leaf = new LeafTier<B, A>();
-            leaf.setAddress(getAllocator().allocate(getTxn(), leaf, leafSize));
+            leaf.setAddress(getStructure().getAllocator().allocate(getTxn(), leaf, getStructure().getInnerSize()));
             return leaf;
         }
         
@@ -1699,7 +1738,7 @@ public class Strata
                             Level<B, A, X> levelOfRoot,
                             InnerTier<B, A> root)
         {
-            return mutation.getInnerSize() == root.size();
+            return mutation.getStructure().getInnerSize() == root.size();
         }
 
         public void operation(Mutation<B, A, X> mutation,
@@ -1742,9 +1781,10 @@ public class Strata
 
                 root.setChildType(ChildType.INNER);
 
-                mutation.getWriter().dirty(mutation.getTxn(), root);
-                mutation.getWriter().dirty(mutation.getTxn(), left);
-                mutation.getWriter().dirty(mutation.getTxn(), right);
+                TierWriter<B, A, X> writer = mutation.getStructure().getWriter();
+                writer.dirty(mutation.getTxn(), root);
+                writer.dirty(mutation.getTxn(), left);
+                writer.dirty(mutation.getTxn(), right);
             }
 
             public boolean canCancel()
@@ -1759,10 +1799,11 @@ public class Strata
     {
         public boolean test(Mutation<B, A, X> mutation, Level<B, A, X> levelOfParent, Level<B, A, X> levelOfChild, InnerTier<B, A> parent)
         {
-            Branch<B, A> branch = parent.find(mutation.comparable);
-            InnerTier<B, A> child = mutation.getInnerTier(branch.getRightKey());
+            Structure<B, A, X> structure = mutation.getStructure();
+            Branch<B, A> branch = parent.find(mutation.getComparable());
+            InnerTier<B, A> child = structure.getPool().getInnerTier(mutation.getTxn(), branch.getAddress());
             levelOfChild.lockAndAdd(child);
-            if (child.size() == mutation.getInnerSize())
+            if (child.size() == structure.getInnerSize())
             {
                 levelOfParent.listOfOperations.add(new Split<B, A, X>(parent, child));
                 return true;
@@ -1800,9 +1841,10 @@ public class Strata
                 int index = parent.getIndex(child.getAddress());
                 parent.add(index + 1, new Branch<B, A>(pivot, right.getAddress()));
 
-                mutation.getWriter().dirty(mutation.getTxn(), parent);
-                mutation.getWriter().dirty(mutation.getTxn(), child);
-                mutation.getWriter().dirty(mutation.getTxn(), right);
+                TierWriter<B, A, X> writer = mutation.getStructure().getWriter();
+                writer.dirty(mutation.getTxn(), parent);
+                writer.dirty(mutation.getTxn(), child);
+                writer.dirty(mutation.getTxn(), right);
             }
 
             public boolean canCancel()
@@ -1826,18 +1868,19 @@ public class Strata
     {
         public boolean test(Mutation<B, A, X> mutation, Level<B, A, X> levelOfParent, Level<B, A, X> levelOfChild, InnerTier<B, A> parent)
         {
+            Structure<B, A, X> structure = mutation.getStructure();
             boolean split = true;
             levelOfChild.getSync = new WriteLockExtractor();
-            Branch<B, A> branch = parent.find(mutation.comparable);
-            LeafTier<B, A> leaf = mutation.getLeafTier(branch.getRightKey());
+            Branch<B, A> branch = parent.find(mutation.getComparable());
+            LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
             levelOfChild.getSync = new WriteLockExtractor();
             levelOfChild.lockAndAdd(leaf);
-            if (leaf.size() == mutation.getLeafSize())
+            if (leaf.size() == structure.getLeafSize())
             {
                 Comparable<B> first = mutation.newComparable(leaf.get(0));
                 if (first.compareTo(leaf.get(leaf.size() - 1)) == 0)
                 {
-                    int compare = mutation.comparable.compareTo(leaf.get(0));
+                    int compare = mutation.getComparable().compareTo(leaf.get(0));
                     if (compare < 0)
                     {
                         mutation.leafOperation = new SplitLinkedListLeft<B, A, X>(parent);
@@ -1878,8 +1921,10 @@ public class Strata
 
             public boolean operate(Mutation<B, A, X> mutation, Level<B, A, X> levelOfLeaf)
             {
-                Branch<B, A> branch = inner.find(mutation.comparable);
-                LeafTier<B, A> leaf = mutation.getLeafTier(branch.getRightKey());
+                Structure<B, A, X> structure = mutation.getStructure();
+
+                Branch<B, A> branch = inner.find(mutation.getComparable());
+                LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
 
                 LeafTier<B, A> right = mutation.newLeafTier();
                 while (leaf.size() != 0)
@@ -1896,9 +1941,10 @@ public class Strata
                 }
                 inner.add(index + 1, new Branch<B, A>(right.get(0), right.getAddress()));
 
-                mutation.getWriter().dirty(mutation.getTxn(), inner);
-                mutation.getWriter().dirty(mutation.getTxn(), leaf);
-                mutation.getWriter().dirty(mutation.getTxn(), right);
+                TierWriter<B, A, X> writer = structure.getWriter();
+                writer.dirty(mutation.getTxn(), inner);
+                writer.dirty(mutation.getTxn(), leaf);
+                writer.dirty(mutation.getTxn(), right);
 
                 return new InsertSorted<B, A, X>(inner).operate(mutation, levelOfLeaf);
             }
@@ -1916,13 +1962,15 @@ public class Strata
 
             private boolean endOfList(Mutation<B, A, X> mutation, LeafTier<B, A> last)
             {
-                return mutation.getAllocator().isNull(last.getNext()) || mutation.newComparable(last.getNext(mutation).get(0)).compareTo(last.get(0)) != 0;
+                return mutation.getStructure().getAllocator().isNull(last.getNext()) || mutation.newComparable(last.getNext(mutation).get(0)).compareTo(last.get(0)) != 0;
             }
 
             public boolean operate(Mutation<B, A, X> mutation, Level<B, A, X> levelOfLeaf)
             {
-                Branch<B, A> branch = inner.find(mutation.comparable);
-                LeafTier<B, A> leaf = mutation.getLeafTier(branch.getRightKey());
+                Structure<B, A, X> structure = mutation.getStructure();
+
+                Branch<B, A> branch = inner.find(mutation.getComparable());
+                LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
 
                 LeafTier<B, A> last = leaf;
                 while (!endOfList(mutation, last))
@@ -1935,9 +1983,10 @@ public class Strata
 
                 inner.add(inner.getIndex(leaf.getAddress()) + 1, new Branch<B, A>(mutation.bucket, right.getAddress()));
 
-                mutation.getWriter().dirty(mutation.getTxn(), inner);
-                mutation.getWriter().dirty(mutation.getTxn(), leaf);
-                mutation.getWriter().dirty(mutation.getTxn(), right);
+                TierWriter<B, A, X> writer = structure.getWriter();
+                writer.dirty(mutation.getTxn(), inner);
+                writer.dirty(mutation.getTxn(), leaf);
+                writer.dirty(mutation.getTxn(), right);
 
                 return new InsertSorted<B, A, X>(inner).operate(mutation, levelOfLeaf);
             }
@@ -1955,8 +2004,10 @@ public class Strata
 
             public void operate(Mutation<B, A, X> mutation)
             {
-                Branch<B, A> branch = inner.find(mutation.comparable);
-                LeafTier<B, A> leaf = mutation.getLeafTier(branch.getRightKey());
+                Structure<B, A, X> structure = mutation.getStructure();
+
+                Branch<B, A> branch = inner.find(mutation.getComparable());
+                LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
 
                 int middle = leaf.size() >> 1;
                 boolean odd = (leaf.size() & 1) == 1;
@@ -1991,9 +2042,10 @@ public class Strata
                 int index = inner.getIndex(leaf.getAddress());
                 inner.add(index + 1, new Branch<B, A>(right.get(0), right.getAddress()));
 
-                mutation.getWriter().dirty(mutation.getTxn(), inner);
-                mutation.getWriter().dirty(mutation.getTxn(), leaf);
-                mutation.getWriter().dirty(mutation.getTxn(), right);
+                TierWriter<B, A, X> writer = structure.getWriter();
+                writer.dirty(mutation.getTxn(), inner);
+                writer.dirty(mutation.getTxn(), leaf);
+                writer.dirty(mutation.getTxn(), right);
             }
 
             public boolean canCancel()
@@ -2014,14 +2066,16 @@ public class Strata
 
             public boolean operate(Mutation<B, A, X> mutation, Level<B, A, X> levelOfLeaf)
             {
-                Branch<B, A> branch = inner.find(mutation.comparable);
-                LeafTier<B, A> leaf = mutation.getLeafTier(branch.getRightKey());
+                Structure<B, A, X> structure = mutation.getStructure();
+
+                Branch<B, A> branch = inner.find(mutation.getComparable());
+                LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
 
                 ListIterator<B> objects = leaf.listIterator();
                 while (objects.hasNext())
                 {
                     B before = objects.next();
-                    if (mutation.comparable.compareTo(before) <= 0)
+                    if (mutation.getComparable().compareTo(before) <= 0)
                     {
                         objects.previous();
                         objects.add(mutation.bucket);
@@ -2036,7 +2090,7 @@ public class Strata
 
                 // FIXME Now we are writing before we are splitting. Problem.
                 // Empty cache does not work!
-                mutation.getWriter().dirty(mutation.getTxn(), leaf);
+                structure.getWriter().dirty(mutation.getTxn(), leaf);
 
                 return true;
             }
@@ -2070,10 +2124,11 @@ public class Strata
         {
             if (root.getChildType() == ChildType.INNER && root.size() == 2)
             {
-                InnerTier<B, A> first = mutation.getInnerTier(root.get(0).getRightKey());
-                InnerTier<B, A> second = mutation.getInnerTier(root.get(1).getRightKey());
+                Structure<B, A, X> structure = mutation.getStructure();
+                InnerTier<B, A> first = structure.getPool().getInnerTier(mutation.getTxn(), root.get(0).getAddress());
+                InnerTier<B, A> second = structure.getPool().getInnerTier(mutation.getTxn(), root.get(1).getAddress());
                 // FIXME These numbers are off.
-                return first.size() + second.size() == mutation.getInnerSize();
+                return first.size() + second.size() == structure.getInnerSize();
             }
             return false;
         }
@@ -2099,8 +2154,10 @@ public class Strata
                 {
                     throw new IllegalStateException();
                 }
+                
+                Structure<B, A, X> structure = mutation.getStructure();
 
-                InnerTier<B, A> child = mutation.getInnerTier(root.remove(0).getRightKey());
+                InnerTier<B, A> child = structure.getPool().getInnerTier(mutation.getTxn(), root.remove(0).getAddress());
                 while (child.size() != 0)
                 {
                     root.add(child.remove(0));
@@ -2108,9 +2165,9 @@ public class Strata
 
                 root.setChildType(child.getChildType());
 
-                mutation.getWriter().remove(child);
-
-                mutation.getWriter().dirty(mutation.getTxn(), root);
+                TierWriter<B, A, X> writer = structure.getWriter();
+                writer.remove(child);
+                writer.dirty(mutation.getTxn(), root);
             }
 
             public boolean canCancel()
@@ -2128,8 +2185,8 @@ public class Strata
                             Level<B, A, X> levelOfChild,
                             InnerTier<B, A> parent)
         {
-            Branch<B, A> branch = parent.find(mutation.comparable);
-            if (branch.getPivot() != null && mutation.comparable.compareTo(branch.getPivot()) == 0)
+            Branch<B, A> branch = parent.find(mutation.getComparable());
+            if (branch.getPivot() != null && mutation.getComparable().compareTo(branch.getPivot()) == 0)
             {
                 levelOfParent.listOfOperations.add(new Swap<B, A, X>(parent));
                 return true;
@@ -2151,9 +2208,9 @@ public class Strata
             {
                 if (mutation.getReplacement() != null)
                 {
-                    Branch<B, A> branch = inner.find(mutation.comparable);
+                    Branch<B, A> branch = inner.find(mutation.getComparable());
                     branch.setPivot(mutation.getReplacement());
-                    mutation.getWriter().dirty(mutation.getTxn(), inner);
+                    mutation.getStructure().getWriter().dirty(mutation.getTxn(), inner);
                 }
             }
 
@@ -2281,7 +2338,7 @@ public class Strata
         {
             if (mutation.isOnlyChild() && branch.getPivot() != null && mutation.getLeftLeaf() == null)
             {
-                return mutation.comparable.compareTo(branch.getPivot()) == 0;
+                return mutation.getComparable().compareTo(branch.getPivot()) == 0;
             }
             return false;
         }
@@ -2318,10 +2375,13 @@ public class Strata
                             Level<B, A, X> levelOfChild,
                             InnerTier<B, A> parent)
         {
+            Structure<B, A, X> structure = mutation.getStructure();
+            TierPool<B, A, X> pool = structure.getPool();
+            
             // Find the child tier.
 
-            Branch<B, A> branch = parent.find(mutation.comparable);
-            InnerTier<B, A> child = mutation.getInnerTier(branch.getRightKey());
+            Branch<B, A> branch = parent.find(mutation.getComparable());
+            InnerTier<B, A> child = pool.getInnerTier(mutation.getTxn(), branch.getAddress());
 
             // If we are on our way down to remove the last item of a leaf
             // tier that is an only child, then we need to find the leaf to
@@ -2342,11 +2402,11 @@ public class Strata
                 InnerTier<B, A> inner = parent;
                 while (inner.getChildType() == ChildType.INNER)
                 {
-                    inner = mutation.getInnerTier(inner.get(index).getRightKey());
+                    inner = pool.getInnerTier(mutation.getTxn(), inner.get(index).getAddress());
                     levelOfParent.lockAndAdd(inner);
                     index = inner.size() - 1;
                 }
-                LeafTier<B, A> leaf = mutation.getLeafTier(inner.get(index).getRightKey());
+                LeafTier<B, A> leaf = pool.getLeafTier(mutation.getTxn(), inner.get(index).getAddress());
                 levelOfParent.lockAndAdd(leaf);
                 mutation.setLeftLeaf(leaf);
             }
@@ -2375,10 +2435,10 @@ public class Strata
             int index = parent.getIndex(child.getAddress());
             if (index != 0)
             {
-                InnerTier<B, A> left = mutation.getInnerTier(parent.get(index - 1).getRightKey());
+                InnerTier<B, A> left = pool.getInnerTier(mutation.getTxn(), parent.get(index - 1).getAddress());
                 levelOfChild.lockAndAdd(left);
                 levelOfChild.lockAndAdd(child);
-                if (left.size() + child.size() <= mutation.getInnerSize())
+                if (left.size() + child.size() <= structure.getInnerSize())
                 {
                     listToMerge.add(left);
                     listToMerge.add(child);
@@ -2392,9 +2452,9 @@ public class Strata
 
             if (listToMerge.isEmpty() && index != parent.size() - 1)
             {
-                InnerTier<B, A> right = mutation.getInnerTier(parent.get(index + 1).getRightKey());
+                InnerTier<B, A> right = pool.getInnerTier(mutation.getTxn(), parent.get(index + 1).getAddress());
                 levelOfChild.lockAndAdd(right);
-                if ((child.size() + right.size() - 1) == mutation.getInnerSize())
+                if ((child.size() + right.size() - 1) == structure.getInnerSize())
                 {
                     listToMerge.add(child);
                     listToMerge.add(right);
@@ -2465,9 +2525,10 @@ public class Strata
                     left.add(right.remove(0));
                 }
 
-                mutation.getWriter().remove(right);
-                mutation.getWriter().dirty(mutation.getTxn(), parent);
-                mutation.getWriter().dirty(mutation.getTxn(), left);
+                TierWriter<B, A, X> writer = mutation.getStructure().getWriter();
+                writer.remove(right);
+                writer.dirty(mutation.getTxn(), parent);
+                writer.dirty(mutation.getTxn(), left);
             }
 
             public boolean canCancel()
@@ -2499,8 +2560,9 @@ public class Strata
                     parent.get(0).setPivot(null);
                 }
 
-                mutation.getWriter().remove(child);
-                mutation.getWriter().dirty(mutation.getTxn(), parent);
+                TierWriter<B, A, X> writer = mutation.getStructure().getWriter();
+                writer.remove(child);
+                writer.dirty(mutation.getTxn(), parent);
             }
 
             public boolean canCancel()
@@ -2518,20 +2580,23 @@ public class Strata
                             Level<B, A, X> levelOfChild,
                             InnerTier<B, A> parent)
         {
+            Structure<B, A, X> structure = mutation.getStructure();
+            TierPool<B, A, X> pool = structure.getPool();
+            
             levelOfChild.getSync = new WriteLockExtractor();
-            Branch<B, A> branch = parent.find(mutation.comparable);
-            int index = parent.getIndex(branch.getRightKey());
+            Branch<B, A> branch = parent.find(mutation.getComparable());
+            int index = parent.getIndex(branch.getAddress());
             LeafTier<B, A> previous = null;
             LeafTier<B, A> leaf = null;
             List<LeafTier<B, A>> listToMerge = new ArrayList<LeafTier<B, A>>();
             if (index != 0)
             {
-                previous = mutation.getLeafTier(parent.get(index - 1).getRightKey());
+                previous = pool.getLeafTier(mutation.getTxn(), parent.get(index - 1).getAddress());
                 levelOfChild.lockAndAdd(previous);
-                leaf = mutation.getLeafTier(branch.getRightKey());
+                leaf = pool.getLeafTier(mutation.getTxn(), branch.getAddress());
                 levelOfChild.lockAndAdd(leaf);
                 int capacity = previous.size() + leaf.size();
-                if (capacity <= mutation.getLeafSize() + 1)
+                if (capacity <= structure.getLeafSize() + 1)
                 {
                     listToMerge.add(previous);
                     listToMerge.add(leaf);
@@ -2544,7 +2609,7 @@ public class Strata
 
             if (leaf == null)
             {
-                leaf = mutation.getLeafTier(branch.getRightKey());
+                leaf = pool.getLeafTier(mutation.getTxn(), branch.getAddress());
                 levelOfChild.lockAndAdd(leaf);
             }
 
@@ -2565,10 +2630,10 @@ public class Strata
             }
             else if (listToMerge.isEmpty() && index != parent.size() - 1)
             {
-                LeafTier<B, A> next = mutation.getLeafTier(parent.get(index + 1).getRightKey());
+                LeafTier<B, A> next = pool.getLeafTier(mutation.getTxn(), parent.get(index + 1).getAddress());
                 levelOfChild.lockAndAdd(next);
                 int capacity = next.size() + leaf.size();
-                if (capacity <= mutation.getLeafSize() + 1)
+                if (capacity <= structure.getLeafSize() + 1)
                 {
                     listToMerge.add(leaf);
                     listToMerge.add(next);
@@ -2584,7 +2649,7 @@ public class Strata
                 if (leaf == null)
                 {
                     // FIXME This is dead code.
-                    leaf = mutation.getLeafTier(branch.getRightKey());
+                    leaf = pool.getLeafTier(mutation.getTxn(), branch.getAddress());
                     levelOfChild.lockAndAdd(leaf);
                 }
                 mutation.leafOperation = new Remove<B, A, X>(leaf);
@@ -2617,6 +2682,9 @@ public class Strata
 
             public boolean operate(Mutation<B, A, X> mutation, Level<B, A, X> levelOfLeaf)
             {
+                Structure<B, A, X> structure = mutation.getStructure();
+                TierWriter<B, A, X> writer = structure.getWriter();
+                
                 // TODO Remove single anywhere but far left.
                 // TODO Remove single very left most.
                 // TODO Remove single very right most.
@@ -2630,7 +2698,7 @@ public class Strata
                     {
                         count++;
                         B candidate = objects.next();
-                        int compare = mutation.comparable.compareTo(candidate);
+                        int compare = mutation.getComparable().compareTo(candidate);
                         if (compare < 0)
                         {
                             break SEARCH;
@@ -2657,24 +2725,24 @@ public class Strata
                                     }
                                 }
                             }
-                            mutation.getWriter().dirty(mutation.getTxn(), current);
+                            writer.dirty(mutation.getTxn(), current);
                             mutation.setResult(candidate);
                             break SEARCH;
                         }
                     }
                     current = current.getNextAndLock(mutation, levelOfLeaf);
                 }
-                while (current != null && mutation.comparable.compareTo(current.get(0)) == 0);
+                while (current != null && mutation.getComparable().compareTo(current.get(0)) == 0);
 
                 if (mutation.getResult() != null
                     && count == found
-                    && current.size() == mutation.getLeafSize() - 1
-                    && mutation.comparable.compareTo(current.get(current.size() - 1)) == 0)
+                    && current.size() == structure.getLeafSize() - 1
+                    && mutation.getComparable().compareTo(current.get(current.size() - 1)) == 0)
                 {
                     for (;;)
                     {
                         LeafTier<B, A> subsequent = current.getNextAndLock(mutation, levelOfLeaf);
-                        if (subsequent == null || mutation.comparable.compareTo(subsequent.get(0)) != 0)
+                        if (subsequent == null || mutation.getComparable().compareTo(subsequent.get(0)) != 0)
                         {
                             break;
                         }
@@ -2682,11 +2750,11 @@ public class Strata
                         if (subsequent.size() == 0)
                         {
                             current.setNext(subsequent.getNext());
-                            mutation.getWriter().remove(subsequent);
+                            writer.remove(subsequent);
                         }
                         else
                         {
-                            mutation.getWriter().dirty(mutation.getTxn(), subsequent);
+                            writer.dirty(mutation.getTxn(), subsequent);
                         }
                         current = subsequent;
                     }
@@ -2732,9 +2800,10 @@ public class Strata
                 // FIXME Get last leaf. 
                 left.setNext(right.getNext());
 
-                mutation.getWriter().remove(right);
-                mutation.getWriter().dirty(mutation.getTxn(), parent);
-                mutation.getWriter().dirty(mutation.getTxn(), left);
+                TierWriter<B, A, X> writer = mutation.getStructure().getWriter();
+                writer.remove(right);
+                writer.dirty(mutation.getTxn(), parent);
+                writer.dirty(mutation.getTxn(), left);
             }
 
             public boolean canCancel()
@@ -2765,9 +2834,10 @@ public class Strata
 
                 left.setNext(leaf.getNext());
 
-                mutation.getWriter().remove(leaf);
-                mutation.getWriter().dirty(mutation.getTxn(), parent);
-                mutation.getWriter().dirty(mutation.getTxn(), left);
+                TierWriter<B, A, X> writer = mutation.getStructure().getWriter();
+                writer.remove(leaf);
+                writer.dirty(mutation.getTxn(), parent);
+                writer.dirty(mutation.getTxn(), left);
 
                 mutation.setOnlyChild(false);
             }
@@ -2782,7 +2852,9 @@ public class Strata
     public final static class CoreCursor<B, A, X>
     implements Cursor<B>
     {
-        private final Navigator<B, A, X> navigator;
+        private final X txn;
+
+        private final Structure<B, A, X> structure;
         
         private int index;
 
@@ -2790,9 +2862,10 @@ public class Strata
 
         private boolean released;
 
-        public CoreCursor(Navigator<B, A, X> navigator, LeafTier<B, A> leaf, int index)
+        public CoreCursor(X txn, Structure<B, A, X> structure, LeafTier<B, A> leaf, int index)
         {
-            this.navigator = navigator;
+            this.txn = txn;
+            this.structure = structure;
             this.leaf = leaf;
             this.index = index;
         }
@@ -2804,12 +2877,12 @@ public class Strata
 
         public Cursor<B> newCursor()
         {
-            return new CoreCursor<B, A, X>(navigator, leaf, index);
+            return new CoreCursor<B, A, X>(txn, structure, leaf, index);
         }
 
         public boolean hasNext()
         {
-            return index < leaf.size() || !navigator.getAllocator().isNull(leaf.getNext());
+            return index < leaf.size() || !structure.getAllocator().isNull(leaf.getNext());
         }
 
         public B next()
@@ -2820,11 +2893,11 @@ public class Strata
             }
             if (index == leaf.size())
             {
-                if (navigator.getAllocator().isNull(leaf.getNext()))
+                if (structure.getAllocator().isNull(leaf.getNext()))
                 {
                     throw new IllegalStateException();
                 }
-                LeafTier<B, A> next = navigator.getLeafTier(leaf.getNext());
+                LeafTier<B, A> next = structure.getPool().getLeafTier(txn, leaf.getNext());
                 next.getReadWriteLock().readLock().lock();
                 leaf.getReadWriteLock().readLock().unlock();
                 leaf = next;
@@ -2900,15 +2973,19 @@ public class Strata
     public final static class CoreQuery<B, T, A, X>
     implements Transaction<T, X>
     {
+        private final X txn;
+
         private final CoreTree<B, T, A, X> tree;
         
-        private final Navigator<B, A, X> navigator;
+        private final Structure<B, A, X> structure;
         
-        public CoreQuery(CoreTree<B, T, A, X> tree,
-                         Navigator<B, A, X> navigator)
+        public CoreQuery(X txn,
+                         CoreTree<B, T, A, X> tree,
+                         Structure<B, A, X> structure)
         {
+            this.txn = txn;
             this.tree = tree;
-            this.navigator = navigator;
+            this.structure = structure;
         }
         
         public Tree<T, X> getTree()
@@ -2918,7 +2995,7 @@ public class Strata
                          
         private InnerTier<B, A> getRoot()
         {
-            return navigator.getInnerTier(tree.getRootAddress());
+            return structure.getPool().getInnerTier(txn, tree.getRootAddress());
         }
 
         private void testInnerTier(Mutation<B, A, X> mutation,
@@ -2979,7 +3056,7 @@ public class Strata
 
             // Inform the tier cache that we are about to perform a mutation
             // of the tree.
-            mutation.getWriter().begin();
+            mutation.getStructure().getWriter().begin();
 
             mutation.listOfLevels.add(new Level<B, A, X>(false));
 
@@ -3009,8 +3086,8 @@ public class Strata
                 if (parent.getChildType() == ChildType.INNER)
                 {
                     testInnerTier(mutation, subsequent, swap, levelOfParent, levelOfChild, parent, 0);
-                    Branch<B, A> branch = parent.find(mutation.comparable);
-                    InnerTier<B, A> child = navigator.getInnerTier(branch.getRightKey());
+                    Branch<B, A> branch = parent.find(mutation.getComparable());
+                    InnerTier<B, A> child = structure.getPool().getInnerTier(mutation.getTxn(), branch.getAddress());
                     parent = child;
                 }
                 else
@@ -3038,7 +3115,7 @@ public class Strata
                     }
                 }
 
-                mutation.getWriter().end(navigator.getTxn());
+                mutation.getStructure().getWriter().end(mutation.getTxn()); // FIXME Probably does not belong here?
             }
 
             ListIterator<Level<B, A, X>> levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
@@ -3054,10 +3131,10 @@ public class Strata
         public void add(T object)
         {
             CoreRecord record = new CoreRecord();
-            tree.getExtractor().extract(navigator.getTxn(), object, record);
+            tree.getExtractor().extract(txn, object, record);
             B bucket = tree.getCooper().newBucket(record.getFields(), object);
             BucketComparable<T, B, X> comparable  = new BucketComparable<T, B, X>();
-            Mutation<B, A, X> mutation = new Mutation<B, A, X>(navigator, tree, bucket, comparable, null, tree.getInnerSize(), tree.getLeafSize());
+            Mutation<B, A, X> mutation = new Mutation<B, A, X>(txn, structure, bucket, comparable, null);
             generalized(mutation, new SplitRoot<B, A, X>(), new SplitInner<B, A, X>(), new InnerNever<B, A, X>(), new LeafInsert<B, A, X>());
         }
 
@@ -3066,7 +3143,7 @@ public class Strata
         public Object remove(Deletable<B> deletable, Comparable<?>... fields)
         {
             BucketComparable<T, B, X> comparable  = new BucketComparable<T, B, X>();
-            Mutation<B, A, X> mutation = new Mutation<B, A, X>(navigator, tree, null, comparable, deletable, tree.getInnerSize(), tree.getLeafSize());
+            Mutation<B, A, X> mutation = new Mutation<B, A, X>(txn, structure, null, comparable, deletable);
             do
             {
                 mutation.listOfLevels.clear();
@@ -3101,12 +3178,12 @@ public class Strata
                 Branch<B, A> branch = inner.find(comparator);
                 if (inner.getChildType() == ChildType.LEAF)
                 {
-                    LeafTier<B, A> leaf = navigator.getLeafTier(branch.getRightKey());
+                    LeafTier<B, A> leaf = structure.getPool().getLeafTier(txn, branch.getAddress());
                     leaf.getReadWriteLock().readLock().lock();
                     previous.unlock();
                     return tree.getCooper().wrap(leaf.find(comparator));
                 }
-                inner = navigator.getInnerTier(branch.getRightKey());
+                inner = structure.getPool().getInnerTier(txn, branch.getAddress());
             }
         }
     }
@@ -3122,24 +3199,22 @@ public class Strata
         
         public int getLeafSize();
         
+        public Allocator<B, A, X> getAllocator();
+        
         public TierWriter<B, A, X> getWriter();
+        
+        public TierPool<B, A, X> getPool();
+        
+        public int compare(X txn, B left, B right);
     }
     
     public final static class CoreTree<B, T, A, X>
-    implements Tree<T, X>, Structure<B, A, X>
+    implements Tree<T, X>
     {
-        private int innerSize;
-        
-        private int leafSize;
-        
         private final A rootAddress;
+        
+        private final Structure<B, A, X> structure;
 
-        private final TierPool<B, A, X> pool;
-        
-        private final TierWriter<B, A, X> writer;
-        
-        private final Allocator<B, A, X> allocator;
-        
         private final Cooper<T, B, X> cooper;
         
         private final Extractor<T, X> extractor;
@@ -3151,10 +3226,8 @@ public class Strata
             this.rootAddress = rootAddress;
             this.schema = schema;
             this.cooper = build.getCooper();
-            this.allocator = build.getAllocator();
+            this.structure = build;
             this.extractor = schema.getExtractor();
-            this.writer = build.getWriter();
-            this.pool = build.getPool();
         }
         
         public A getRootAddress()
@@ -3169,35 +3242,9 @@ public class Strata
 
         public Transaction<T, X> query(X txn)
         {
-            Navigator<B, A, X> navigator = new Navigator<B, A, X>(txn, allocator, pool);
-            return new CoreQuery<B, T, A, X>(this, navigator);
+            return new CoreQuery<B, T, A, X>(txn, this, structure);
         }
-        
-        public int getInnerSize()
-        {
-            return innerSize;
-        }
-        
-        public int getLeafSize()
-        {
-            return leafSize;
-        }
-        
-        public Allocator<B, A, X> getAllocator()
-        {
-            return allocator;
-        }
-        
-        public TierPool<B, A, X> getPool()
-        {
-            return pool;
-        }
-        
-        public TierWriter<B, A, X> getWriter()
-        {
-            return writer;
-        }
-        
+
         public Cooper<T, B, X> getCooper()
         {
             return cooper;
@@ -3226,6 +3273,7 @@ public class Strata
     }
     
     public static final class Build<B, T, A, X>
+    implements Structure<B, A, X>
     {
         private final Schema<T, X> schema;
 
@@ -3249,6 +3297,16 @@ public class Strata
             this.pool = schema.getTierPoolBuilder().newTierPool(this);
         }
         
+        public int getInnerSize()
+        {
+            return schema.getInnerSize();
+        }
+        
+        public int getLeafSize()
+        {
+            return schema.getLeafSize();
+        }
+
         public Schema<T, X> getSchema()
         {
             return schema;
@@ -3279,6 +3337,12 @@ public class Strata
             return pool;
         }
         
+        public int compare(X txn, B left, B right)
+        {
+            Extractor<T, X> extractor = schema.getExtractor();
+            return Strata.compare(getCooper().getFields(txn, extractor, left), getCooper().getFields(txn, extractor, right));
+        }
+        
         public Transaction<T, X> newTransaction(X txn)
         {
             writer.begin();
@@ -3288,8 +3352,7 @@ public class Strata
             root.setAddress(allocator.allocate(txn, root, schema.getInnerSize()));
             
             LeafTier<B, A> leaf = new LeafTier<B, A>();
-            leaf.setAddress(allocator.allocate(txn, root, schema.getLeafSize()));
-
+            leaf.setAddress(allocator.allocate(txn, leaf, schema.getLeafSize()));
             
             root.add(new Branch<B, A>(null, leaf.getAddress()));
 
@@ -3299,7 +3362,7 @@ public class Strata
             
             CoreTree<B, T, A, X> tree = new CoreTree<B, T, A, X>(root.getAddress(), schema, this);
             
-            return new CoreQuery<B, T, A, X>(tree, new Navigator<B, A, X>(txn, getAllocator(), getPool()));
+            return new CoreQuery<B, T, A, X>(txn, tree, this);
         }
     }
     
@@ -3312,75 +3375,6 @@ public class Strata
             Build<Bucket<T>, T, A, X> build = new Build<Bucket<T>, T, A, X>(schema, storage, cooper);
             return build.newTransaction(txn);
         }
-    }
-    
-    public final static class DeadCode<T, A, X, B>
-    implements Serializable
-    {
-        private static final long serialVersionUID = 1L;
-
-        private int innerSize;
-        
-        private int leafSize;
-        
-        private TierWriter<B, A, X> writer;
-        
-        private Allocator<B, A, X> allocator;
-        
-        public DeadCode()
-        {
-            this.leafSize = 5;
-            this.innerSize = 5;
-        }
-        
-        public int getInnerSize()
-        {
-            return innerSize;
-        }
-        
-        public void setInnerSize(int innerSize)
-        {
-            this.innerSize = innerSize;
-        }
-        
-        public int getLeafSize()
-        {
-            return leafSize;
-        }
-        
-        public void setLeafSize(int leafSize)
-        {
-            this.leafSize = leafSize;
-        }
-        
-        public Transaction<T, X> newTransaction(X txn)
-        {
-            writer.begin();
-            
-            InnerTier<B, A> root = new InnerTier<B, A>();
-            root.setChildType(ChildType.LEAF);
-            root.setAddress(allocator.allocate(txn, root, innerSize));
-            writer.dirty(txn, root);
-            
-            LeafTier<B, A> leaf = new LeafTier<B, A>();
-            leaf.setAddress(allocator.allocate(txn, leaf, leafSize));
-            writer.dirty(txn, leaf);
-
-            writer.end(txn);
-            
-            root.add(new Branch<B, A>(null, leaf.getAddress()));
-
-//            Navigator<B, A, X> navigator = new Navigator<B, A, X>(txn, allocator,pool);
-//            CoreTree<T, A, X, B> tree = new CoreTree<T, A, X, B>(innerSize, leafSize, 
-//            CoreQuery<T, A, X, B> query = new CoreQuery<T, A, X, B>(this, tree, root.getAddress(), navigator, cooper, extractor, writer);
-            
-            return null;
-        }
-    }
-
-    public enum WriteCache
-    {
-        NONE, PER_QUERY, PER_STRATA
     }
     
     public final static class Schema<T, X>
@@ -3400,10 +3394,6 @@ public class Strata
         private boolean fieldCaching;
         
         private Extractor<T, X> extractor;
-        
-        public Schema()
-        {
-        }
         
         public void setInnerSize(int innerSize)
         {
