@@ -31,6 +31,7 @@ import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.KeyStroke;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.WindowConstants;
 import javax.swing.event.EventListenerList;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
@@ -99,7 +100,7 @@ public class Viewer
             if (node.type == Strata.INNER)
             {
                 Strata.InnerTier inner = new Strata.InnerTier((Strata.Tier<Strata.Branch>) node.tier);
-                Strata.Branch branch = (Strata.Branch) inner.get(index);
+                Strata.Branch branch = inner.get(index);
                 Strata.Tier<Strata.Branch> tier = innerStorage.getTier(null, branch.getRightKey());
                 Object pivot = branch.getPivot();
                 return new TreeNode(tier, pivot == null ? "<" : pivot.toString(), (short) inner.getChildType());
@@ -110,7 +111,7 @@ public class Viewer
             if (index == size)
             {
                 Strata.LeafTier next = new Strata.LeafTier(leafStorage.getTier(null, leaf.getNextLeafKey()));
-                if (next != null && next.getTier().size() != 0 && next.get(0).equals(leaf.get(0)))
+                if (next.getTier().size() != 0 && next.get(0).equals(leaf.get(0)))
                 {
                     return next.get(0) + " [" + index + "]";
                 }
@@ -125,7 +126,7 @@ public class Viewer
                     offset -= size;
                     leaf = new Strata.LeafTier(leafStorage.getTier(null, leaf.getNextLeafKey()));
                 }
-                if (leaf == null || !leaf.get(0).equals(object) || leaf.getTier().size() == offset)
+                if (!leaf.get(0).equals(object) || leaf.getTier().size() == offset)
                 {
                     return "<";
                 }
@@ -193,7 +194,7 @@ public class Viewer
                     previous = leaf;
                     leaf = new Strata.LeafTier(leafStorage.getTier(null, leaf.getNextLeafKey()));
                 }
-                while (leaf != null && previous.get(0).equals(leaf.get(0)));
+                while (previous.get(0).equals(leaf.get(0)));
 
                 return count;
             }
@@ -222,7 +223,7 @@ public class Viewer
 
         public void fire()
         {
-            TreeModelListener[] listeners = (TreeModelListener[]) listOfListeners.getListeners(TreeModelListener.class);
+            TreeModelListener[] listeners = listOfListeners.getListeners(TreeModelListener.class);
             for (int i = 0; i < listeners.length; i++)
             {
                 listeners[i].treeStructureChanged(new TreeModelEvent(this, new Object[] { new TreeNode(root, null, Strata.INNER) }));
@@ -616,7 +617,7 @@ public class Viewer
                 }
             }
         }
-    };
+    }
 
     public final static void main(String[] args)
     {
@@ -673,7 +674,7 @@ public class Viewer
         frame.setJMenuBar(menuBar);
 
         frame.pack();
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         frame.setVisible(true);
 
         // expandAll(tree, true);

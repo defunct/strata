@@ -1,7 +1,7 @@
 /* Copyright Alan Gutierrez 2006 */
 package com.agtrz.strata;
 
-public abstract class Bag<O, E extends Comparable<? super E>>
+public class Bag<O, E extends Comparable<? super E>>
 {
     public interface Extractor<O, E extends Comparable<? super E>>
     {
@@ -48,13 +48,25 @@ public abstract class Bag<O, E extends Comparable<? super E>>
         }
     }
    
-    public abstract void add(O o);
+    public void add(O o)
+    {
+        
+    }
     
-    public abstract O get(O o);
+    public O get(O o)
+    {
+        return null;
+    }
     
-    public abstract boolean contains(O o);
+    public boolean contains(O o)
+    {
+        return false;
+    }
     
-    public abstract Cursor<O> find(E e);
+    public Cursor<O> find(E e)
+    {
+        return null;
+    }
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */

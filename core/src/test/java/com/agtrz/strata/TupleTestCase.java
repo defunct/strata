@@ -16,7 +16,7 @@ public class TupleTestCase
     
     @Ignore @Test void api()
     {
-        Bag<Person, Pair<String, String>> bag = null;
+        Bag<Person, Pair<String, String>> bag = new Bag<Person, Pair<String,String>>();
         Bag.Extractor<Person, Bag.Two<String, String>> lastNameFirst = new Bag.Extractor<Person, Bag.Two<String, String>>()
         {
             public Bag.Two<String, String> extract(Person person)

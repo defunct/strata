@@ -804,7 +804,7 @@ implements Serializable
             Branch candidate = branches.next();
             while (branches.hasNext())
             {
-                Branch branch = (Branch) branches.next();
+                Branch branch = branches.next();
                 if (compare(fields, tier.getStructure().getFields(txn, branch.getPivot())) < 0)
                 {
                     break;
@@ -820,7 +820,7 @@ implements Serializable
             Iterator<Branch> branches = listIterator();
             while (branches.hasNext())
             {
-                Branch branch = (Branch) branches.next();
+                Branch branch = branches.next();
                 if (branch.getRightKey().equals(keyOfTier))
                 {
                     return index;
@@ -850,7 +850,7 @@ implements Serializable
             boolean isMinimal = true;
             while (branches.hasNext())
             {
-                Branch branch = (Branch) branches.next();
+                Branch branch = branches.next();
                 if (isMinimal != branch.isMinimal())
                 {
                     throw new IllegalStateException();
@@ -1684,11 +1684,11 @@ implements Serializable
 
             for (int i = 0; i < size - leaveExclusive; i++)
             {
-                Level level = (Level) levels.next();
+                Level level = levels.next();
                 Iterator<Operation> operations = level.listOfOperations.iterator();
                 while (operations.hasNext())
                 {
-                    Operation operation = (Operation) operations.next();
+                    Operation operation = operations.next();
                     if (operation.canCancel())
                     {
                         operations.remove();
@@ -2558,8 +2558,8 @@ implements Serializable
 
             public void operate(Mutation mutation)
             {
-                InnerTier left = (InnerTier) listToMerge.get(0);
-                InnerTier right = (InnerTier) listToMerge.get(1);
+                InnerTier left = listToMerge.get(0);
+                InnerTier right = listToMerge.get(1);
 
                 int index = parent.getIndexOfTier(right.getTier().getKey());
                 Branch branch = parent.remove(index);
@@ -2687,12 +2687,6 @@ implements Serializable
 
             if (listToMerge.isEmpty())
             {
-                if (leaf == null)
-                {
-                    // FIXME This is dead code.
-                    leaf = mutation.getLeafTier(branch.getRightKey());
-                    levelOfChild.lockAndAdd(leaf.getTier());
-                }
                 mutation.leafOperation = new Remove(leaf);
             }
             else
@@ -2703,8 +2697,8 @@ implements Serializable
                     mutation.rewind(2);
                     mutation.mapOfVariables.remove(DELETING);
                 }
-                LeafTier left = (LeafTier) listToMerge.get(0);
-                LeafTier right = (LeafTier) listToMerge.get(1);
+                LeafTier left = listToMerge.get(0);
+                LeafTier right = listToMerge.get(1);
                 levelOfParent.listOfOperations.add(new Merge(parent, left, right));
                 mutation.leafOperation = new Remove(leaf);
             }
@@ -3145,11 +3139,11 @@ implements Serializable
                 ListIterator<Level> levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
                 while (levels.hasPrevious())
                 {
-                    Level level = (Level) levels.previous();
+                    Level level = levels.previous();
                     ListIterator<Operation> operations = level.listOfOperations.listIterator(level.listOfOperations.size());
                     while (operations.hasPrevious())
                     {
-                        Operation operation = (Operation) operations.previous();
+                        Operation operation = operations.previous();
                         operation.operate(mutation);
                     }
                 }
@@ -3160,7 +3154,7 @@ implements Serializable
             ListIterator<Level> levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
             while (levels.hasPrevious())
             {
-                Level level = (Level) levels.previous();
+                Level level = levels.previous();
                 level.releaseAndClear();
             }
 
@@ -3317,7 +3311,7 @@ implements Serializable
                 Iterator<Branch> branches = inner.listIterator();
                 while (branches.hasNext())
                 {
-                    Branch branch = (Branch) branches.next();
+                    Branch branch = branches.next();
                     destroy(navigator.getInnerTier(branch.getRightKey()));
                 }
             }
@@ -3326,7 +3320,7 @@ implements Serializable
                 Iterator<Branch> branches = inner.listIterator();
                 while (branches.hasNext())
                 {
-                    Branch branch = (Branch) branches.next();
+                    Branch branch = branches.next();
                     LeafTier leaf = navigator.getLeafTier(branch.getRightKey());
                     navigator.getStorage().getLeafStore().free(navigator.getTxn(), leaf.getTier());
                 }

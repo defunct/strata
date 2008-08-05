@@ -1650,11 +1650,11 @@ public class Strata
 
             for (int i = 0; i < size - leaveExclusive; i++)
             {
-                Level<B, A, X> level = (Level<B, A, X>) levels.next();
+                Level<B, A, X> level = levels.next();
                 Iterator<Operation<B, A, X>> operations = level.listOfOperations.iterator();
                 while (operations.hasNext())
                 {
-                    Operation<B, A, X> operation = (Operation<B, A, X>) operations.next();
+                    Operation<B, A, X> operation = operations.next();
                     if (operation.canCancel())
                     {
                         operations.remove();
@@ -2646,12 +2646,6 @@ public class Strata
 
             if (listToMerge.isEmpty())
             {
-                if (leaf == null)
-                {
-                    // FIXME This is dead code.
-                    leaf = pool.getLeafTier(mutation.getTxn(), branch.getAddress());
-                    levelOfChild.lockAndAdd(leaf);
-                }
                 mutation.leafOperation = new Remove<B, A, X>(leaf);
             }
             else
@@ -3106,7 +3100,7 @@ public class Strata
                 ListIterator<Level<B, A, X>> levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
                 while (levels.hasPrevious())
                 {
-                    Level<B, A, X> level = (Level<B, A, X>) levels.previous();
+                    Level<B, A, X> level = levels.previous();
                     ListIterator<Operation<B, A, X>> operations = level.listOfOperations.listIterator(level.listOfOperations.size());
                     while (operations.hasPrevious())
                     {
