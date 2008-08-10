@@ -259,14 +259,42 @@ public class Strata
 
         private A next;
         
-        public Cursor<B> find(Comparable<B> comparable)
+        public int find(Comparable<B> comparable)
         {
-            return null;
+            int low = 1;
+            int high = size() - 1;
+            while (low < high)
+            {
+                int mid = (low + high) >>> 1;
+                int compare = comparable.compareTo(get(mid));
+                if (compare > 0)
+                {
+                    low = mid + 1;
+                }
+                else
+                {
+                    high = mid;
+                }
+            }
+            if (low < size())
+            {
+                while (low != 0 && comparable.compareTo(get(low - 1)) == 0)
+                {
+                    low --;
+                }
+                return low;
+            }
+            return low - 1;
         }
         
-        public <X> void link(Mutation<B, A, X> mutation, LeafTier<B, A> leaf)
+        public <X> void link(Mutation<B, A, X> mutation, LeafTier<B, A> nextLeaf)
         {
-            
+            Structure<B, A, X> structure = mutation.getStructure();
+            TierWriter<B, A, X> writer = structure.getWriter();
+            writer.dirty(mutation.getTxn(), this);
+            writer.dirty(mutation.getTxn(), nextLeaf);
+            nextLeaf.setNext(getNext());
+            setNext(nextLeaf.getAddress());
         }
         
         public <X> LeafTier<B, A> getNextAndLock(Mutation<B, A, X> mutation, Level<B, A, X> leafLevel)
@@ -399,7 +427,7 @@ public class Strata
             int high = size() - 1;
             while (low < high)
             {
-                int mid = (low + high) / 2;
+                int mid = (low + high) >>> 1;
                 int compare = comparable.compareTo(get(mid).getPivot());
                 if (compare > 0)
                 {
@@ -575,7 +603,6 @@ public class Strata
     public interface Cursor<T>
     extends Iterator<T>
     {
-
     }
     
     private interface LockExtractor
@@ -3175,7 +3202,8 @@ public class Strata
                     LeafTier<B, A> leaf = structure.getPool().getLeafTier(txn, branch.getAddress());
                     leaf.getReadWriteLock().readLock().lock();
                     previous.unlock();
-                    return tree.getCooper().wrap(leaf.find(comparator));
+                    Cursor<B> cursor = new CoreCursor<B, A, X>(txn, structure, leaf, leaf.find(comparator));
+                    return tree.getCooper().wrap(cursor);
                 }
                 inner = structure.getPool().getInnerTier(txn, branch.getAddress());
             }

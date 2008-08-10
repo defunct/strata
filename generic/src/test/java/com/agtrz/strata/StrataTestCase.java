@@ -1,6 +1,10 @@
 /* Copyright Alan Gutierrez 2006 */
 package com.agtrz.strata;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.assertFalse;
+
 import org.testng.annotations.Test;
 
 import com.agtrz.strata.Strata.Record;
@@ -22,6 +26,10 @@ public class StrataTestCase
         schema.setExtractor(extractor);
         Strata.Transaction<Integer, Object> transaction = schema.newTransaction(null);
         transaction.add(1);
+        Strata.Cursor<Integer> cursor = transaction.find(1);
+        assertTrue(cursor.hasNext());
+        assertEquals((int) cursor.next(), 1);
+        assertFalse(cursor.hasNext());
     }
 }
 
