@@ -1,6 +1,6 @@
 <projectDescription>
-  <name>strata-generic</name>
-  <comment>A B-Tree.</comment>
+  <name>strata</name>
+  <comment>A B-Tree Index.</comment>
   <projects/>
   <buildSpec>
     <buildCommand>
