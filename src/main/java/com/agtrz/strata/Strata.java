@@ -2983,12 +2983,38 @@ public class Strata
         public void add(T object);
         
         public Cursor<T> find(Comparable<?>... fields);
+        
+        public Object remove(Deletable<T> deletable, Comparable<?>... fields);
+        
+        public Object remove(Comparable<?>... fields);
+
+        public  Deletable<T> deleteAny();
+    
     }
     
     public interface Transaction<T, X>
     extends Query<T>
     {
         public Tree<T, X> getTree();
+    }
+    
+    public final static class BucketDeletable<T, B, X>
+    implements Deletable<B>
+    {
+        private final Cooper<T, B, X> cooper;
+        
+        private final Deletable<T> deletable;
+        
+        public BucketDeletable(Cooper<T, B, X> cooper, Deletable<T> deletable)
+        {
+            this.cooper = cooper;
+            this.deletable = deletable;
+        }
+        
+        public boolean deletable(B bucket)
+        {
+            return deletable.deletable(cooper.getObject(bucket));
+        }
     }
 
     public final static class CoreQuery<B, T, A, X>
@@ -3158,13 +3184,24 @@ public class Strata
             Mutation<B, A, X> mutation = new Mutation<B, A, X>(txn, structure, bucket, comparable, null);
             generalized(mutation, new SplitRoot<B, A, X>(), new SplitInner<B, A, X>(), new InnerNever<B, A, X>(), new LeafInsert<B, A, X>());
         }
+        
+        public Deletable<T> deleteAny()
+        {
+            return new Deletable<T>()
+            {
+                public boolean deletable(T object)
+                {
+                    return true;
+                }
+            };
+        }
 
         // TODO Where do I actually use deletable? Makes sense, though. A
         // condition to choose which to delete.
-        public Object remove(Deletable<B> deletable, Comparable<?>... fields)
+        public Object remove(Deletable<T> deletable, Comparable<?>... fields)
         {
             BucketComparable<T, B, X> comparable  = new BucketComparable<T, B, X>();
-            Mutation<B, A, X> mutation = new Mutation<B, A, X>(txn, structure, null, comparable, deletable);
+            Mutation<B, A, X> mutation = new Mutation<B, A, X>(txn, structure, null, comparable, new BucketDeletable<T, B, X>(tree.getCooper(), deletable));
             do
             {
                 mutation.listOfLevels.clear();
@@ -3182,6 +3219,11 @@ public class Strata
             B removed = mutation.getResult();
 
             return removed;
+        }
+        
+        public Object remove(Comparable<?>... fields)
+        {
+            return remove(deleteAny());
         }
 
         // Here is where I get the power of not using comparator.
