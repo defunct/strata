@@ -48,11 +48,12 @@ public class StrataTestCase
         assertFalse(cursor.hasNext());
     }
     
-    public void removeSingle()
+    @Test public void removeSingle()
     {
         Strata.Transaction<Integer, Object> transaction = newTransaction();
         transaction.add(1);
-        transaction.remove(1);
+        assertEquals(transaction.remove(1), 1);
+        assertFalse(transaction.find(1).hasNext());
     }
 }
 

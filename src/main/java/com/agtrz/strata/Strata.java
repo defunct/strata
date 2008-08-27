@@ -198,13 +198,22 @@ public class Strata
     public final static class BucketComparable<T, B, X>
     implements Comparable<B>
     {
-        private Cooper<T, B, X> cooper;
+        private final X txn;
+        
+        private final Cooper<T, B, X> cooper;
 
-        private Extractor<T, X> extractor;
+        private final Extractor<T, X> extractor;
 
-        private X txn;
-
-        private Comparable<?>[] fields;
+        private final Comparable<?>[] fields;
+        
+        public BucketComparable(X txn, Cooper<T, B, X> cooper,
+                                Extractor<T, X> extractor, Comparable<?>[] fields)
+        {
+            this.txn = txn;
+            this.cooper = cooper;
+            this.extractor = extractor;
+            this.fields = fields;
+        }
 
         public int compareTo(B bucket)
         {
@@ -3180,7 +3189,7 @@ public class Strata
             CoreRecord record = new CoreRecord();
             tree.getExtractor().extract(txn, object, record);
             B bucket = tree.getCooper().newBucket(record.getFields(), object);
-            BucketComparable<T, B, X> comparable  = new BucketComparable<T, B, X>();
+            BucketComparable<T, B, X> comparable  = new BucketComparable<T, B, X>(txn, tree.getCooper(), tree.getExtractor(), record.getFields());
             Mutation<B, A, X> mutation = new Mutation<B, A, X>(txn, structure, bucket, comparable, null);
             generalized(mutation, new SplitRoot<B, A, X>(), new SplitInner<B, A, X>(), new InnerNever<B, A, X>(), new LeafInsert<B, A, X>());
         }
@@ -3200,7 +3209,7 @@ public class Strata
         // condition to choose which to delete.
         public Object remove(Deletable<T> deletable, Comparable<?>... fields)
         {
-            BucketComparable<T, B, X> comparable  = new BucketComparable<T, B, X>();
+            BucketComparable<T, B, X> comparable  = new BucketComparable<T, B, X>(txn, tree.getCooper(), tree.getExtractor(), fields);
             Mutation<B, A, X> mutation = new Mutation<B, A, X>(txn, structure, null, comparable, new BucketDeletable<T, B, X>(tree.getCooper(), deletable));
             do
             {
@@ -3223,7 +3232,7 @@ public class Strata
         
         public Object remove(Comparable<?>... fields)
         {
-            return remove(deleteAny());
+            return remove(deleteAny(), fields);
         }
 
         // Here is where I get the power of not using comparator.
@@ -3232,7 +3241,7 @@ public class Strata
             Lock previous = new ReentrantLock();
             previous.lock();
             InnerTier<B, A> inner = getRoot();
-            Comparable<B> comparator = new BucketComparable<T, B, X>();
+            Comparable<B> comparator = new BucketComparable<T, B, X>(txn, tree.getCooper(), tree.getExtractor(), fields);
             for (;;)
             {
                 inner.getReadWriteLock().readLock().lock();
