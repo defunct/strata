@@ -224,6 +224,8 @@ public class Strata
     public abstract static class Tier<B, A>
     extends ArrayList<B>
     {
+        private static final long serialVersionUID = 1L;
+
         private final ReadWriteLock readWriteLock;
 
         private A address;
