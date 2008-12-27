@@ -3,10 +3,10 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.agtrz</groupId>
+    <groupId>com.goodworkalan</groupId>
     <artifactId>strata</artifactId>
     <packaging>jar</packaging>
-    <version>0.2.1</version>
+    <version>0.1.X</version>
 
     <name>strata</name>
     <description>A B-Tree Index.</description>
@@ -46,11 +46,6 @@
             <artifactId>args4j</artifactId>
             <version>2.0.8</version>
              <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.agtrz</groupId>
-            <artifactId>pack</artifactId>
-            <version>0.1</version>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>

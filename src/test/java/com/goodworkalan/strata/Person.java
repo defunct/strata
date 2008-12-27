@@ -1,5 +1,5 @@
 /* Copyright Alan Gutierrez 2006 */
-package com.agtrz.strata;
+package com.goodworkalan.strata;
 
 public class Person
 {
