@@ -1,6 +1,5 @@
 package com.goodworkalan.strata;
 
-
 public class BucketTreeBuilder
 implements TreeBuilder
 {

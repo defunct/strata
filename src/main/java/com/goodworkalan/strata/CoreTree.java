@@ -2,7 +2,7 @@ package com.goodworkalan.strata;
 
 
 public final class CoreTree<B, T, A, X>
-implements Tree<T, X>
+implements Strata<T, X>
 {
     private final A rootAddress;
     

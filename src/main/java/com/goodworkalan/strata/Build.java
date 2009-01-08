@@ -69,7 +69,7 @@ implements Structure<B, A, X>
     public int compare(X txn, B left, B right)
     {
         Extractor<T, X> extractor = schema.getExtractor();
-        return Strata.compare(getCooper().getFields(txn, extractor, left), getCooper().getFields(txn, extractor, right));
+        return Stratas.compare(getCooper().getFields(txn, extractor, left), getCooper().getFields(txn, extractor, right));
     }
     
     public Transaction<T, X> newTransaction(X txn)

@@ -1,6 +1,5 @@
 package com.goodworkalan.strata;
 
-
 public interface Cooper<T, B, X>
 {
     public B newBucket(X txn, Extractor<T, X> extractor, T object);

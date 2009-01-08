@@ -11,7 +11,7 @@ import com.goodworkalan.strata.Cursor;
 import com.goodworkalan.strata.Extractor;
 import com.goodworkalan.strata.Record;
 import com.goodworkalan.strata.Schema;
-import com.goodworkalan.strata.Strata;
+import com.goodworkalan.strata.Stratas;
 import com.goodworkalan.strata.Transaction;
 
 
@@ -19,7 +19,7 @@ public class StrataTestCase
 {
     private Transaction<Integer, Object> newTransaction()
     {
-        Schema<Integer, Object> schema = Strata.newInMemorySchema();
+        Schema<Integer, Object> schema = Stratas.newInMemorySchema();
         schema.setInnerSize(5);
         schema.setLeafSize(7);
         Extractor<Integer, Object> extractor = new Extractor<Integer, Object>()
@@ -34,7 +34,7 @@ public class StrataTestCase
     }
     @Test public void create()
     {
-        Schema<Integer, Object> schema = Strata.newInMemorySchema();
+        Schema<Integer, Object> schema = Stratas.newInMemorySchema();
         schema.setInnerSize(5);
         schema.setLeafSize(7);
         Extractor<Integer, Object> extractor = new Extractor<Integer, Object>()

@@ -23,9 +23,14 @@ implements Transaction<T, X>
         this.structure = structure;
     }
     
-    public Tree<T, X> getTree()
+    public Strata<T, X> getStrata()
     {
         return tree;
+    }
+    
+    public X getState()
+    {
+        return txn;
     }
                      
     private InnerTier<B, A> getRoot()
@@ -237,5 +242,10 @@ implements Transaction<T, X>
             }
             inner = structure.getPool().getInnerTier(txn, branch.getAddress());
         }
+    }
+    
+    public Cursor<T> first()
+    {
+        return null;
     }
 }

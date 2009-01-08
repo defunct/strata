@@ -22,6 +22,6 @@ implements Comparable<B>
 
     public int compareTo(B bucket)
     {
-        return Strata.compare(fields, cooper.getFields(txn, extractor, bucket));
+        return Stratas.compare(fields, cooper.getFields(txn, extractor, bucket));
     }
 }

@@ -11,5 +11,6 @@ public interface Query<T>
     public Object remove(Comparable<?>... fields);
 
     public  Deletable<T> deleteAny();
-
+    
+    public Cursor<T> first();
 }
