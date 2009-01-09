@@ -1,6 +1,6 @@
 package com.goodworkalan.strata;
 
-public interface Extractor<T, X>
+public interface Extractor<T, F extends Comparable<F>, X>
 {
-    public void extract(X txn, T object, Record record);
+    public F extract(X txn, T object);
 }

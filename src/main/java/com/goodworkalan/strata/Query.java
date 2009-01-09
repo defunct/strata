@@ -1,16 +1,20 @@
 package com.goodworkalan.strata;
 
-public interface Query<T>
+public interface Query<T, F extends Comparable<F>>
 {
     public void add(T object);
     
-    public Cursor<T> find(Comparable<?>... fields);
+    public Cursor<T> find(F fields);
     
-    public Object remove(Deletable<T> deletable, Comparable<?>... fields);
+    public T remove(Deletable<T> deletable, F fields);
     
-    public Object remove(Comparable<?>... fields);
+    public T remove(F fields);
 
-    public  Deletable<T> deleteAny();
+    public Deletable<T> deleteAny();
     
     public Cursor<T> first();
+    
+    public F extract(T object);
+    
+    public void flush();
 }

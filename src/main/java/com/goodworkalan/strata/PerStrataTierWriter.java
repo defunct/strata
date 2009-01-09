@@ -3,17 +3,17 @@ package com.goodworkalan.strata;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class PerStrataTierWriter<B, T, A, X>
-extends AbstractTierCache<B, T, A, X>
+public class PerStrataTierWriter<B, T, F extends Comparable<F>, A, X>
+extends AbstractTierCache<B, T, F, A, X>
 {
     private final ReadWriteLock readWriteLock;
 
-    public PerStrataTierWriter(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor, int max)
+    public PerStrataTierWriter(Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper, Extractor<T, F, X> extractor, int max)
     {
         this(storage, cooper, extractor, new ReentrantReadWriteLock(), new Object(), max);
     }
 
-    private PerStrataTierWriter(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor,
+    private PerStrataTierWriter(Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper, Extractor<T, F, X> extractor,
                                 ReadWriteLock readWriteLock,
                                 Object mutex,
                                 int max)
@@ -25,7 +25,7 @@ extends AbstractTierCache<B, T, A, X>
              true);
     }
 
-    private PerStrataTierWriter(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor,
+    private PerStrataTierWriter(Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper, Extractor<T, F, X> extractor,
                                 ReadWriteLock readWriteLock,
                                 Object mutex,
                                 int max,
@@ -54,6 +54,6 @@ extends AbstractTierCache<B, T, A, X>
     
     public TierWriter<B, A, X> newTierCache()
     {
-        return new PerStrataTierWriter<B, T, A, X>(getStorage(), cooper, extractor, readWriteLock, mutex, max, isAutoCommit());
+        return new PerStrataTierWriter<B, T, F, A, X>(getStorage(), cooper, extractor, readWriteLock, mutex, max, isAutoCommit());
     }
 }

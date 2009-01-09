@@ -1,18 +1,18 @@
 package com.goodworkalan.strata;
 
-public final class Bucket<T>
+public final class Bucket<T, F extends Comparable<F>>
 {
-    private final Comparable<?>[] fields;
+    private final F fields;
 
     private final T object;
 
-    public Bucket(Comparable<?>[] fields, T object)
+    public Bucket(F fields, T object)
     {
         this.fields = fields;
         this.object = object;
     }
     
-    public Comparable<?>[] getFields()
+    public F getFields()
     {
         return fields;
     }

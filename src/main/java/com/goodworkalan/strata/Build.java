@@ -1,14 +1,14 @@
 package com.goodworkalan.strata;
 
 
-public final class Build<B, T, A, X>
+public final class Build<B, T, F extends Comparable<F>, A, X>
 implements Structure<B, A, X>
 {
-    private final Schema<T, X> schema;
+    private final Schema<T, F, X> schema;
 
-    private final Storage<T, A, X> storage;
+    private final Storage<T, F, A, X> storage;
     
-    private final Cooper<T, B, X> cooper;
+    private final Cooper<T, F, B, X> cooper;
     
     private final Allocator<B, A, X> allocator;
     
@@ -16,7 +16,7 @@ implements Structure<B, A, X>
     
     private final TierPool<B, A, X> pool;
     
-    public Build(Schema<T, X> schema, Storage<T, A, X> storage, Cooper<T, B, X> cooper)
+    public Build(Schema<T, F, X> schema, Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper)
     {
         this.schema = schema;
         this.storage = storage;
@@ -36,17 +36,17 @@ implements Structure<B, A, X>
         return schema.getLeafSize();
     }
 
-    public Schema<T, X> getSchema()
+    public Schema<T, F, X> getSchema()
     {
         return schema;
     }
     
-    public Storage<T, A, X> getStorage()
+    public Storage<T, F, A, X> getStorage()
     {
         return storage;
     }
     
-    public Cooper<T, B, X> getCooper()
+    public Cooper<T, F, B, X> getCooper()
     {
         return cooper;
     }
@@ -68,11 +68,11 @@ implements Structure<B, A, X>
     
     public int compare(X txn, B left, B right)
     {
-        Extractor<T, X> extractor = schema.getExtractor();
-        return Stratas.compare(getCooper().getFields(txn, extractor, left), getCooper().getFields(txn, extractor, right));
+        Extractor<T, F, X> extractor = schema.getExtractor();
+        return getCooper().getFields(txn, extractor, left).compareTo(getCooper().getFields(txn, extractor, right));
     }
     
-    public Transaction<T, X> newTransaction(X txn)
+    public Transaction<T, F, X> newTransaction(X txn)
     {
         writer.begin();
         
@@ -89,8 +89,8 @@ implements Structure<B, A, X>
         writer.dirty(txn, leaf);
         writer.end(txn);
         
-        CoreTree<B, T, A, X> tree = new CoreTree<B, T, A, X>(root.getAddress(), schema, this);
+        CoreTree<B, T, F, A, X> tree = new CoreTree<B, T, F, A, X>(root.getAddress(), schema, this);
         
-        return new CoreQuery<B, T, A, X>(txn, tree, this);
+        return new CoreQuery<B, T, F, A, X>(txn, tree, this);
     }
 }

@@ -4,7 +4,7 @@ import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.util.Map;
 
-final class BasicTierPool<T, A, X, B>
+final class BasicTierPool<T, F extends Comparable<F>, A, X, B>
 implements TierPool<B, A, X>
 {
     private final ReferenceQueue<InnerTier<B, A>> innerQueue = null;
@@ -15,13 +15,13 @@ implements TierPool<B, A, X>
     
     private final Map<A, Reference<LeafTier<B, A>>> leafTiers = null;
     
-    private final Storage<T, A, X> storage;
+    private final Storage<T, F, A, X> storage;
     
-    private final Extractor<T, X> extractor;
+    private final Extractor<T, F, X> extractor;
     
-    private final Cooper<T, B, X> cooper;
+    private final Cooper<T, F, B, X> cooper;
     
-    public BasicTierPool(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor)
+    public BasicTierPool(Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper, Extractor<T, F, X> extractor)
     {
         this.storage = storage;
         this.cooper = cooper;

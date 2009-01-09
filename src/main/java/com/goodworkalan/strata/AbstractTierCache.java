@@ -9,18 +9,18 @@ import java.util.concurrent.locks.Lock;
  * the tiers are written to file and flushed. Used as the base class of
  * both the per query and per strata implementations of the tier cache.
  */
-class AbstractTierCache<B, T, A, X>
+class AbstractTierCache<B, T, F extends Comparable<F>, A, X>
 extends EmptyTierCache<B, A, X>
 {
     private final Map<A, LeafTier<B, A>> leafTiers;
     
     private final Map<A, InnerTier<B, A>> innerTiers;
     
-    private final Storage<T, A, X> storage;
+    private final Storage<T, F, A, X> storage;
     
-    protected final Cooper<T, B, X> cooper;
+    protected final Cooper<T, F, B, X> cooper;
     
-    protected final Extractor<T, X> extractor;
+    protected final Extractor<T, F, X> extractor;
 
     protected final Object mutex;
     
@@ -42,9 +42,9 @@ extends EmptyTierCache<B, A, X>
      * @param autoCommit If true, the commit method of the storage
      * strategy is called after the dirty tiers are written.
      */
-    public AbstractTierCache(Storage<T, A, X> storage,
-                             Cooper<T, B, X> cooper,
-                             Extractor<T, X> extractor,
+    public AbstractTierCache(Storage<T, F, A, X> storage,
+                             Cooper<T, F, B, X> cooper,
+                             Extractor<T, F, X> extractor,
                              Lock lock,
                              Object mutex,
                              int max,
@@ -68,7 +68,7 @@ extends EmptyTierCache<B, A, X>
         }
     }
     
-    public Storage<T, A, X> getStorage()
+    public Storage<T, F, A, X> getStorage()
     {
         return storage;
     }

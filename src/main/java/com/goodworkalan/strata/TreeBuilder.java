@@ -3,5 +3,5 @@ package com.goodworkalan.strata;
 
 public interface TreeBuilder
 {
-    public <T, A, X> Transaction<T, X> newTransaction(X txn, Schema<T, X> schema, Storage<T, A, X> storage);
+    public <T, F extends Comparable<F>, A, X> Transaction<T, F, X> newTransaction(X txn, Schema<T, F, X> schema, Storage<T, F, A, X> storage);
 }

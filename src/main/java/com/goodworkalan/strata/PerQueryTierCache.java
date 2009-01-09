@@ -14,8 +14,8 @@ import java.util.concurrent.locks.ReentrantLock;
  * is released. Thus, the empty map of dirty tiers is an indicator that
  * the associated query does not hold the lock on the strata.
  */
-public class PerQueryTierCache<B, T, A, X>
-extends AbstractTierCache<B, T, A, X>
+public class PerQueryTierCache<B, T, F extends Comparable<F>, A, X>
+extends AbstractTierCache<B, T, F, A, X>
 {
     /**
      * Create a per query tier cache.
@@ -24,12 +24,12 @@ extends AbstractTierCache<B, T, A, X>
      * @param max The dirty tier cache size that when reached, will cause
      * the cache to empty and the tiers to be written.
      */
-    public PerQueryTierCache(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor, int max)
+    public PerQueryTierCache(Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper, Extractor<T, F, X> extractor, int max)
     {
         this(storage, cooper, extractor, new ReentrantLock(), max, true);
     }
     
-    private PerQueryTierCache(Storage<T, A, X> storage, Cooper<T, B, X> cooper, Extractor<T, X> extractor, Lock lock, int max, boolean autoCommit)
+    private PerQueryTierCache(Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper, Extractor<T, F, X> extractor, Lock lock, int max, boolean autoCommit)
     {
         super(storage, cooper, extractor,
               lock,
@@ -57,6 +57,6 @@ extends AbstractTierCache<B, T, A, X>
     
     public TierWriter<B, A, X> newTierCache()
     {
-        return new PerQueryTierCache<B, T, A, X>(getStorage(), cooper, extractor, lock, max, isAutoCommit());
+        return new PerQueryTierCache<B, T, F, A, X>(getStorage(), cooper, extractor, lock, max, isAutoCommit());
     }
 }

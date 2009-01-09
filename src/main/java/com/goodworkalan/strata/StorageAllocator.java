@@ -1,11 +1,11 @@
 package com.goodworkalan.strata;
 
-final class StorageAllocator<T, B, A, X>
+final class StorageAllocator<T, F extends Comparable<F>, B, A, X>
 implements Allocator<B, A, X>
 {
-    private Storage<T, A, X> storage;
+    private Storage<T, F, A, X> storage;
     
-    public StorageAllocator(Storage<T, A, X> storage)
+    public StorageAllocator(Storage<T, F, A, X> storage)
     {
         this.storage = storage;
     }

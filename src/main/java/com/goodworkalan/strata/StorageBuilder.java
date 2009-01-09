@@ -1,7 +1,7 @@
 package com.goodworkalan.strata;
 
 
-public interface StorageBuilder<T, X>
+public interface StorageBuilder<T, F extends Comparable<F>, X>
 {
-    public Transaction<T, X> newTransaction(X txn, Schema<T, X> schema);
+    public Transaction<T, F, X> newTransaction(X txn, Schema<T, F, X> schema);
 }

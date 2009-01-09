@@ -3,35 +3,33 @@ package com.goodworkalan.strata;
 import java.io.Serializable;
 
 
-public class BucketCooper<T, X>
-implements Cooper<T, Bucket<T>, X>, Serializable
+public class BucketCooper<T, F extends Comparable<F>, X>
+implements Cooper<T, F, Bucket<T, F>, X>, Serializable
 {
     private final static long serialVersionUID = 20070402L;
 
-    public Bucket<T> newBucket(X txn, Extractor<T, X> extractor, T object)
+    public Bucket<T, F> newBucket(X txn, Extractor<T, F, X> extractor, T object)
     {
-        CoreRecord record = new CoreRecord();
-        extractor.extract(txn, object, record);
-        return new Bucket<T>(record.getFields(), object);
+        return new Bucket<T, F>(extractor.extract(txn, object), object);
     }
 
-    public Bucket<T> newBucket(Comparable<?>[] fields, T object)
+    public Bucket<T, F> newBucket(F fields, T object)
     {
-        return new Bucket<T>(fields, object);
+        return new Bucket<T, F>(fields, object);
     }
 
-    public Comparable<?>[] getFields(X txn, Extractor<T, X> extractor, Bucket<T> bucket)
+    public F getFields(X txn, Extractor<T, F, X> extractor, Bucket<T, F> bucket)
     {
         return bucket.getFields();
     }
 
-    public T getObject(Bucket<T> bucket)
+    public T getObject(Bucket<T, F> bucket)
     {
         return bucket.getObject();
     }
     
-    public Cursor<T> wrap(Cursor<Bucket<T>> cursor)
+    public Cursor<T> wrap(Cursor<Bucket<T, F>> cursor)
     {
-        return new BucketCursor<T, Bucket<T>, X>(cursor);
+        return new BucketCursor<T, F, Bucket<T, F>, X>(cursor);
     }
 }

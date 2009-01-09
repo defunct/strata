@@ -1,12 +1,12 @@
 package com.goodworkalan.strata;
 
-public final class Schema<T, X>
+public final class Schema<T, F extends Comparable<F>, X>
 {
     private int innerSize;
     
     private int leafSize;
     
-    private StorageBuilder<T, X> storageBuilder;
+    private StorageBuilder<T, F, X> storageBuilder;
     
     private AllocatorBuilder allocatorBuilder;
     
@@ -16,7 +16,7 @@ public final class Schema<T, X>
     
     private boolean fieldCaching;
     
-    private Extractor<T, X> extractor;
+    private Extractor<T, F, X> extractor;
     
     public void setInnerSize(int innerSize)
     {
@@ -58,12 +58,12 @@ public final class Schema<T, X>
         this.fieldCaching = fieldCaching;
     }
     
-    public StorageBuilder<T, X> getStorageBuilder()
+    public StorageBuilder<T, F, X> getStorageBuilder()
     {
         return storageBuilder;
     }
     
-    public void setStorageBuilder(StorageBuilder<T, X> storageBuilder)
+    public void setStorageBuilder(StorageBuilder<T, F, X> storageBuilder)
     {
         this.storageBuilder = storageBuilder;
     }
@@ -88,23 +88,23 @@ public final class Schema<T, X>
         this.tierPoolBuilder = tierPoolBuilder;
     }
 
-    public Extractor<T, X> getExtractor()
+    public Extractor<T, F, X> getExtractor()
     {
         return extractor;
     }
 
-    public void setExtractor(Extractor<T, X> extractor)
+    public void setExtractor(Extractor<T, F, X> extractor)
     {
         this.extractor = extractor;
     }
     
-    public <A> Transaction<T, X> newTransaction(X txn, Storage<T, A, X> storage)
+    public <A> Transaction<T, F, X> newTransaction(X txn, Storage<T, F, A, X> storage)
     {
         TreeBuilder builder = isFieldCaching() ? new BucketTreeBuilder() : new LookupTreeBuilder();
         return builder.newTransaction(txn, this, storage);
     }
     
-    public Transaction<T, X> newTransaction(X txn)
+    public Transaction<T, F, X> newTransaction(X txn)
     {
         return storageBuilder.newTransaction(txn, this);
     }

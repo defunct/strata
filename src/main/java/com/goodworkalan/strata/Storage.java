@@ -1,10 +1,10 @@
 package com.goodworkalan.strata;
 
-public interface Storage<T, A, X>
+public interface Storage<T, F extends Comparable<F>, A, X>
 {
-    public InnerStore<T, A, X> getInnerStore();
+    public InnerStore<T, F, A, X> getInnerStore();
     
-    public LeafStore<T, A, X> getLeafStore();
+    public LeafStore<T, F, A, X> getLeafStore();
     
     public void commit(X txn);
     

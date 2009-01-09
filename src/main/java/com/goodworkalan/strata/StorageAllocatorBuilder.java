@@ -4,8 +4,8 @@ package com.goodworkalan.strata;
 class StorageAllocatorBuilder
 implements AllocatorBuilder
 {
-    public <B, T, A, X> Allocator<B, A, X> newAllocator(Build<B, T, A, X> build)
+    public <B, T, F extends Comparable<F>, A, X> Allocator<B, A, X> newAllocator(Build<B, T, F, A, X> build)
     {
-        return new StorageAllocator<T, B, A, X>(build.getStorage());
+        return new StorageAllocator<T, F, B, A, X>(build.getStorage());
     }
 }

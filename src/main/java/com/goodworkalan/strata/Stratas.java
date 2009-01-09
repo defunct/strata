@@ -87,12 +87,12 @@ public class Stratas
         return new ObjectReferenceTierPoolBuilder();
     }
     
-    public static <T> Schema<T, Object> newInMemorySchema()
+    public static <T, F extends Comparable<F>> Schema<T, F, Object> newInMemorySchema()
     {
-        Schema<T, Object> schema = new Schema<T, Object>();
+        Schema<T, F, Object> schema = new Schema<T, F, Object>();
         schema.setAllocatorBuilder(newNullAllocatorBuilder());
         schema.setFieldCaching(false);
-        schema.setStorageBuilder(new InMemoryStorageBuilder<T, Object>());
+        schema.setStorageBuilder(new InMemoryStorageBuilder<T, F, Object>());
         schema.setTierPoolBuilder(newObjectReferenceTierPool());
         schema.setTierWriterBuilder(newEmptyTierWriter());
         return schema;

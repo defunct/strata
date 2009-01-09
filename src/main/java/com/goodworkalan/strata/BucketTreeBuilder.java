@@ -3,10 +3,10 @@ package com.goodworkalan.strata;
 public class BucketTreeBuilder
 implements TreeBuilder
 {
-    public <T, A, X> Transaction<T, X> newTransaction(X txn, Schema<T, X> schema, Storage<T, A, X> storage)
+    public <T, F extends Comparable<F>, A, X> Transaction<T, F, X> newTransaction(X txn, Schema<T, F, X> schema, Storage<T, F, A, X> storage)
     {
-        Cooper<T, Bucket<T>, X> cooper = new BucketCooper<T, X>();
-        Build<Bucket<T>, T, A, X> build = new Build<Bucket<T>, T, A, X>(schema, storage, cooper);
+        Cooper<T, F, Bucket<T, F>, X> cooper = new BucketCooper<T, F, X>();
+        Build<Bucket<T, F>, T, F, A, X> build = new Build<Bucket<T, F>, T, F, A, X>(schema, storage, cooper);
         return build.newTransaction(txn);
     }
 }

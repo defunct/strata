@@ -11,8 +11,8 @@ implements TierWriterBuilder
         this.max = max;
     }
 
-    public <B, T, A, X> TierWriter<B, A, X> newTierWriter(Build<B, T, A, X> build)
+    public <B, T, F extends Comparable<F>, A, X> TierWriter<B, A, X> newTierWriter(Build<B, T, F, A, X> build)
     {
-        return new PerStrataTierWriter<B, T, A, X>(build.getStorage(), build.getCooper(), build.getSchema().getExtractor(), max);
+        return new PerStrataTierWriter<B, T, F, A, X>(build.getStorage(), build.getCooper(), build.getSchema().getExtractor(), max);
     }
 }
