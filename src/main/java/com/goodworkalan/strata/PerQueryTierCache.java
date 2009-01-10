@@ -3,7 +3,7 @@ package com.goodworkalan.strata;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.goodworkalan.favorites.Stash;
+import com.goodworkalan.stash.Stash;
 
 /**
  * A tier cache that maintains a map of dirty tiers per query and that

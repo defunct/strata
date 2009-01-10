@@ -4,7 +4,7 @@ import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.util.Map;
 
-import com.goodworkalan.favorites.Stash;
+import com.goodworkalan.stash.Stash;
 
 final class BasicTierPool<T, F extends Comparable<F>, A, B>
 implements TierPool<B, A>

@@ -3,7 +3,7 @@ package com.goodworkalan.strata;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.goodworkalan.favorites.Stash;
+import com.goodworkalan.stash.Stash;
 
 /**
  * A tier cache for in memory storage applications that merely implements

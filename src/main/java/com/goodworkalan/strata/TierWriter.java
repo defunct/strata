@@ -1,6 +1,6 @@
 package com.goodworkalan.strata;
 
-import com.goodworkalan.favorites.Stash;
+import com.goodworkalan.stash.Stash;
 
 
 /**

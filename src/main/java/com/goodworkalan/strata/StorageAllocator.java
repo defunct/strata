@@ -1,6 +1,6 @@
 package com.goodworkalan.strata;
 
-import com.goodworkalan.favorites.Stash;
+import com.goodworkalan.stash.Stash;
 
 final class StorageAllocator<T, F extends Comparable<F>, B, A>
 implements Allocator<B, A>

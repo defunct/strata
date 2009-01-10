@@ -1,6 +1,6 @@
 package com.goodworkalan.strata;
 
-import com.goodworkalan.favorites.Stash;
+import com.goodworkalan.stash.Stash;
 
 
 public final class CoreTree<B, T, F extends Comparable<F>, A>

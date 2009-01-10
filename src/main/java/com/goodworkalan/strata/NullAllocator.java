@@ -1,6 +1,6 @@
 package com.goodworkalan.strata;
 
-import com.goodworkalan.favorites.Stash;
+import com.goodworkalan.stash.Stash;
 
 final class NullAllocator<B, A>
 implements Allocator<B, A>

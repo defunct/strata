@@ -4,7 +4,7 @@ import java.util.ListIterator;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.goodworkalan.favorites.Stash;
+import com.goodworkalan.stash.Stash;
 
 public final class CoreQuery<B, T, F extends Comparable<F>, A> implements
         Query<T, F>

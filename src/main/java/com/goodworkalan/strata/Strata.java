@@ -1,6 +1,6 @@
 package com.goodworkalan.strata;
 
-import com.goodworkalan.favorites.Stash;
+import com.goodworkalan.stash.Stash;
 
 // FIXME Add field to strata.
 public interface Strata<T, F extends Comparable<F>>

@@ -3,7 +3,7 @@ package com.goodworkalan.strata;
 import java.util.Iterator;
 import java.util.LinkedList;
 
-import com.goodworkalan.favorites.Stash;
+import com.goodworkalan.stash.Stash;
 
 
 final class Mutation<B, A>

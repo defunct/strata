@@ -3,7 +3,7 @@ package com.goodworkalan.strata;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.goodworkalan.favorites.Stash;
+import com.goodworkalan.stash.Stash;
 
 public class PerStrataTierWriter<B, T, F extends Comparable<F>, A>
 extends AbstractTierCache<B, T, F, A>

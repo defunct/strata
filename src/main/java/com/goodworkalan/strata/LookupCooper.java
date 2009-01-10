@@ -2,7 +2,7 @@ package com.goodworkalan.strata;
 
 import java.io.Serializable;
 
-import com.goodworkalan.favorites.Stash;
+import com.goodworkalan.stash.Stash;
 
 
 public final class LookupCooper<T, F extends Comparable<F>>
