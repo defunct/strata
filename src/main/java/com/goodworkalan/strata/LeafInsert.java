@@ -2,12 +2,12 @@ package com.goodworkalan.strata;
 
 import java.util.ListIterator;
 
-final class LeafInsert<B, A, X>
-implements Decision<B, A, X>
+final class LeafInsert<B, A>
+implements Decision<B, A>
 {
-    public boolean test(Mutation<B, A, X> mutation, Level<B, A, X> levelOfParent, Level<B, A, X> levelOfChild, InnerTier<B, A> parent)
+    public boolean test(Mutation<B, A> mutation, Level<B, A> levelOfParent, Level<B, A> levelOfChild, InnerTier<B, A> parent)
     {
-        Structure<B, A, X> structure = mutation.getStructure();
+        Structure<B, A> structure = mutation.getStructure();
         boolean split = true;
         levelOfChild.getSync = new WriteLockExtractor();
         Branch<B, A> branch = parent.find(mutation.getComparable());
@@ -22,34 +22,34 @@ implements Decision<B, A, X>
                 int compare = mutation.getComparable().compareTo(leaf.get(0));
                 if (compare < 0)
                 {
-                    mutation.leafOperation = new LeafInsert.SplitLinkedListLeft<B, A, X>(parent);
+                    mutation.leafOperation = new LeafInsert.SplitLinkedListLeft<B, A>(parent);
                 }
                 else if (compare > 0)
                 {
-                    mutation.leafOperation = new LeafInsert.SplitLinkedListRight<B, A, X>(parent);
+                    mutation.leafOperation = new LeafInsert.SplitLinkedListRight<B, A>(parent);
                 }
                 else
                 {
-                    mutation.leafOperation = new LeafInsert.InsertLinkedList<B, A, X>(leaf);
+                    mutation.leafOperation = new LeafInsert.InsertLinkedList<B, A>(leaf);
                     split = false;
                 }
             }
             else
             {
-                levelOfParent.listOfOperations.add(new LeafInsert.SplitLeaf<B, A, X>(parent));
-                mutation.leafOperation = new LeafInsert.InsertSorted<B, A, X>(parent);
+                levelOfParent.listOfOperations.add(new LeafInsert.SplitLeaf<B, A>(parent));
+                mutation.leafOperation = new LeafInsert.InsertSorted<B, A>(parent);
             }
         }
         else
         {
-            mutation.leafOperation = new LeafInsert.InsertSorted<B, A, X>(parent);
+            mutation.leafOperation = new LeafInsert.InsertSorted<B, A>(parent);
             split = false;
         }
         return split;
     }
 
-    private final static class SplitLinkedListLeft<B, A, X>
-    implements LeafOperation<B, A, X>
+    private final static class SplitLinkedListLeft<B, A>
+    implements LeafOperation<B, A>
     {
         private final InnerTier<B, A> inner;
 
@@ -58,9 +58,9 @@ implements Decision<B, A, X>
             this.inner = inner;
         }
 
-        public boolean operate(Mutation<B, A, X> mutation, Level<B, A, X> levelOfLeaf)
+        public boolean operate(Mutation<B, A> mutation, Level<B, A> levelOfLeaf)
         {
-            Structure<B, A, X> structure = mutation.getStructure();
+            Structure<B, A> structure = mutation.getStructure();
 
             Branch<B, A> branch = inner.find(mutation.getComparable());
             LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
@@ -80,17 +80,17 @@ implements Decision<B, A, X>
             }
             inner.add(index + 1, new Branch<B, A>(right.get(0), right.getAddress()));
 
-            TierWriter<B, A, X> writer = structure.getWriter();
+            TierWriter<B, A> writer = structure.getWriter();
             writer.dirty(mutation.getTxn(), inner);
             writer.dirty(mutation.getTxn(), leaf);
             writer.dirty(mutation.getTxn(), right);
 
-            return new LeafInsert.InsertSorted<B, A, X>(inner).operate(mutation, levelOfLeaf);
+            return new LeafInsert.InsertSorted<B, A>(inner).operate(mutation, levelOfLeaf);
         }
     }
 
-    private final static class SplitLinkedListRight<B, A, X>
-    implements LeafOperation<B, A, X>
+    private final static class SplitLinkedListRight<B, A>
+    implements LeafOperation<B, A>
     {
         private final InnerTier<B, A> inner;
 
@@ -99,14 +99,14 @@ implements Decision<B, A, X>
             this.inner = inner;
         }
 
-        private boolean endOfList(Mutation<B, A, X> mutation, LeafTier<B, A> last)
+        private boolean endOfList(Mutation<B, A> mutation, LeafTier<B, A> last)
         {
             return mutation.getStructure().getAllocator().isNull(last.getNext()) || mutation.newComparable(last.getNext(mutation).get(0)).compareTo(last.get(0)) != 0;
         }
 
-        public boolean operate(Mutation<B, A, X> mutation, Level<B, A, X> levelOfLeaf)
+        public boolean operate(Mutation<B, A> mutation, Level<B, A> levelOfLeaf)
         {
-            Structure<B, A, X> structure = mutation.getStructure();
+            Structure<B, A> structure = mutation.getStructure();
 
             Branch<B, A> branch = inner.find(mutation.getComparable());
             LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
@@ -122,17 +122,17 @@ implements Decision<B, A, X>
 
             inner.add(inner.getIndex(leaf.getAddress()) + 1, new Branch<B, A>(mutation.bucket, right.getAddress()));
 
-            TierWriter<B, A, X> writer = structure.getWriter();
+            TierWriter<B, A> writer = structure.getWriter();
             writer.dirty(mutation.getTxn(), inner);
             writer.dirty(mutation.getTxn(), leaf);
             writer.dirty(mutation.getTxn(), right);
 
-            return new LeafInsert.InsertSorted<B, A, X>(inner).operate(mutation, levelOfLeaf);
+            return new LeafInsert.InsertSorted<B, A>(inner).operate(mutation, levelOfLeaf);
         }
     }
 
-    private final static class SplitLeaf<B, A, X>
-    implements Operation<B, A, X>
+    private final static class SplitLeaf<B, A>
+    implements Operation<B, A>
     {
         private final InnerTier<B, A> inner;
 
@@ -141,9 +141,9 @@ implements Decision<B, A, X>
             this.inner = inner;
         }
 
-        public void operate(Mutation<B, A, X> mutation)
+        public void operate(Mutation<B, A> mutation)
         {
-            Structure<B, A, X> structure = mutation.getStructure();
+            Structure<B, A> structure = mutation.getStructure();
 
             Branch<B, A> branch = inner.find(mutation.getComparable());
             LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
@@ -181,7 +181,7 @@ implements Decision<B, A, X>
             int index = inner.getIndex(leaf.getAddress());
             inner.add(index + 1, new Branch<B, A>(right.get(0), right.getAddress()));
 
-            TierWriter<B, A, X> writer = structure.getWriter();
+            TierWriter<B, A> writer = structure.getWriter();
             writer.dirty(mutation.getTxn(), inner);
             writer.dirty(mutation.getTxn(), leaf);
             writer.dirty(mutation.getTxn(), right);
@@ -193,8 +193,8 @@ implements Decision<B, A, X>
         }
     }
 
-    private final static class InsertSorted<B, A, X>
-    implements LeafOperation<B, A, X>
+    private final static class InsertSorted<B, A>
+    implements LeafOperation<B, A>
     {
         private final InnerTier<B, A> inner;
 
@@ -203,9 +203,9 @@ implements Decision<B, A, X>
             this.inner = inner;
         }
 
-        public boolean operate(Mutation<B, A, X> mutation, Level<B, A, X> levelOfLeaf)
+        public boolean operate(Mutation<B, A> mutation, Level<B, A> levelOfLeaf)
         {
-            Structure<B, A, X> structure = mutation.getStructure();
+            Structure<B, A> structure = mutation.getStructure();
 
             Branch<B, A> branch = inner.find(mutation.getComparable());
             LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
@@ -235,8 +235,8 @@ implements Decision<B, A, X>
         }
     }
 
-    private final static class InsertLinkedList<B, A, X>
-    implements LeafOperation<B, A, X>
+    private final static class InsertLinkedList<B, A>
+    implements LeafOperation<B, A>
     {
         private final LeafTier<B, A> leaf;
 
@@ -245,7 +245,7 @@ implements Decision<B, A, X>
             this.leaf = leaf;
         }
 
-        public boolean operate(Mutation<B, A, X> mutation, Level<B, A, X> levelOfLeaf)
+        public boolean operate(Mutation<B, A> mutation, Level<B, A> levelOfLeaf)
         {
             leaf.append(mutation, levelOfLeaf);
             return true;

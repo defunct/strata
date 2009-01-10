@@ -1,20 +1,22 @@
 package com.goodworkalan.strata;
 
+import com.goodworkalan.favorites.Stash;
 
-public final class CoreTree<B, T, F extends Comparable<F>, A, X>
-implements Strata<T, F, X>
+
+public final class CoreTree<B, T, F extends Comparable<F>, A>
+implements Strata<T, F>
 {
     private final A rootAddress;
     
-    private final Structure<B, A, X> structure;
+    private final Structure<B, A> structure;
 
-    private final Cooper<T, F, B, X> cooper;
+    private final Cooper<T, F, B> cooper;
     
-    private final Extractor<T, F, X> extractor;
+    private final Extractor<T, F> extractor;
     
-    private final Schema<T, F, X> schema;
+    private final Schema<T, F> schema;
     
-    public CoreTree(A rootAddress, Schema<T, F, X> schema, Build<B, T, F, A, X> build)
+    public CoreTree(A rootAddress, Schema<T, F> schema, Build<B, T, F, A> build)
     {
         this.rootAddress = rootAddress;
         this.schema = schema;
@@ -28,22 +30,27 @@ implements Strata<T, F, X>
         return rootAddress;
     }
     
-    public Schema<T, F, X> getSchema()
+    public Schema<T, F> getSchema()
     {
         return schema;
     }
-
-    public Transaction<T, F, X> query(X txn)
+    
+    public Query<T, F> query()
     {
-        return new CoreQuery<B, T, F, A, X>(txn, this, structure);
+        return query(new Stash());
     }
 
-    public Cooper<T, F, B, X> getCooper()
+    public Query<T, F> query(Stash stash)
+    {
+        return new CoreQuery<B, T, F, A>(stash, this, structure);
+    }
+
+    public Cooper<T, F, B> getCooper()
     {
         return cooper;
     }
     
-    public Extractor<T, F, X> getExtractor()
+    public Extractor<T, F> getExtractor()
     {
         return extractor;
     }

@@ -4,8 +4,8 @@ package com.goodworkalan.strata;
 final class ObjectReferenceTierPoolBuilder
 implements TierPoolBuilder
 {
-    public <B, T, F extends Comparable<F>, A, X> TierPool<B, A, X> newTierPool(Build<B, T, F, A, X> build)
+    public <B, T, F extends Comparable<F>, A> TierPool<B, A> newTierPool(Build<B, T, F, A> build)
     {
-        return new ObjectReferenceTierPool<B, A, X>();
+        return new ObjectReferenceTierPool<B, A>();
     }
 }

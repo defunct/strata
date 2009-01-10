@@ -1,8 +1,10 @@
 package com.goodworkalan.strata;
 
-public interface TierPool<B, A, X>
+import com.goodworkalan.favorites.Stash;
+
+public interface TierPool<B, A>
 {
-    public LeafTier<B, A> getLeafTier(X txn, A address);
+    public LeafTier<B, A> getLeafTier(Stash stash, A address);
     
-    public InnerTier<B, A> getInnerTier(X txn, A address);
+    public InnerTier<B, A> getInnerTier(Stash stash, A address);
 }

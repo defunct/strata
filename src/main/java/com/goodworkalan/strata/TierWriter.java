@@ -1,12 +1,14 @@
 package com.goodworkalan.strata;
 
+import com.goodworkalan.favorites.Stash;
+
 
 /**
  * A strategy for both caching dirty tiers in order to writing them out to
  * storage in a batch as well as for locking the Strata for exclusive
  * insert and delete.
  */
-public interface TierWriter<B, A, X>
+public interface TierWriter<B, A>
 {
     /**
      * Determines if the tier cache will invoke the commit method of the
@@ -45,7 +47,7 @@ public interface TierWriter<B, A, X>
      * @param txn A storage specific state object.
      * @param tier The dirty tier.
      */
-    public void dirty(X txn, InnerTier<B, A> tier);
+    public void dirty(Stash stash, InnerTier<B, A> tier);
     
     /**
      * Remove a dirty tier from the tier cache.
@@ -61,7 +63,7 @@ public interface TierWriter<B, A, X>
      * @param txn A storage specific state object.
      * @param tier The dirty tier.
      */
-    public void dirty(X txn, LeafTier<B, A> tier);
+    public void dirty(Stash stash, LeafTier<B, A> tier);
     
     /**
      * Remove a dirty tier from the tier cache.
@@ -79,7 +81,7 @@ public interface TierWriter<B, A, X>
      * @param storage The storage strategy.
      * @param txn A storage specific state object.
      */
-    public void end(X txn);
+    public void end(Stash stash);
     
     /**
      * Flush any dirty pages in the tier cache and empty the tier cache.
@@ -89,7 +91,7 @@ public interface TierWriter<B, A, X>
      * @param storage The storage strategy.
      * @param txn A storage specific state object.
      */
-    public void flush(X txn);
+    public void flush(Stash stash);
     
     /**
      * Lock the Strata for exclusive inserts and deletes. This does not
@@ -103,5 +105,5 @@ public interface TierWriter<B, A, X>
      *
      * @return A new tier cache based on this prototype instance.
      */
-    public TierWriter<B, A, X> newTierWriter();
+    public TierWriter<B, A> newTierWriter();
 }

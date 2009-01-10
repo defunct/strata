@@ -1,16 +1,18 @@
 package com.goodworkalan.strata;
 
-final class NullAllocator<B, A, X>
-implements Allocator<B, A, X>
+import com.goodworkalan.favorites.Stash;
+
+final class NullAllocator<B, A>
+implements Allocator<B, A>
 {
     @SuppressWarnings("unchecked")
-    public A allocate(X txn, InnerTier<B, A> inner, int size)
+    public A allocate(Stash stash, InnerTier<B, A> inner, int size)
     {
         return (A) inner;
     }
     
     @SuppressWarnings("unchecked")
-    public A allocate(X txn, LeafTier<B, A> leaf, int size)
+    public A allocate(Stash stash, LeafTier<B, A> leaf, int size)
     {
         return (A) leaf;
     }

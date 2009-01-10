@@ -4,14 +4,14 @@ package com.goodworkalan.strata;
 /**
  * Logic for deleting the 
  */
-final class DeleteRoot<B, A, X>
-implements RootDecision<B, A, X>
+final class DeleteRoot<B, A>
+implements RootDecision<B, A>
 {
-    public boolean test(Mutation<B, A, X> mutation, Level<B, A, X> levelOfRoot, InnerTier<B, A> root)
+    public boolean test(Mutation<B, A> mutation, Level<B, A> levelOfRoot, InnerTier<B, A> root)
     {
         if (root.getChildType() == ChildType.INNER && root.size() == 2)
         {
-            Structure<B, A, X> structure = mutation.getStructure();
+            Structure<B, A> structure = mutation.getStructure();
             InnerTier<B, A> first = structure.getPool().getInnerTier(mutation.getTxn(), root.get(0).getAddress());
             InnerTier<B, A> second = structure.getPool().getInnerTier(mutation.getTxn(), root.get(1).getAddress());
             // FIXME These numbers are off.
@@ -20,13 +20,13 @@ implements RootDecision<B, A, X>
         return false;
     }
 
-    public void operation(Mutation<B, A, X> mutation, Level<B, A, X> levelOfRoot, InnerTier<B, A> root)
+    public void operation(Mutation<B, A> mutation, Level<B, A> levelOfRoot, InnerTier<B, A> root)
     {
-        levelOfRoot.listOfOperations.add(new DeleteRoot.Merge<B, A, X>(root));
+        levelOfRoot.listOfOperations.add(new DeleteRoot.Merge<B, A>(root));
     }
 
-    public final static class Merge<B, A, X>
-    implements Operation<B, A, X>
+    public final static class Merge<B, A>
+    implements Operation<B, A>
     {
         private final InnerTier<B, A> root;
 
@@ -35,14 +35,14 @@ implements RootDecision<B, A, X>
             this.root = root;
         }
 
-        public void operate(Mutation<B, A, X> mutation)
+        public void operate(Mutation<B, A> mutation)
         {
             if (root.size() != 0)
             {
                 throw new IllegalStateException();
             }
             
-            Structure<B, A, X> structure = mutation.getStructure();
+            Structure<B, A> structure = mutation.getStructure();
 
             InnerTier<B, A> child = structure.getPool().getInnerTier(mutation.getTxn(), root.remove(0).getAddress());
             while (child.size() != 0)
@@ -52,7 +52,7 @@ implements RootDecision<B, A, X>
 
             root.setChildType(child.getChildType());
 
-            TierWriter<B, A, X> writer = structure.getWriter();
+            TierWriter<B, A> writer = structure.getWriter();
             writer.remove(child);
             writer.dirty(mutation.getTxn(), root);
         }

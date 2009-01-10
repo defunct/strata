@@ -1,16 +1,18 @@
 package com.goodworkalan.strata;
 
-final class ObjectReferenceTierPool<B, A, X>
-implements TierPool<B, A, X>
+import com.goodworkalan.favorites.Stash;
+
+final class ObjectReferenceTierPool<B, A>
+implements TierPool<B, A>
 {
     @SuppressWarnings("unchecked")
-    public InnerTier<B, A> getInnerTier(X txn, A address)
+    public InnerTier<B, A> getInnerTier(Stash stash, A address)
     {
         return (InnerTier<B, A>) address;
     }
     
     @SuppressWarnings("unchecked")
-    public LeafTier<B, A> getLeafTier(X txn, A address)
+    public LeafTier<B, A> getLeafTier(Stash stash, A address)
     {
         return (LeafTier<B, A>) address;
     }

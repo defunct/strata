@@ -1,25 +1,25 @@
 package com.goodworkalan.strata;
 
 
-public final class SplitRoot<B, A, X>
-implements RootDecision<B, A, X>
+public final class SplitRoot<B, A>
+implements RootDecision<B, A>
 {
-    public boolean test(Mutation<B, A, X> mutation,
-                        Level<B, A, X> levelOfRoot,
+    public boolean test(Mutation<B, A> mutation,
+                        Level<B, A> levelOfRoot,
                         InnerTier<B, A> root)
     {
         return mutation.getStructure().getInnerSize() == root.size();
     }
 
-    public void operation(Mutation<B, A, X> mutation,
-                          Level<B, A, X> levelOfRoot,
+    public void operation(Mutation<B, A> mutation,
+                          Level<B, A> levelOfRoot,
                           InnerTier<B, A> root)
     {
-        levelOfRoot.listOfOperations.add(new SplitRoot.Split<B, A, X>(root));
+        levelOfRoot.listOfOperations.add(new SplitRoot.Split<B, A>(root));
     }
 
-    private final static class Split<B, A, X>
-    implements Operation<B, A, X>
+    private final static class Split<B, A>
+    implements Operation<B, A>
     {
         private final InnerTier<B, A> root;
 
@@ -28,7 +28,7 @@ implements RootDecision<B, A, X>
             this.root = root;
         }
 
-        public void operate(Mutation<B, A, X> mutation)
+        public void operate(Mutation<B, A> mutation)
         {
             InnerTier<B, A> left = mutation.newInnerTier(root.getChildType());
             InnerTier<B, A> right = mutation.newInnerTier(root.getChildType());
@@ -51,7 +51,7 @@ implements RootDecision<B, A, X>
 
             root.setChildType(ChildType.INNER);
 
-            TierWriter<B, A, X> writer = mutation.getStructure().getWriter();
+            TierWriter<B, A> writer = mutation.getStructure().getWriter();
             writer.dirty(mutation.getTxn(), root);
             writer.dirty(mutation.getTxn(), left);
             writer.dirty(mutation.getTxn(), right);

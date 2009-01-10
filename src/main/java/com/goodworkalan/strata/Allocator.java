@@ -1,10 +1,12 @@
 package com.goodworkalan.strata;
 
-public interface Allocator<B, A, X>
+import com.goodworkalan.favorites.Stash;
+
+public interface Allocator<B, A>
 {
-    public A allocate(X txn, InnerTier<B, A> inner, int size);
+    public A allocate(Stash stash, InnerTier<B, A> inner, int size);
     
-    public A allocate(X txn, LeafTier<B, A> leaf, int size);
+    public A allocate(Stash stash, LeafTier<B, A> leaf, int size);
     
     public boolean isNull(A address);
     

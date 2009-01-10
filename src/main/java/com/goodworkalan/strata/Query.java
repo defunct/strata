@@ -1,7 +1,13 @@
 package com.goodworkalan.strata;
 
+import com.goodworkalan.favorites.Stash;
+
 public interface Query<T, F extends Comparable<F>>
 {
+    public Stash getStash();
+    
+    public Strata<T, F> getStrata();
+    
     public void add(T object);
     
     public Cursor<T> find(F fields);

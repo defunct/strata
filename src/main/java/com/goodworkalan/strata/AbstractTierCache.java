@@ -4,23 +4,25 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 
+import com.goodworkalan.favorites.Stash;
+
 /**
  * Keeps a synchronized map of dirty tiers with a maximum size at which
  * the tiers are written to file and flushed. Used as the base class of
  * both the per query and per strata implementations of the tier cache.
  */
-class AbstractTierCache<B, T, F extends Comparable<F>, A, X>
-extends EmptyTierCache<B, A, X>
+class AbstractTierCache<B, T, F extends Comparable<F>, A>
+extends EmptyTierCache<B, A>
 {
     private final Map<A, LeafTier<B, A>> leafTiers;
     
     private final Map<A, InnerTier<B, A>> innerTiers;
     
-    private final Storage<T, F, A, X> storage;
+    private final Storage<T, F, A> storage;
     
-    protected final Cooper<T, F, B, X> cooper;
+    protected final Cooper<T, F, B> cooper;
     
-    protected final Extractor<T, F, X> extractor;
+    protected final Extractor<T, F> extractor;
 
     protected final Object mutex;
     
@@ -42,9 +44,9 @@ extends EmptyTierCache<B, A, X>
      * @param autoCommit If true, the commit method of the storage
      * strategy is called after the dirty tiers are written.
      */
-    public AbstractTierCache(Storage<T, F, A, X> storage,
-                             Cooper<T, F, B, X> cooper,
-                             Extractor<T, F, X> extractor,
+    public AbstractTierCache(Storage<T, F, A> storage,
+                             Cooper<T, F, B> cooper,
+                             Extractor<T, F> extractor,
                              Lock lock,
                              Object mutex,
                              int max,
@@ -60,15 +62,15 @@ extends EmptyTierCache<B, A, X>
         this.innerTiers = new HashMap<A, InnerTier<B,A>>();
     }
 
-    public void autoCommit(X txn)
+    public void autoCommit(Stash stash)
     {
         if (isAutoCommit())
         {
-            storage.commit(txn);
+            storage.commit(stash);
         }
     }
     
-    public Storage<T, F, A, X> getStorage()
+    public Storage<T, F, A> getStorage()
     {
         return storage;
     }
@@ -89,7 +91,7 @@ extends EmptyTierCache<B, A, X>
      * @param force If true save unconditionally, do not check the
      * maximum size.
      */
-    protected void save(X txn, boolean force)
+    protected void save(Stash stash, boolean force)
     {
         synchronized (mutex)
         {
@@ -97,24 +99,24 @@ extends EmptyTierCache<B, A, X>
             {
                 for (InnerTier<B, A> inner : innerTiers.values())
                 {
-                    storage.getInnerStore().write(txn, inner, cooper, extractor);
+                    storage.getInnerStore().write(stash, inner, cooper, extractor);
                 }
                 innerTiers.clear();
                 for (LeafTier<B, A> leaf : leafTiers.values())
                 {
-                    storage.getLeafStore().write(txn, leaf, cooper, extractor);
+                    storage.getLeafStore().write(stash, leaf, cooper, extractor);
                 }
                 leafTiers.clear();
                 if (isAutoCommit())
                 {
-                    getStorage().commit(txn);
+                    getStorage().commit(stash);
                 }
             }
         }
     }
     
     @Override
-    public void dirty(X txn, InnerTier<B,A> inner)
+    public void dirty(Stash stash, InnerTier<B,A> inner)
     {
         synchronized (mutex)
         {
@@ -132,7 +134,7 @@ extends EmptyTierCache<B, A, X>
     }
     
     @Override
-    public void dirty(X txn, LeafTier<B,A> leaf)
+    public void dirty(Stash stash, LeafTier<B,A> leaf)
     {
         synchronized (mutex)
         {
@@ -149,8 +151,8 @@ extends EmptyTierCache<B, A, X>
      * @param txn A storage specific state object.
      */
     @Override
-    public void flush(X txn)
+    public void flush(Stash stash)
     {
-        save(txn, true);
+        save(stash, true);
     }
 }

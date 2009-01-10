@@ -1,8 +1,8 @@
 package com.goodworkalan.strata;
 
-interface Operation<B, A, X>
+interface Operation<B, A>
 {
-    public void operate(Mutation<B, A, X> mutation);
+    public void operate(Mutation<B, A> mutation);
 
     public boolean canCancel();
 }

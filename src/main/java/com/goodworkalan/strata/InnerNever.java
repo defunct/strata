@@ -1,9 +1,9 @@
 package com.goodworkalan.strata;
 
-final class InnerNever<B, A, X>
-implements Decision<B, A, X>
+final class InnerNever<B, A>
+implements Decision<B, A>
 {
-    public boolean test(Mutation<B, A, X> mutation, Level<B, A, X> levelOfParent, Level<B, A, X> levelOfChild, InnerTier<B, A> parent)
+    public boolean test(Mutation<B, A> mutation, Level<B, A> levelOfParent, Level<B, A> levelOfChild, InnerTier<B, A> parent)
     {
         return false;
     }

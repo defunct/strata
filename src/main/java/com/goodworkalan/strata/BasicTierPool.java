@@ -4,8 +4,10 @@ import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.util.Map;
 
-final class BasicTierPool<T, F extends Comparable<F>, A, X, B>
-implements TierPool<B, A, X>
+import com.goodworkalan.favorites.Stash;
+
+final class BasicTierPool<T, F extends Comparable<F>, A, B>
+implements TierPool<B, A>
 {
     private final ReferenceQueue<InnerTier<B, A>> innerQueue = null;
     
@@ -15,13 +17,13 @@ implements TierPool<B, A, X>
     
     private final Map<A, Reference<LeafTier<B, A>>> leafTiers = null;
     
-    private final Storage<T, F, A, X> storage;
+    private final Storage<T, F, A> storage;
     
-    private final Extractor<T, F, X> extractor;
+    private final Extractor<T, F> extractor;
     
-    private final Cooper<T, F, B, X> cooper;
+    private final Cooper<T, F, B> cooper;
     
-    public BasicTierPool(Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper, Extractor<T, F, X> extractor)
+    public BasicTierPool(Storage<T, F, A> storage, Cooper<T, F, B> cooper, Extractor<T, F> extractor)
     {
         this.storage = storage;
         this.cooper = cooper;
@@ -48,7 +50,7 @@ implements TierPool<B, A, X>
         }
     }
     
-    public InnerTier<B, A> getInnerTier(X txn, A address)
+    public InnerTier<B, A> getInnerTier(Stash stash, A address)
     {
         collect();
         
@@ -63,7 +65,7 @@ implements TierPool<B, A, X>
             }
             if (inner == null)
             {
-                inner = storage.getInnerStore().load(txn, address, cooper, extractor);
+                inner = storage.getInnerStore().load(stash, address, cooper, extractor);
                 innerTiers.put(inner.getAddress(), new KeyedReference<A, InnerTier<B,A>>(address, inner, innerTiers, innerQueue));
             }
         }
@@ -71,7 +73,7 @@ implements TierPool<B, A, X>
         return inner;
     }
     
-    public LeafTier<B, A> getLeafTier(X txn, A address)
+    public LeafTier<B, A> getLeafTier(Stash stash, A address)
     {
         collect();
 
@@ -86,7 +88,7 @@ implements TierPool<B, A, X>
             }
             if (leaf == null)
             {
-                leaf = storage.getLeafStore().load(txn, address, cooper, extractor);
+                leaf = storage.getLeafStore().load(stash, address, cooper, extractor);
                 leafTiers.put(leaf.getAddress(), new KeyedReference<A, LeafTier<B,A>>(address, leaf, leafTiers, leafQueue));
             }
         }

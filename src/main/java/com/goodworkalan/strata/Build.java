@@ -1,22 +1,24 @@
 package com.goodworkalan.strata;
 
+import com.goodworkalan.favorites.Stash;
 
-public final class Build<B, T, F extends Comparable<F>, A, X>
-implements Structure<B, A, X>
+
+public final class Build<B, T, F extends Comparable<F>, A>
+implements Structure<B, A>
 {
-    private final Schema<T, F, X> schema;
+    private final Schema<T, F> schema;
 
-    private final Storage<T, F, A, X> storage;
+    private final Storage<T, F, A> storage;
     
-    private final Cooper<T, F, B, X> cooper;
+    private final Cooper<T, F, B> cooper;
     
-    private final Allocator<B, A, X> allocator;
+    private final Allocator<B, A> allocator;
     
-    private final TierWriter<B, A, X> writer;
+    private final TierWriter<B, A> writer;
     
-    private final TierPool<B, A, X> pool;
+    private final TierPool<B, A> pool;
     
-    public Build(Schema<T, F, X> schema, Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper)
+    public Build(Schema<T, F> schema, Storage<T, F, A> storage, Cooper<T, F, B> cooper)
     {
         this.schema = schema;
         this.storage = storage;
@@ -36,61 +38,61 @@ implements Structure<B, A, X>
         return schema.getLeafSize();
     }
 
-    public Schema<T, F, X> getSchema()
+    public Schema<T, F> getSchema()
     {
         return schema;
     }
     
-    public Storage<T, F, A, X> getStorage()
+    public Storage<T, F, A> getStorage()
     {
         return storage;
     }
     
-    public Cooper<T, F, B, X> getCooper()
+    public Cooper<T, F, B> getCooper()
     {
         return cooper;
     }
     
-    public Allocator<B, A, X> getAllocator()
+    public Allocator<B, A> getAllocator()
     {
         return allocator;
     }
 
-    public TierWriter<B, A, X> getWriter()
+    public TierWriter<B, A> getWriter()
     {
         return writer;
     }
     
-    public TierPool<B, A, X> getPool()
+    public TierPool<B, A> getPool()
     {
         return pool;
     }
     
-    public int compare(X txn, B left, B right)
+    public int compare(Stash stash, B left, B right)
     {
-        Extractor<T, F, X> extractor = schema.getExtractor();
-        return getCooper().getFields(txn, extractor, left).compareTo(getCooper().getFields(txn, extractor, right));
+        Extractor<T, F> extractor = schema.getExtractor();
+        return getCooper().getFields(stash, extractor, left).compareTo(getCooper().getFields(stash, extractor, right));
     }
     
-    public Transaction<T, F, X> newTransaction(X txn)
+    public Query<T, F> newTransaction(Stash stash)
     {
         writer.begin();
         
         InnerTier<B, A> root = new InnerTier<B, A>();
         root.setChildType(ChildType.LEAF);
-        root.setAddress(allocator.allocate(txn, root, schema.getInnerSize()));
+        root.setAddress(allocator.allocate(stash, root, schema.getInnerSize()));
         
         LeafTier<B, A> leaf = new LeafTier<B, A>();
-        leaf.setAddress(allocator.allocate(txn, leaf, schema.getLeafSize()));
+        leaf.setAddress(allocator.allocate(stash, leaf, schema.getLeafSize()));
         
         root.add(new Branch<B, A>(null, leaf.getAddress()));
 
-        writer.dirty(txn, root);
-        writer.dirty(txn, leaf);
-        writer.end(txn);
+        writer.dirty(stash, root);
+        writer.dirty(stash, leaf);
+        writer.end(stash);
         
-        CoreTree<B, T, F, A, X> tree = new CoreTree<B, T, F, A, X>(root.getAddress(), schema, this);
+        CoreTree<B, T, F, A> tree = new CoreTree<B, T, F, A>(root.getAddress(), schema, this);
         
-        return new CoreQuery<B, T, F, A, X>(txn, tree, this);
+        return new CoreQuery<B, T, F, A>(stash, tree, this);
     }
 }

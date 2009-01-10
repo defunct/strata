@@ -1,6 +1,6 @@
 package com.goodworkalan.strata;
 
-interface LeafOperation<B, A, X>
+interface LeafOperation<B, A>
 {
-    public boolean operate(Mutation<B, A, X> mutation, Level<B, A, X> levelOfLeaf);
+    public boolean operate(Mutation<B, A> mutation, Level<B, A> levelOfLeaf);
 }

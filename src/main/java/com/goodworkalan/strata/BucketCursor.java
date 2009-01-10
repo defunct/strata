@@ -1,9 +1,9 @@
 package com.goodworkalan.strata;
 
-public final class BucketCursor<T, F extends Comparable<F>, B, X>
+public final class BucketCursor<T, F extends Comparable<F>, B>
 implements Cursor<T>
 {
-    public Cooper<T, F, B, X> cooper;
+    public Cooper<T, F, B> cooper;
 
     private Cursor<B> cursor;
 

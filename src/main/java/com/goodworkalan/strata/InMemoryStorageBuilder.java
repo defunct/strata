@@ -1,11 +1,13 @@
 package com.goodworkalan.strata;
 
+import com.goodworkalan.favorites.Stash;
 
-public final class InMemoryStorageBuilder<T, F extends Comparable<F>, X>
-implements StorageBuilder<T, F, X>
+
+public final class InMemoryStorageBuilder<T, F extends Comparable<F>>
+implements StorageBuilder<T, F>
 {
-    public Transaction<T, F, X> newTransaction(X txn, Schema<T, F, X> schema)
+    public Query<T, F> newTransaction(Stash stash, Schema<T, F> schema)
     {
-        return schema.newTransaction(txn, (Storage<T, F, Object, X>) null);
+        return schema.newTransaction(stash, (Storage<T, F, Object>) null);
     }
 }

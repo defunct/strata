@@ -1,12 +1,14 @@
 package com.goodworkalan.strata;
 
-public final class Schema<T, F extends Comparable<F>, X>
+import com.goodworkalan.favorites.Stash;
+
+public final class Schema<T, F extends Comparable<F>>
 {
     private int innerSize;
     
     private int leafSize;
     
-    private StorageBuilder<T, F, X> storageBuilder;
+    private StorageBuilder<T, F> storageBuilder;
     
     private AllocatorBuilder allocatorBuilder;
     
@@ -16,7 +18,7 @@ public final class Schema<T, F extends Comparable<F>, X>
     
     private boolean fieldCaching;
     
-    private Extractor<T, F, X> extractor;
+    private Extractor<T, F> extractor;
     
     public void setInnerSize(int innerSize)
     {
@@ -58,12 +60,12 @@ public final class Schema<T, F extends Comparable<F>, X>
         this.fieldCaching = fieldCaching;
     }
     
-    public StorageBuilder<T, F, X> getStorageBuilder()
+    public StorageBuilder<T, F> getStorageBuilder()
     {
         return storageBuilder;
     }
     
-    public void setStorageBuilder(StorageBuilder<T, F, X> storageBuilder)
+    public void setStorageBuilder(StorageBuilder<T, F> storageBuilder)
     {
         this.storageBuilder = storageBuilder;
     }
@@ -88,24 +90,24 @@ public final class Schema<T, F extends Comparable<F>, X>
         this.tierPoolBuilder = tierPoolBuilder;
     }
 
-    public Extractor<T, F, X> getExtractor()
+    public Extractor<T, F> getExtractor()
     {
         return extractor;
     }
 
-    public void setExtractor(Extractor<T, F, X> extractor)
+    public void setExtractor(Extractor<T, F> extractor)
     {
         this.extractor = extractor;
     }
     
-    public <A> Transaction<T, F, X> newTransaction(X txn, Storage<T, F, A, X> storage)
+    public <A> Query<T, F> newTransaction(Stash stash, Storage<T, F, A> storage)
     {
         TreeBuilder builder = isFieldCaching() ? new BucketTreeBuilder() : new LookupTreeBuilder();
-        return builder.newTransaction(txn, this, storage);
+        return builder.newTransaction(stash, this, storage);
     }
     
-    public Transaction<T, F, X> newTransaction(X txn)
+    public Query<T, F> newTransaction(Stash stash)
     {
-        return storageBuilder.newTransaction(txn, this);
+        return storageBuilder.newTransaction(stash, this);
     }
 }

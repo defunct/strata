@@ -4,8 +4,8 @@ package com.goodworkalan.strata;
 final class NullAllocatorBuilder
 implements AllocatorBuilder
 {
-    public <B, T, F extends Comparable<F>, A, X> Allocator<B, A, X> newAllocator(Build<B, T, F, A, X> build)
+    public <B, T, F extends Comparable<F>, A> Allocator<B, A> newAllocator(Build<B, T, F, A> build)
     {
-        return new NullAllocator<B, A, X>();
+        return new NullAllocator<B, A>();
     }
 }

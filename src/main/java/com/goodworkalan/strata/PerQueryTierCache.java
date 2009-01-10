@@ -3,6 +3,8 @@ package com.goodworkalan.strata;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.goodworkalan.favorites.Stash;
+
 /**
  * A tier cache that maintains a map of dirty tiers per query and that
  * prevents other queries from inserting or deleting items until the tier
@@ -14,8 +16,8 @@ import java.util.concurrent.locks.ReentrantLock;
  * is released. Thus, the empty map of dirty tiers is an indicator that
  * the associated query does not hold the lock on the strata.
  */
-public class PerQueryTierCache<B, T, F extends Comparable<F>, A, X>
-extends AbstractTierCache<B, T, F, A, X>
+public class PerQueryTierCache<B, T, F extends Comparable<F>, A>
+extends AbstractTierCache<B, T, F, A>
 {
     /**
      * Create a per query tier cache.
@@ -24,12 +26,12 @@ extends AbstractTierCache<B, T, F, A, X>
      * @param max The dirty tier cache size that when reached, will cause
      * the cache to empty and the tiers to be written.
      */
-    public PerQueryTierCache(Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper, Extractor<T, F, X> extractor, int max)
+    public PerQueryTierCache(Storage<T, F, A> storage, Cooper<T, F, B> cooper, Extractor<T, F> extractor, int max)
     {
         this(storage, cooper, extractor, new ReentrantLock(), max, true);
     }
     
-    private PerQueryTierCache(Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper, Extractor<T, F, X> extractor, Lock lock, int max, boolean autoCommit)
+    private PerQueryTierCache(Storage<T, F, A> storage, Cooper<T, F, B> cooper, Extractor<T, F> extractor, Lock lock, int max, boolean autoCommit)
     {
         super(storage, cooper, extractor,
               lock,
@@ -46,17 +48,17 @@ extends AbstractTierCache<B, T, F, A, X>
         }
     }
     
-    public void end(X txn)
+    public void end(Stash stash)
     {
-        save(txn, false);
+        save(stash, false);
         if (size() == 0)
         {
             unlock();
         }
     }
     
-    public TierWriter<B, A, X> newTierCache()
+    public TierWriter<B, A> newTierCache()
     {
-        return new PerQueryTierCache<B, T, F, A, X>(getStorage(), cooper, extractor, lock, max, isAutoCommit());
+        return new PerQueryTierCache<B, T, F, A>(getStorage(), cooper, extractor, lock, max, isAutoCommit());
     }
 }

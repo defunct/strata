@@ -1,6 +1,8 @@
 package com.goodworkalan.strata;
 
-public interface Extractor<T, F extends Comparable<F>, X>
+import com.goodworkalan.favorites.Stash;
+
+public interface Extractor<T, F extends Comparable<F>>
 {
-    public F extract(X txn, T object);
+    public F extract(Stash stash, T object);
 }

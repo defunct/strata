@@ -1,6 +1,8 @@
 package com.goodworkalan.strata;
 
-interface AutoCommit<X>
+import com.goodworkalan.favorites.Stash;
+
+interface AutoCommit
 {
-    public void autoCommit(X txn);
+    public void autoCommit(Stash stash);
 }

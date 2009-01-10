@@ -4,16 +4,16 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-final class LeafRemove<B, A, X>
-implements Decision<B, A, X>
+final class LeafRemove<B, A>
+implements Decision<B, A>
 {
-    public boolean test(Mutation<B, A, X> mutation,
-                        Level<B, A, X> levelOfParent,
-                        Level<B, A, X> levelOfChild,
+    public boolean test(Mutation<B, A> mutation,
+                        Level<B, A> levelOfParent,
+                        Level<B, A> levelOfChild,
                         InnerTier<B, A> parent)
     {
-        Structure<B, A, X> structure = mutation.getStructure();
-        TierPool<B, A, X> pool = structure.getPool();
+        Structure<B, A> structure = mutation.getStructure();
+        TierPool<B, A> pool = structure.getPool();
         
         levelOfChild.getSync = new WriteLockExtractor();
         Branch<B, A> branch = parent.find(mutation.getComparable());
@@ -52,12 +52,12 @@ implements Decision<B, A, X>
             if (left == null)
             {
                 mutation.setOnlyChild(true);
-                mutation.leafOperation = new LeafRemove.Fail<B, A, X>();
+                mutation.leafOperation = new LeafRemove.Fail<B, A>();
                 return false;
             }
 
-            levelOfParent.listOfOperations.add(new LeafRemove.RemoveLeaf<B, A, X>(parent, leaf, left));
-            mutation.leafOperation = new LeafRemove.Remove<B, A, X>(leaf);
+            levelOfParent.listOfOperations.add(new LeafRemove.RemoveLeaf<B, A>(parent, leaf, left));
+            mutation.leafOperation = new LeafRemove.Remove<B, A>(leaf);
             return true;
         }
         else if (listToMerge.isEmpty() && index != parent.size() - 1)
@@ -78,7 +78,7 @@ implements Decision<B, A, X>
 
         if (listToMerge.isEmpty())
         {
-            mutation.leafOperation = new LeafRemove.Remove<B, A, X>(leaf);
+            mutation.leafOperation = new LeafRemove.Remove<B, A>(leaf);
         }
         else
         {
@@ -90,14 +90,14 @@ implements Decision<B, A, X>
             }
             LeafTier<B, A> left = listToMerge.get(0);
             LeafTier<B, A> right = listToMerge.get(1);
-            levelOfParent.listOfOperations.add(new LeafRemove.Merge<B, A, X>(parent, left, right));
-            mutation.leafOperation = new LeafRemove.Remove<B, A, X>(leaf);
+            levelOfParent.listOfOperations.add(new LeafRemove.Merge<B, A>(parent, left, right));
+            mutation.leafOperation = new LeafRemove.Remove<B, A>(leaf);
         }
         return !listToMerge.isEmpty();
     }
 
-    public final static class Remove<B, A, X>
-    implements LeafOperation<B, A, X>
+    public final static class Remove<B, A>
+    implements LeafOperation<B, A>
     {
         private final LeafTier<B, A> leaf;
 
@@ -106,10 +106,10 @@ implements Decision<B, A, X>
             this.leaf = leaf;
         }
 
-        public boolean operate(Mutation<B, A, X> mutation, Level<B, A, X> levelOfLeaf)
+        public boolean operate(Mutation<B, A> mutation, Level<B, A> levelOfLeaf)
         {
-            Structure<B, A, X> structure = mutation.getStructure();
-            TierWriter<B, A, X> writer = structure.getWriter();
+            Structure<B, A> structure = mutation.getStructure();
+            TierWriter<B, A> writer = structure.getWriter();
             
             // TODO Remove single anywhere but far left.
             // TODO Remove single very left most.
@@ -190,17 +190,17 @@ implements Decision<B, A, X>
         }
     }
 
-    public final static class Fail<B, A, X>
-    implements LeafOperation<B, A, X>
+    public final static class Fail<B, A>
+    implements LeafOperation<B, A>
     {
-        public boolean operate(Mutation<B, A, X> mutation, Level<B, A, X> levelOfLeaf)
+        public boolean operate(Mutation<B, A> mutation, Level<B, A> levelOfLeaf)
         {
             return false;
         }
     }
 
-    public final static class Merge<B, A, X>
-    implements Operation<B, A, X>
+    public final static class Merge<B, A>
+    implements Operation<B, A>
     {
         private final InnerTier<B, A> parent;
 
@@ -215,7 +215,7 @@ implements Decision<B, A, X>
             this.right = right;
         }
 
-        public void operate(Mutation<B, A, X> mutation)
+        public void operate(Mutation<B, A> mutation)
         {
             parent.remove(parent.getIndex(right.getAddress()));
 
@@ -226,7 +226,7 @@ implements Decision<B, A, X>
             // FIXME Get last leaf. 
             left.setNext(right.getNext());
 
-            TierWriter<B, A, X> writer = mutation.getStructure().getWriter();
+            TierWriter<B, A> writer = mutation.getStructure().getWriter();
             writer.remove(right);
             writer.dirty(mutation.getTxn(), parent);
             writer.dirty(mutation.getTxn(), left);
@@ -238,8 +238,8 @@ implements Decision<B, A, X>
         }
     }
 
-    public final static class RemoveLeaf<B, A, X>
-    implements Operation<B, A, X>
+    public final static class RemoveLeaf<B, A>
+    implements Operation<B, A>
     {
         private final InnerTier<B, A> parent;
 
@@ -254,13 +254,13 @@ implements Decision<B, A, X>
             this.left = left;
         }
 
-        public void operate(Mutation<B, A, X> mutation)
+        public void operate(Mutation<B, A> mutation)
         {
             parent.remove(parent.getIndex(leaf.getAddress()));
 
             left.setNext(leaf.getNext());
 
-            TierWriter<B, A, X> writer = mutation.getStructure().getWriter();
+            TierWriter<B, A> writer = mutation.getStructure().getWriter();
             writer.remove(leaf);
             writer.dirty(mutation.getTxn(), parent);
             writer.dirty(mutation.getTxn(), left);

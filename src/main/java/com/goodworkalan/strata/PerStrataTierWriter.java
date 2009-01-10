@@ -3,17 +3,19 @@ package com.goodworkalan.strata;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class PerStrataTierWriter<B, T, F extends Comparable<F>, A, X>
-extends AbstractTierCache<B, T, F, A, X>
+import com.goodworkalan.favorites.Stash;
+
+public class PerStrataTierWriter<B, T, F extends Comparable<F>, A>
+extends AbstractTierCache<B, T, F, A>
 {
     private final ReadWriteLock readWriteLock;
 
-    public PerStrataTierWriter(Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper, Extractor<T, F, X> extractor, int max)
+    public PerStrataTierWriter(Storage<T, F, A> storage, Cooper<T, F, B> cooper, Extractor<T, F> extractor, int max)
     {
         this(storage, cooper, extractor, new ReentrantReadWriteLock(), new Object(), max);
     }
 
-    private PerStrataTierWriter(Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper, Extractor<T, F, X> extractor,
+    private PerStrataTierWriter(Storage<T, F, A> storage, Cooper<T, F, B> cooper, Extractor<T, F> extractor,
                                 ReadWriteLock readWriteLock,
                                 Object mutex,
                                 int max)
@@ -25,7 +27,7 @@ extends AbstractTierCache<B, T, F, A, X>
              true);
     }
 
-    private PerStrataTierWriter(Storage<T, F, A, X> storage, Cooper<T, F, B, X> cooper, Extractor<T, F, X> extractor,
+    private PerStrataTierWriter(Storage<T, F, A> storage, Cooper<T, F, B> cooper, Extractor<T, F> extractor,
                                 ReadWriteLock readWriteLock,
                                 Object mutex,
                                 int max,
@@ -43,17 +45,17 @@ extends AbstractTierCache<B, T, F, A, X>
         }
     }
     
-    public void end(X txn)
+    public void end(Stash stash)
     {
-        save(txn, false);
+        save(stash, false);
         if (lockCount == 0)
         {
             readWriteLock.readLock().unlock();
         }
     }
     
-    public TierWriter<B, A, X> newTierCache()
+    public TierWriter<B, A> newTierCache()
     {
-        return new PerStrataTierWriter<B, T, F, A, X>(getStorage(), cooper, extractor, readWriteLock, mutex, max, isAutoCommit());
+        return new PerStrataTierWriter<B, T, F, A>(getStorage(), cooper, extractor, readWriteLock, mutex, max, isAutoCommit());
     }
 }

@@ -1,7 +1,9 @@
 package com.goodworkalan.strata;
 
+import com.goodworkalan.favorites.Stash;
 
-public interface StorageBuilder<T, F extends Comparable<F>, X>
+
+public interface StorageBuilder<T, F extends Comparable<F>>
 {
-    public Transaction<T, F, X> newTransaction(X txn, Schema<T, F, X> schema);
+    public Query<T, F> newTransaction(Stash stash, Schema<T, F> schema);
 }

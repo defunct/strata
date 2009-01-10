@@ -3,6 +3,8 @@ package com.goodworkalan.strata;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.goodworkalan.favorites.Stash;
+
 /**
  * A tier cache for in memory storage applications that merely implements
  * the ability to lock the common structure. This implementation
@@ -14,8 +16,8 @@ import java.util.concurrent.locks.ReentrantLock;
  * The auto commit property will retain the value set, but it does not
  * actually effect the behavior of storage.
  */
-public class EmptyTierCache<B, A, X>
-implements TierWriter<B, A, X>, AutoCommit<X>
+public class EmptyTierCache<B, A>
+implements TierWriter<B, A>, AutoCommit
 {
     /**
      * A lock instance that will exclusively lock the Strata for insert and
@@ -50,7 +52,7 @@ implements TierWriter<B, A, X>, AutoCommit<X>
         this.autoCommit = autoCommit;
     }
     
-    public void autoCommit(X txn)
+    public void autoCommit(Stash stash)
     {
     }
     
@@ -99,7 +101,7 @@ implements TierWriter<B, A, X>, AutoCommit<X>
     {
     }
 
-    public void dirty(X txn, InnerTier<B, A> inner)
+    public void dirty(Stash stash, InnerTier<B, A> inner)
     {
     }
 
@@ -107,7 +109,7 @@ implements TierWriter<B, A, X>, AutoCommit<X>
     {
     }
 
-    public void dirty(X txn, LeafTier<B, A> leaf)
+    public void dirty(Stash stash, LeafTier<B, A> leaf)
     {
     }
 
@@ -122,7 +124,7 @@ implements TierWriter<B, A, X>, AutoCommit<X>
      * @param storage The storage strategy.
      * @param txn A storage specific state object.
      */
-    public void end(X txn)
+    public void end(Stash stash)
     {
     }
       
@@ -133,9 +135,9 @@ implements TierWriter<B, A, X>, AutoCommit<X>
      * @param storage The storage strategy.
      * @param txn A storage specific state object.
      */
-    public void flush(X txn)
+    public void flush(Stash stash)
     {
-        autoCommit(txn);
+        autoCommit(stash);
     }
     
     /**
@@ -158,8 +160,8 @@ implements TierWriter<B, A, X>, AutoCommit<X>
      *
      * @return A new tier cache based on this prototype instance.
      */
-    public TierWriter<B, A, X> newTierWriter()
+    public TierWriter<B, A> newTierWriter()
     {
-        return new EmptyTierCache<B, A, X>(lock, autoCommit);
+        return new EmptyTierCache<B, A>(lock, autoCommit);
     }
 }

@@ -3,12 +3,14 @@ package com.goodworkalan.strata;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import com.goodworkalan.favorites.Stash;
 
-final class Mutation<B, A, X>
+
+final class Mutation<B, A>
 {
-    private final X txn;
+    private final Stash stash;
 
-    private final Structure<B, A, X> structure;
+    private final Structure<B, A> structure;
     
     final B bucket;
     
@@ -16,7 +18,7 @@ final class Mutation<B, A, X>
     
     final Deletable<B> deletable;
     
-    final LinkedList<Level<B, A, X>> listOfLevels = new LinkedList<Level<B, A, X>>();
+    final LinkedList<Level<B, A>> listOfLevels = new LinkedList<Level<B, A>>();
     
     private boolean onlyChild;
     
@@ -28,15 +30,15 @@ final class Mutation<B, A, X>
     
     private LeafTier<B, A> leftLeaf;
     
-    public LeafOperation<B, A, X> leafOperation;
+    public LeafOperation<B, A> leafOperation;
 
-    public Mutation(X txn,
-                    Structure<B, A, X> structure,
+    public Mutation(Stash stash,
+                    Structure<B, A> structure,
                     B bucket,
                     Comparable<B> comparable,
                     Deletable<B> deletable)
     {
-        this.txn = txn;
+        this.stash = stash;
         this._comparable = comparable;
         this.deletable = deletable;
         this.bucket = bucket;
@@ -48,9 +50,10 @@ final class Mutation<B, A, X>
         return _comparable;
     }
     
-    public X getTxn()
+    // FIXME Rename.
+    public Stash getTxn()
     {
-        return txn;
+        return stash;
     }
     
     public B getBucket()
@@ -58,7 +61,7 @@ final class Mutation<B, A, X>
         return bucket;
     }
 
-    public Structure<B, A, X> getStructure()
+    public Structure<B, A> getStructure()
     {
         return structure;
     }
@@ -130,17 +133,17 @@ final class Mutation<B, A, X>
     
     public void rewind(int leaveExclusive)
     {
-        Iterator<Level<B, A, X>>levels = listOfLevels.iterator();
+        Iterator<Level<B, A>>levels = listOfLevels.iterator();
         int size = listOfLevels.size();
         boolean unlock = true;
 
         for (int i = 0; i < size - leaveExclusive; i++)
         {
-            Level<B, A, X> level = levels.next();
-            Iterator<Operation<B, A, X>> operations = level.listOfOperations.iterator();
+            Level<B, A> level = levels.next();
+            Iterator<Operation<B, A>> operations = level.listOfOperations.iterator();
             while (operations.hasNext())
             {
-                Operation<B, A, X> operation = operations.next();
+                Operation<B, A> operation = operations.next();
                 if (operation.canCancel())
                 {
                     operations.remove();
@@ -167,10 +170,10 @@ final class Mutation<B, A, X>
 
     public void shift()
     {
-        Iterator<Level<B, A, X>> levels = listOfLevels.iterator();
+        Iterator<Level<B, A>> levels = listOfLevels.iterator();
         while (listOfLevels.size() > 3 && levels.hasNext())
         {
-            Level<B, A, X> level = levels.next();
+            Level<B, A> level = levels.next();
             if (level.listOfOperations.size() != 0)
             {
                 break;

@@ -104,8 +104,8 @@ import java.util.List;
  * The could be addressed by linking the inner tiers and thinking harder,
  * but that would increase the size of the project.
  */
-final class MergeInner<B, A, X>
-implements Decision<B, A, X>
+final class MergeInner<B, A>
+implements Decision<B, A>
 {
     /**
      * Determine if we are deleting a final leaf in a child and therefore
@@ -116,7 +116,7 @@ implements Decision<B, A, X>
      * @param onlyChild The value of the last item that is about to be
      * removed from a leaf tier.
      */
-    private boolean lockLeft(Mutation<B, A, X> mutation, Branch<B, A> branch)
+    private boolean lockLeft(Mutation<B, A> mutation, Branch<B, A> branch)
     {
         if (mutation.isOnlyChild() && branch.getPivot() != null && mutation.getLeftLeaf() == null)
         {
@@ -152,13 +152,13 @@ implements Decision<B, A, X>
      * @param levelOfChidl the locks and operations of child.
      * @param parent The parent tier.
      */
-    public boolean test(Mutation<B, A, X> mutation,
-                        Level<B, A, X> levelOfParent,
-                        Level<B, A, X> levelOfChild,
+    public boolean test(Mutation<B, A> mutation,
+                        Level<B, A> levelOfParent,
+                        Level<B, A> levelOfChild,
                         InnerTier<B, A> parent)
     {
-        Structure<B, A, X> structure = mutation.getStructure();
-        TierPool<B, A, X> pool = structure.getPool();
+        Structure<B, A> structure = mutation.getStructure();
+        TierPool<B, A> pool = structure.getPool();
         
         // Find the child tier.
 
@@ -206,7 +206,7 @@ implements Decision<B, A, X>
             {
                 mutation.setDeleting(true);
             }
-            levelOfParent.listOfOperations.add(new MergeInner.Remove<B, A, X>(parent, child));
+            levelOfParent.listOfOperations.add(new MergeInner.Remove<B, A>(parent, child));
             return true;
         }
 
@@ -265,7 +265,7 @@ implements Decision<B, A, X>
                 mutation.setDeleting(false);
             }
 
-            levelOfParent.listOfOperations.add(new MergeInner.Merge<B, A, X>(parent, listToMerge));
+            levelOfParent.listOfOperations.add(new MergeInner.Merge<B, A>(parent, listToMerge));
 
             return true;
         }
@@ -280,8 +280,8 @@ implements Decision<B, A, X>
         return false;
     }
 
-    public final static class Merge<B, A, X>
-    implements Operation<B, A, X>
+    public final static class Merge<B, A>
+    implements Operation<B, A>
     {
         private final InnerTier<B, A> parent;
 
@@ -293,7 +293,7 @@ implements Decision<B, A, X>
             this.listToMerge = listToMerge;
         }
 
-        public void operate(Mutation<B, A, X> mutation)
+        public void operate(Mutation<B, A> mutation)
         {
             InnerTier<B, A> left = listToMerge.get(0);
             InnerTier<B, A> right = listToMerge.get(1);
@@ -307,7 +307,7 @@ implements Decision<B, A, X>
                 left.add(right.remove(0));
             }
 
-            TierWriter<B, A, X> writer = mutation.getStructure().getWriter();
+            TierWriter<B, A> writer = mutation.getStructure().getWriter();
             writer.remove(right);
             writer.dirty(mutation.getTxn(), parent);
             writer.dirty(mutation.getTxn(), left);
@@ -319,8 +319,8 @@ implements Decision<B, A, X>
         }
     }
 
-    public final static class Remove<B, A, X>
-    implements Operation<B, A, X>
+    public final static class Remove<B, A>
+    implements Operation<B, A>
     {
         private final InnerTier<B, A> parent;
 
@@ -332,7 +332,7 @@ implements Decision<B, A, X>
             this.child = child;
         }
 
-        public void operate(Mutation<B, A, X> mutation)
+        public void operate(Mutation<B, A> mutation)
         {
             int index = parent.getIndex(child.getAddress());
 
@@ -342,7 +342,7 @@ implements Decision<B, A, X>
                 parent.get(0).setPivot(null);
             }
 
-            TierWriter<B, A, X> writer = mutation.getStructure().getWriter();
+            TierWriter<B, A> writer = mutation.getStructure().getWriter();
             writer.remove(child);
             writer.dirty(mutation.getTxn(), parent);
         }

@@ -1,20 +1,22 @@
 package com.goodworkalan.strata;
 
-public final class BucketComparable<T, F extends Comparable<F>, B, X>
+import com.goodworkalan.favorites.Stash;
+
+public final class BucketComparable<T, F extends Comparable<F>, B>
 implements Comparable<B>
 {
-    private final X txn;
+    private final Stash stash;
     
-    private final Cooper<T, F, B, X> cooper;
+    private final Cooper<T, F, B> cooper;
 
-    private final Extractor<T, F, X> extractor;
+    private final Extractor<T, F> extractor;
 
     private final F fields;
     
-    public BucketComparable(X txn, Cooper<T, F, B, X> cooper,
-                            Extractor<T, F, X> extractor, F fields)
+    public BucketComparable(Stash stash, Cooper<T, F, B> cooper,
+                            Extractor<T, F> extractor, F fields)
     {
-        this.txn = txn;
+        this.stash = stash;
         this.cooper = cooper;
         this.extractor = extractor;
         this.fields = fields;
@@ -22,6 +24,6 @@ implements Comparable<B>
 
     public int compareTo(B bucket)
     {
-        return fields.compareTo(cooper.getFields(txn, extractor, bucket));
+        return fields.compareTo(cooper.getFields(stash, extractor, bucket));
     }
 }

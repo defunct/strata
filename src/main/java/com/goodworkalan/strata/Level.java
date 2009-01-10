@@ -6,13 +6,13 @@ import java.util.LinkedList;
 import java.util.Map;
 
 
-final class Level<B, A, X>
+final class Level<B, A>
 {
     public LockExtractor getSync;
 
     public final Map<Object, Tier<?, A>> mapOfLockedTiers = new HashMap<Object, Tier<?, A>>();
 
-    public final LinkedList<Operation<B, A, X>> listOfOperations = new LinkedList<Operation<B, A, X>>();
+    public final LinkedList<Operation<B, A>> listOfOperations = new LinkedList<Operation<B, A>>();
 
     public Level(boolean exclusive)
     {
@@ -105,7 +105,7 @@ final class Level<B, A, X>
         exclusive();
     }
 
-    public boolean upgrade(Level<B, A, X> levelOfChild)
+    public boolean upgrade(Level<B, A> levelOfChild)
     {
         if (!getSync.isExeclusive())
         {

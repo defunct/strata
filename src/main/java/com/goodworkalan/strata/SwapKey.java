@@ -1,25 +1,25 @@
 package com.goodworkalan.strata;
 
 
-final class SwapKey<B, A, X>
-implements Decision<B, A, X>
+final class SwapKey<B, A>
+implements Decision<B, A>
 {
-    public boolean test(Mutation<B, A, X> mutation,
-                        Level<B, A, X> levelOfParent,
-                        Level<B, A, X> levelOfChild,
+    public boolean test(Mutation<B, A> mutation,
+                        Level<B, A> levelOfParent,
+                        Level<B, A> levelOfChild,
                         InnerTier<B, A> parent)
     {
         Branch<B, A> branch = parent.find(mutation.getComparable());
         if (branch.getPivot() != null && mutation.getComparable().compareTo(branch.getPivot()) == 0)
         {
-            levelOfParent.listOfOperations.add(new SwapKey.Swap<B, A, X>(parent));
+            levelOfParent.listOfOperations.add(new SwapKey.Swap<B, A>(parent));
             return true;
         }
         return false;
     }
 
-    private final static class Swap<B, A, X>
-    implements Operation<B, A, X>
+    private final static class Swap<B, A>
+    implements Operation<B, A>
     {
         private final InnerTier<B, A> inner;
 
@@ -28,7 +28,7 @@ implements Decision<B, A, X>
             this.inner = inner;
         }
 
-        public void operate(Mutation<B, A, X> mutation)
+        public void operate(Mutation<B, A> mutation)
         {
             if (mutation.getReplacement() != null)
             {

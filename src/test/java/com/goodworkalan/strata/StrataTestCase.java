@@ -7,17 +7,19 @@ import static org.testng.Assert.assertTrue;
 
 import org.testng.annotations.Test;
 
+import com.goodworkalan.favorites.Stash;
+
 
 public class StrataTestCase
 {
-    private Transaction<Integer, Integer, Object> newTransaction()
+    private Query<Integer, Integer> newTransaction()
     {
-        Schema<Integer, Integer, Object> schema = Stratas.newInMemorySchema();
+        Schema<Integer, Integer> schema = Stratas.newInMemorySchema();
         schema.setInnerSize(5);
         schema.setLeafSize(7);
-        Extractor<Integer, Integer, Object> extractor = new Extractor<Integer, Integer, Object>()
+        Extractor<Integer, Integer> extractor = new Extractor<Integer, Integer>()
         {
-            public Integer extract(Object txn, Integer object)
+            public Integer extract(Stash stash, Integer object)
             {
                 return object;
             }
@@ -25,20 +27,21 @@ public class StrataTestCase
         schema.setExtractor(extractor);
         return schema.newTransaction(null);
     }
+
     @Test public void create()
     {
-        Schema<Integer, Integer, Object> schema = Stratas.newInMemorySchema();
+        Schema<Integer, Integer> schema = Stratas.newInMemorySchema();
         schema.setInnerSize(5);
         schema.setLeafSize(7);
-        Extractor<Integer, Integer, Object> extractor = new Extractor<Integer, Integer, Object>()
+        Extractor<Integer, Integer> extractor = new Extractor<Integer, Integer>()
         {
-            public Integer extract(Object txn, Integer object)
+            public Integer extract(Stash stash, Integer object)
             {
                 return object;
             }
         };
         schema.setExtractor(extractor);
-        Transaction<Integer, Integer, Object> transaction = schema.newTransaction(null);
+        Query<Integer, Integer> transaction = schema.newTransaction(null);
         transaction.add(1);
         Cursor<Integer> cursor = transaction.find(1);
         assertTrue(cursor.hasNext());
@@ -48,7 +51,7 @@ public class StrataTestCase
     
     @Test public void removeSingle()
     {
-        Transaction<Integer, Integer, Object> transaction = newTransaction();
+        Query<Integer, Integer> transaction = newTransaction();
         transaction.add(1);
         assertEquals((int) transaction.remove(1), 1);
         assertFalse(transaction.find(1).hasNext());

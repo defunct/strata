@@ -1,12 +1,14 @@
 package com.goodworkalan.strata;
 
-public interface Storage<T, F extends Comparable<F>, A, X>
+import com.goodworkalan.favorites.Stash;
+
+public interface Storage<T, F extends Comparable<F>, A>
 {
-    public InnerStore<T, F, A, X> getInnerStore();
+    public InnerStore<T, F, A> getInnerStore();
     
-    public LeafStore<T, F, A, X> getLeafStore();
+    public LeafStore<T, F, A> getLeafStore();
     
-    public void commit(X txn);
+    public void commit(Stash stash);
     
     public A getNull();
     

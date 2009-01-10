@@ -1,12 +1,14 @@
 package com.goodworkalan.strata;
 
+import com.goodworkalan.favorites.Stash;
 
-public final class CoreCursor<B, A, X>
+
+public final class CoreCursor<B, A>
 implements Cursor<B>
 {
-    private final X txn;
+    private final Stash stash;
 
-    private final Structure<B, A, X> structure;
+    private final Structure<B, A> structure;
     
     private int index;
 
@@ -14,9 +16,9 @@ implements Cursor<B>
 
     private boolean released;
 
-    public CoreCursor(X txn, Structure<B, A, X> structure, LeafTier<B, A> leaf, int index)
+    public CoreCursor(Stash stash, Structure<B, A> structure, LeafTier<B, A> leaf, int index)
     {
-        this.txn = txn;
+        this.stash = stash;
         this.structure = structure;
         this.leaf = leaf;
         this.index = index;
@@ -29,7 +31,7 @@ implements Cursor<B>
 
     public Cursor<B> newCursor()
     {
-        return new CoreCursor<B, A, X>(txn, structure, leaf, index);
+        return new CoreCursor<B, A>(stash, structure, leaf, index);
     }
 
     public boolean hasNext()
@@ -49,7 +51,7 @@ implements Cursor<B>
             {
                 throw new IllegalStateException();
             }
-            LeafTier<B, A> next = structure.getPool().getLeafTier(txn, leaf.getNext());
+            LeafTier<B, A> next = structure.getPool().getLeafTier(stash, leaf.getNext());
             next.getReadWriteLock().readLock().lock();
             leaf.getReadWriteLock().readLock().unlock();
             leaf = next;

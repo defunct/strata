@@ -4,41 +4,43 @@ import java.util.ListIterator;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public final class CoreQuery<B, T, F extends Comparable<F>, A, X> implements
-        Transaction<T, F, X>
+import com.goodworkalan.favorites.Stash;
+
+public final class CoreQuery<B, T, F extends Comparable<F>, A> implements
+        Query<T, F>
 {
-    private final X txn;
+    private final Stash stash;
+    
+    private final CoreTree<B, T, F, A> tree;
 
-    private final CoreTree<B, T, F, A, X> tree;
+    private final Structure<B, A> structure;
 
-    private final Structure<B, A, X> structure;
-
-    public CoreQuery(X txn, CoreTree<B, T, F, A, X> tree,
-            Structure<B, A, X> structure)
+    public CoreQuery(Stash stash, CoreTree<B, T, F, A> tree,
+            Structure<B, A> structure)
     {
-        this.txn = txn;
+        this.stash = stash;
         this.tree = tree;
         this.structure = structure;
     }
 
-    public Strata<T, F, X> getStrata()
+    public Stash getStash()
+    {
+        return stash;
+    }
+    
+    public Strata<T, F> getStrata()
     {
         return tree;
     }
 
-    public X getState()
-    {
-        return txn;
-    }
-
     private InnerTier<B, A> getRoot()
     {
-        return structure.getPool().getInnerTier(txn, tree.getRootAddress());
+        return structure.getPool().getInnerTier(stash, tree.getRootAddress());
     }
 
-    private void testInnerTier(Mutation<B, A, X> mutation,
-            Decision<B, A, X> subsequent, Decision<B, A, X> swap,
-            Level<B, A, X> levelOfParent, Level<B, A, X> levelOfChild,
+    private void testInnerTier(Mutation<B, A> mutation,
+            Decision<B, A> subsequent, Decision<B, A> swap,
+            Level<B, A> levelOfParent, Level<B, A> levelOfChild,
             InnerTier<B, A> parent, int rewind)
     {
         boolean tiers = subsequent.test(mutation, levelOfParent, levelOfChild,
@@ -89,9 +91,9 @@ public final class CoreQuery<B, T, F extends Comparable<F>, A, X> implements
      *            delete the leaf, the insert or delete action to take on the
      *            leaf, or whether to restart the descent.
      */
-    private B generalized(Mutation<B, A, X> mutation,
-            RootDecision<B, A, X> initial, Decision<B, A, X> subsequent,
-            Decision<B, A, X> swap, Decision<B, A, X> penultimate)
+    private B generalized(Mutation<B, A> mutation,
+            RootDecision<B, A> initial, Decision<B, A> subsequent,
+            Decision<B, A> swap, Decision<B, A> penultimate)
     {
         // TODO Replace this with our caching pattern.
 
@@ -99,14 +101,14 @@ public final class CoreQuery<B, T, F extends Comparable<F>, A, X> implements
         // of the tree.
         mutation.getStructure().getWriter().begin();
 
-        mutation.listOfLevels.add(new Level<B, A, X>(false));
+        mutation.listOfLevels.add(new Level<B, A>(false));
 
         InnerTier<B, A> parent = getRoot();
-        Level<B, A, X> levelOfParent = new Level<B, A, X>(false);
+        Level<B, A> levelOfParent = new Level<B, A>(false);
         levelOfParent.lockAndAdd(parent);
         mutation.listOfLevels.add(levelOfParent);
 
-        Level<B, A, X> levelOfChild = new Level<B, A, X>(false);
+        Level<B, A> levelOfChild = new Level<B, A>(false);
         mutation.listOfLevels.add(levelOfChild);
 
         if (initial.test(mutation, levelOfParent, parent))
@@ -140,7 +142,7 @@ public final class CoreQuery<B, T, F extends Comparable<F>, A, X> implements
                 break;
             }
             levelOfParent = levelOfChild;
-            levelOfChild = new Level<B, A, X>(levelOfChild.getSync
+            levelOfChild = new Level<B, A>(levelOfChild.getSync
                     .isExeclusive());
             mutation.listOfLevels.add(levelOfChild);
             mutation.shift();
@@ -148,16 +150,16 @@ public final class CoreQuery<B, T, F extends Comparable<F>, A, X> implements
 
         if (mutation.leafOperation.operate(mutation, levelOfChild))
         {
-            ListIterator<Level<B, A, X>> levels = mutation.listOfLevels
+            ListIterator<Level<B, A>> levels = mutation.listOfLevels
                     .listIterator(mutation.listOfLevels.size());
             while (levels.hasPrevious())
             {
-                Level<B, A, X> level = levels.previous();
-                ListIterator<Operation<B, A, X>> operations = level.listOfOperations
+                Level<B, A> level = levels.previous();
+                ListIterator<Operation<B, A>> operations = level.listOfOperations
                         .listIterator(level.listOfOperations.size());
                 while (operations.hasPrevious())
                 {
-                    Operation<B, A, X> operation = operations.previous();
+                    Operation<B, A> operation = operations.previous();
                     operation.operate(mutation);
                 }
             }
@@ -170,11 +172,11 @@ public final class CoreQuery<B, T, F extends Comparable<F>, A, X> implements
                                                                         // here?
         }
 
-        ListIterator<Level<B, A, X>> levels = mutation.listOfLevels
+        ListIterator<Level<B, A>> levels = mutation.listOfLevels
                 .listIterator(mutation.listOfLevels.size());
         while (levels.hasPrevious())
         {
-            Level<B, A, X> level = levels.previous();
+            Level<B, A> level = levels.previous();
             level.releaseAndClear();
         }
 
@@ -183,15 +185,15 @@ public final class CoreQuery<B, T, F extends Comparable<F>, A, X> implements
 
     public void add(T object)
     {
-        F fields = tree.getExtractor().extract(txn, object);
+        F fields = tree.getExtractor().extract(stash, object);
         B bucket = tree.getCooper().newBucket(fields, object);
-        BucketComparable<T, F, B, X> comparable = new BucketComparable<T, F, B, X>(
-                txn, tree.getCooper(), tree.getExtractor(), fields);
-        Mutation<B, A, X> mutation = new Mutation<B, A, X>(txn, structure,
+        BucketComparable<T, F, B> comparable = new BucketComparable<T, F, B>(
+                stash, tree.getCooper(), tree.getExtractor(), fields);
+        Mutation<B, A> mutation = new Mutation<B, A>(stash, structure,
                 bucket, comparable, null);
-        generalized(mutation, new SplitRoot<B, A, X>(),
-                new SplitInner<B, A, X>(), new InnerNever<B, A, X>(),
-                new LeafInsert<B, A, X>());
+        generalized(mutation, new SplitRoot<B, A>(),
+                new SplitInner<B, A>(), new InnerNever<B, A>(),
+                new LeafInsert<B, A>());
     }
 
     public Deletable<T> deleteAny()
@@ -209,10 +211,10 @@ public final class CoreQuery<B, T, F extends Comparable<F>, A, X> implements
     // condition to choose which to delete.
     public T remove(Deletable<T> deletable, F fields)
     {
-        BucketComparable<T, F, B, X> comparable = new BucketComparable<T, F, B, X>(
-                txn, tree.getCooper(), tree.getExtractor(), fields);
-        Mutation<B, A, X> mutation = new Mutation<B, A, X>(txn, structure,
-                null, comparable, new BucketDeletable<T, F, B, X>(tree
+        BucketComparable<T, F, B> comparable = new BucketComparable<T, F, B>(
+                stash, tree.getCooper(), tree.getExtractor(), fields);
+        Mutation<B, A> mutation = new Mutation<B, A>(stash, structure,
+                null, comparable, new BucketDeletable<T, F, B>(tree
                         .getCooper(), deletable));
         do
         {
@@ -220,9 +222,9 @@ public final class CoreQuery<B, T, F extends Comparable<F>, A, X> implements
 
             mutation.clear();
 
-            generalized(mutation, new DeleteRoot<B, A, X>(),
-                    new MergeInner<B, A, X>(), new SwapKey<B, A, X>(),
-                    new LeafRemove<B, A, X>());
+            generalized(mutation, new DeleteRoot<B, A>(),
+                    new MergeInner<B, A>(), new SwapKey<B, A>(),
+                    new LeafRemove<B, A>());
         }
         while (mutation.isOnlyChild());
 
@@ -242,7 +244,7 @@ public final class CoreQuery<B, T, F extends Comparable<F>, A, X> implements
         Lock previous = new ReentrantLock();
         previous.lock();
         InnerTier<B, A> inner = getRoot();
-        Comparable<B> comparator = new BucketComparable<T, F, B, X>(txn, tree
+        Comparable<B> comparator = new BucketComparable<T, F, B>(stash, tree
                 .getCooper(), tree.getExtractor(), fields);
         for (;;)
         {
@@ -252,15 +254,13 @@ public final class CoreQuery<B, T, F extends Comparable<F>, A, X> implements
             Branch<B, A> branch = inner.find(comparator);
             if (inner.getChildType() == ChildType.LEAF)
             {
-                LeafTier<B, A> leaf = structure.getPool().getLeafTier(txn,
-                        branch.getAddress());
+                LeafTier<B, A> leaf = structure.getPool().getLeafTier(stash, branch.getAddress());
                 leaf.getReadWriteLock().readLock().lock();
                 previous.unlock();
-                Cursor<B> cursor = new CoreCursor<B, A, X>(txn, structure,
-                        leaf, leaf.find(comparator));
+                Cursor<B> cursor = new CoreCursor<B, A>(stash, structure, leaf, leaf.find(comparator));
                 return tree.getCooper().wrap(cursor);
             }
-            inner = structure.getPool().getInnerTier(txn, branch.getAddress());
+            inner = structure.getPool().getInnerTier(stash, branch.getAddress());
         }
     }
 
@@ -271,7 +271,7 @@ public final class CoreQuery<B, T, F extends Comparable<F>, A, X> implements
 
     public F extract(T object)
     {
-        return tree.getExtractor().extract(txn, object);
+        return tree.getExtractor().extract(stash, object);
     }
     
     public void flush()
