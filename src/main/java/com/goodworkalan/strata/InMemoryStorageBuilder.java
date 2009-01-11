@@ -6,8 +6,8 @@ import com.goodworkalan.stash.Stash;
 public final class InMemoryStorageBuilder<T, F extends Comparable<F>>
 implements StorageBuilder<T, F>
 {
-    public Query<T, F> newTransaction(Stash stash, Schema<T, F> schema)
+    public Query<T, F> create(Stash stash, Schema<T, F> schema)
     {
-        return schema.newTransaction(stash, (Storage<T, F, Object>) null);
+        return schema.create(stash, (Storage<T, F, Object>) null).getQuery();
     }
 }

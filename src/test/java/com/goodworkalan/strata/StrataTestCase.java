@@ -25,7 +25,7 @@ public class StrataTestCase
             }
         };
         schema.setExtractor(extractor);
-        return schema.newTransaction(null);
+        return schema.create(new Stash(), new InMemoryStorageBuilder<Integer, Integer>());
     }
 
     @Test public void create()
@@ -41,7 +41,7 @@ public class StrataTestCase
             }
         };
         schema.setExtractor(extractor);
-        Query<Integer, Integer> transaction = schema.newTransaction(null);
+        Query<Integer, Integer> transaction = schema.create(new Stash(), new InMemoryStorageBuilder<Integer, Integer>());
         transaction.add(1);
         Cursor<Integer> cursor = transaction.find(1);
         assertTrue(cursor.hasNext());

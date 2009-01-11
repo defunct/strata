@@ -60,12 +60,12 @@ public final class Schema<T, F extends Comparable<F>>
         this.fieldCaching = fieldCaching;
     }
     
-    public StorageBuilder<T, F> getStorageBuilder()
+    public StorageBuilder<T, F> getStorageBuilder_()
     {
         return storageBuilder;
     }
     
-    public void setStorageBuilder(StorageBuilder<T, F> storageBuilder)
+    public void setStorageBuilder_(StorageBuilder<T, F> storageBuilder)
     {
         this.storageBuilder = storageBuilder;
     }
@@ -100,14 +100,25 @@ public final class Schema<T, F extends Comparable<F>>
         this.extractor = extractor;
     }
     
-    public <A> Query<T, F> newTransaction(Stash stash, Storage<T, F, A> storage)
+    public <A> Construction<T, F, A> create(Stash stash, Storage<T, F, A> storage)
     {
         TreeBuilder builder = isFieldCaching() ? new BucketTreeBuilder() : new LookupTreeBuilder();
-        return builder.newTransaction(stash, this, storage);
+        return builder.create(stash, this, storage);
     }
     
-    public Query<T, F> newTransaction(Stash stash)
+    public <A> Strata<T, F> open(Stash stash, Storage<T, F, A> storage, A address) 
     {
-        return storageBuilder.newTransaction(stash, this);
+        TreeBuilder builder = isFieldCaching() ? new BucketTreeBuilder() : new LookupTreeBuilder();
+        return builder.open(stash, this, storage, address);
     }
+    
+    public Query<T, F> create(Stash stash, StorageBuilder<T, F> storageBuilder)
+    {
+        return storageBuilder.create(stash, this);
+    }
+
+//    public Query<T, F> create(Stash stash)
+//    {
+//        return storageBuilder.create(stash, this);
+//    }
 }

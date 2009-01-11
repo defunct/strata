@@ -74,7 +74,7 @@ implements Structure<B, A>
         return getCooper().getFields(stash, extractor, left).compareTo(getCooper().getFields(stash, extractor, right));
     }
     
-    public Query<T, F> newTransaction(Stash stash)
+    public Construction<T, F, A> create(Stash stash)
     {
         writer.begin();
         
@@ -93,6 +93,11 @@ implements Structure<B, A>
         
         CoreTree<B, T, F, A> tree = new CoreTree<B, T, F, A>(root.getAddress(), schema, this);
         
-        return new CoreQuery<B, T, F, A>(stash, tree, this);
+        return new Construction<T, F, A>(new CoreQuery<B, T, F, A>(stash, tree, this), root.getAddress());
+    }
+    
+    public Strata<T, F> open(Stash stash, A rootAddress)
+    {
+        return new CoreTree<B, T, F, A>(rootAddress, schema, this);
     }
 }
