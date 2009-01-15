@@ -2,7 +2,7 @@ package com.goodworkalan.strata;
 
 import com.goodworkalan.stash.Stash;
 
-public interface Query<T, F extends Comparable<F>>
+public interface Query<T, F extends Comparable<? super F>>
 {
     public Stash getStash();
     
@@ -10,11 +10,12 @@ public interface Query<T, F extends Comparable<F>>
     
     public void add(T object);
     
-    public Cursor<T> find(F fields);
+    // TODO Rename find fields? (Erasure)
+    public Cursor<T> find(Comparable<? super F> comparable);
     
-    public T remove(Deletable<T> deletable, F fields);
+    public T remove(Deletable<T> deletable, Comparable<? super F> comparable);
     
-    public T remove(F fields);
+    public T remove(Comparable<? super F> comparable);
 
     public Deletable<T> deleteAny();
     
@@ -23,4 +24,6 @@ public interface Query<T, F extends Comparable<F>>
     public F extract(T object);
     
     public void flush();
+    
+    public void destroy();
 }

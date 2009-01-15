@@ -5,7 +5,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.goodworkalan.stash.Stash;
 
-public class PerStrataTierWriter<B, T, F extends Comparable<F>, A>
+public class PerStrataTierWriter<B, T, F extends Comparable<? super F>, A>
 extends AbstractTierCache<B, T, F, A>
 {
     private final ReadWriteLock readWriteLock;

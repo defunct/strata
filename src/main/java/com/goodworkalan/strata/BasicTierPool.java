@@ -6,7 +6,7 @@ import java.util.Map;
 
 import com.goodworkalan.stash.Stash;
 
-final class BasicTierPool<T, F extends Comparable<F>, A, B>
+final class BasicTierPool<T, F extends Comparable<? super F>, A, B>
 implements TierPool<B, A>
 {
     private final ReferenceQueue<InnerTier<B, A>> innerQueue = null;

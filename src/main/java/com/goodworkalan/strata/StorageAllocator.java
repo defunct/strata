@@ -2,7 +2,7 @@ package com.goodworkalan.strata;
 
 import com.goodworkalan.stash.Stash;
 
-final class StorageAllocator<T, F extends Comparable<F>, B, A>
+final class StorageAllocator<T, F extends Comparable<? super F>, B, A>
 implements Allocator<B, A>
 {
     private Storage<T, F, A> storage;

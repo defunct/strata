@@ -2,7 +2,7 @@ package com.goodworkalan.strata;
 
 import com.goodworkalan.stash.Stash;
 
-public interface InnerStore<T, F extends Comparable<F>, A>
+public interface InnerStore<T, F extends Comparable<? super F>, A>
 {
     public A allocate(Stash stash, int size);
     

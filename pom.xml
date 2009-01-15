@@ -53,6 +53,16 @@
              <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>com.goodworkalan</groupId>
+            <artifactId>tuple-partial</artifactId>
+            <version>0.1.X</version>
+        </dependency>
+        <dependency>
+            <groupId>com.mallardsoft</groupId>
+            <artifactId>tuple</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <version>5.8</version>

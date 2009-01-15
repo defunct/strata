@@ -2,7 +2,7 @@ package com.goodworkalan.strata;
 
 import com.goodworkalan.stash.Stash;
 
-public final class BucketComparable<T, F extends Comparable<F>, B>
+public final class BucketComparable<T, F extends Comparable<? super F>, B>
 implements Comparable<B>
 {
     private final Stash stash;
@@ -11,10 +11,9 @@ implements Comparable<B>
 
     private final Extractor<T, F> extractor;
 
-    private final F fields;
+    private final Comparable<? super F> fields;
     
-    public BucketComparable(Stash stash, Cooper<T, F, B> cooper,
-                            Extractor<T, F> extractor, F fields)
+    public BucketComparable(Stash stash, Cooper<T, F, B> cooper, Extractor<T, F> extractor, Comparable<? super F> fields)
     {
         this.stash = stash;
         this.cooper = cooper;

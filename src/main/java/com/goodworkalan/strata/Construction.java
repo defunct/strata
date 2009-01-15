@@ -1,6 +1,6 @@
 package com.goodworkalan.strata;
 
-public class Construction<T, F extends Comparable<F>, A>
+public class Construction<T, F extends Comparable<? super F>, A>
 {
     private A address;
     

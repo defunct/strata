@@ -5,7 +5,7 @@ import java.io.Serializable;
 import com.goodworkalan.stash.Stash;
 
 
-public class BucketCooper<T, F extends Comparable<F>>
+public class BucketCooper<T, F extends Comparable<? super F>>
 implements Cooper<T, F, Bucket<T, F>>, Serializable
 {
     private final static long serialVersionUID = 20070402L;

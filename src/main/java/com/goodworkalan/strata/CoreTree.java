@@ -3,7 +3,7 @@ package com.goodworkalan.strata;
 import com.goodworkalan.stash.Stash;
 
 
-public final class CoreTree<B, T, F extends Comparable<F>, A>
+public final class CoreTree<B, T, F extends Comparable<? super F>, A>
 implements Strata<T, F>
 {
     private final A rootAddress;

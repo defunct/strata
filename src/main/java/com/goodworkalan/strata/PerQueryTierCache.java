@@ -16,7 +16,7 @@ import com.goodworkalan.stash.Stash;
  * is released. Thus, the empty map of dirty tiers is an indicator that
  * the associated query does not hold the lock on the strata.
  */
-public class PerQueryTierCache<B, T, F extends Comparable<F>, A>
+public class PerQueryTierCache<B, T, F extends Comparable<? super F>, A>
 extends AbstractTierCache<B, T, F, A>
 {
     /**

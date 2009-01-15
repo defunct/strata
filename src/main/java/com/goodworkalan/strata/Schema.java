@@ -2,7 +2,7 @@ package com.goodworkalan.strata;
 
 import com.goodworkalan.stash.Stash;
 
-public final class Schema<T, F extends Comparable<F>>
+public final class Schema<T, F extends Comparable<? super F>>
 {
     private int innerSize;
     

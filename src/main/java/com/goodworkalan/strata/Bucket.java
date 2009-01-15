@@ -1,6 +1,6 @@
 package com.goodworkalan.strata;
 
-public final class Bucket<T, F extends Comparable<F>>
+public final class Bucket<T, F extends Comparable<? super F>>
 {
     private final F fields;
 

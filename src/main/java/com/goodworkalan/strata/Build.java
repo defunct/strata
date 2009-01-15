@@ -3,7 +3,7 @@ package com.goodworkalan.strata;
 import com.goodworkalan.stash.Stash;
 
 
-public final class Build<B, T, F extends Comparable<F>, A>
+public final class Build<B, T, F extends Comparable<? super F>, A>
 implements Structure<B, A>
 {
     private final Schema<T, F> schema;

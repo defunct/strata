@@ -2,7 +2,7 @@ package com.goodworkalan.strata;
 
 import com.goodworkalan.stash.Stash;
 
-public interface Cooper<T, F extends Comparable<F>, B>
+public interface Cooper<T, F extends Comparable<? super F>, B>
 {
     public B newBucket(Stash stash, Extractor<T, F> extractor, T object);
 

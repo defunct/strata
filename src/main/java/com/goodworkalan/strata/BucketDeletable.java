@@ -1,6 +1,6 @@
 package com.goodworkalan.strata;
 
-public final class BucketDeletable<T, F extends Comparable<F>, B>
+public final class BucketDeletable<T, F extends Comparable<? super F>, B>
 implements Deletable<B>
 {
     private final Cooper<T, F, B> cooper;

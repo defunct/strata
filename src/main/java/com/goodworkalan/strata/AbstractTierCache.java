@@ -11,7 +11,7 @@ import com.goodworkalan.stash.Stash;
  * the tiers are written to file and flushed. Used as the base class of
  * both the per query and per strata implementations of the tier cache.
  */
-class AbstractTierCache<B, T, F extends Comparable<F>, A>
+class AbstractTierCache<B, T, F extends Comparable<? super F>, A>
 extends EmptyTierCache<B, A>
 {
     private final Map<A, LeafTier<B, A>> leafTiers;

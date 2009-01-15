@@ -5,7 +5,7 @@ import java.io.Serializable;
 import com.goodworkalan.stash.Stash;
 
 
-public final class LookupCooper<T, F extends Comparable<F>>
+public final class LookupCooper<T, F extends Comparable<? super F>>
 implements Cooper<T, F, T>, Serializable
 {
     private final static long serialVersionUID = 20070402L;

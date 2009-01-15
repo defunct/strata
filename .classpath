@@ -12,4 +12,14 @@
     </attributes>
   </classpathentry>
   <classpathentry kind="var" path="M2_REPO/org/testng/testng/5.8/testng-5.8-jdk15.jar"/>
+  <classpathentry kind="var" path="M2_REPO/com/mallardsoft/tuple/1.0/tuple-1.0.jar" sourcepath="M2_REPO/com/mallardsoft/tuple/1.0/tuple-1.0-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/Users/alan/.m2/repository/com/mallardsoft/tuple/1.0/tuple-1.0-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/goodworkalan/tuple-partial/0.1.X/tuple-partial-0.1.X.jar" sourcepath="M2_REPO/com/goodworkalan/tuple-partial/0.1.X/tuple-partial-0.1.X-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/Users/alan/.m2/repository/com/goodworkalan/tuple-partial/0.1.X/tuple-partial-0.1.X-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
 </classpath>

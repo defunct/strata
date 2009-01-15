@@ -8,6 +8,10 @@ import static org.testng.Assert.assertTrue;
 import org.testng.annotations.Test;
 
 import com.goodworkalan.stash.Stash;
+import com.goodworkalan.tuple.partial.Partial;
+import com.mallardsoft.tuple.Pair;
+import com.mallardsoft.tuple.Single;
+import com.mallardsoft.tuple.Tuple;
 
 
 public class StrataTestCase
@@ -55,6 +59,47 @@ public class StrataTestCase
         transaction.add(1);
         assertEquals((int) transaction.remove(1), 1);
         assertFalse(transaction.find(1).hasNext());
+    }
+    
+    @Test
+    public void tuple()
+    {
+        Schema<Person, Pair<String, String>> schema = Stratas.newInMemorySchema();
+        schema.setInnerSize(5);
+        schema.setLeafSize(7);
+        schema.setExtractor(new Extractor<Person, Pair<String, String>>()
+        {
+            public Pair<String, String> extract(Stash stash, Person person)
+            {
+                return Tuple.from(person.getLastName(), person.getFirstName());
+            }
+        });
+        Query<Person, Pair<String, String>> query = schema.create(new Stash(), new InMemoryStorageBuilder<Person, Pair<String, String>>());
+        
+        Person person = new Person();
+        person.setFirstName("Thomas");
+        person.setLastName("Jefferson");
+        query.add(person);
+        
+        person = new Person();
+        person.setFirstName("George");
+        person.setLastName("Jefferson");
+        query.add(person);
+        
+        person = new Person();
+        person.setFirstName("Don");
+        person.setLastName("Johnson");
+        query.add(person);
+        
+        person = new Person();
+        person.setFirstName("Henry");
+        person.setLastName("James");
+        query.add(person);
+        
+        Partial<Pair<String, String>, Single<String>> byLastName = Partial.oneOf(Partial.<String, String>pair()); 
+        
+        Cursor<Person> cursor = query.find(byLastName.compare(Tuple.from("Johnson")));
+        assertTrue(cursor.hasNext());
     }
 }
 

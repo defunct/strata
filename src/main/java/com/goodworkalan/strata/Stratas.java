@@ -39,7 +39,7 @@ public class Stratas
         return new ObjectReferenceTierPoolBuilder();
     }
     
-    public static <T, F extends Comparable<F>> Schema<T, F> newInMemorySchema()
+    public static <T, F extends Comparable<? super F>> Schema<T, F> newInMemorySchema()
     {
         Schema<T, F> schema = new Schema<T, F>();
         schema.setAllocatorBuilder(newNullAllocatorBuilder());

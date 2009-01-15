@@ -11,7 +11,7 @@ implements TierWriterBuilder
         this.max = max;
     }
     
-    public <B, T, F extends Comparable<F>, A> TierWriter<B, A> newTierWriter(Build<B, T, F, A> build)
+    public <B, T, F extends Comparable<? super F>, A> TierWriter<B, A> newTierWriter(Build<B, T, F, A> build)
     {
         return new PerQueryTierCache<B, T, F, A>(build.getStorage(), build.getCooper(), build.getSchema()
         .getExtractor(), max);
