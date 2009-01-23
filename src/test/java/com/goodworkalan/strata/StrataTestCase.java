@@ -8,6 +8,7 @@ import static org.testng.Assert.assertTrue;
 import org.testng.annotations.Test;
 
 import com.goodworkalan.stash.Stash;
+import com.goodworkalan.tuple.partial.Compare;
 import com.goodworkalan.tuple.partial.Partial;
 import com.mallardsoft.tuple.Pair;
 import com.mallardsoft.tuple.Single;
@@ -61,6 +62,11 @@ public class StrataTestCase
         assertFalse(transaction.find(1).hasNext());
     }
     
+    public void kissPerson(Person person)
+    {
+        // Do some kissing here...
+    }
+    
     @Test
     public void tuple()
     {
@@ -96,7 +102,7 @@ public class StrataTestCase
         person.setLastName("James");
         query.add(person);
         
-        Partial<Pair<String, String>, Single<String>> byLastName = Partial.oneOf(Partial.<String, String>pair()); 
+        Partial<Pair<String, String>, Single<String>> byLastName = Compare.oneOf(Compare.<String, String>pair()); 
         
         Cursor<Person> cursor = query.find(byLastName.compare(Tuple.from("Johnson")));
         assertTrue(cursor.hasNext());

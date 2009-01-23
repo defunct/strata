@@ -50,8 +50,6 @@ public class Person
     {
         this.age = age;
     }
-    
-    
 }
 
 /* vim: set et sw=4 ts=4 ai tw=78 nowrap: */
