@@ -35,9 +35,9 @@ extends EmptyTierCache<B, A>
     /**
      * Create a tier cache using the specified map of dirty tiers and the
      * that flushes when the maximum size is reached. The lock is an
-     * exclusive lock on the strata.
+     * exclusive lock on the <code>Strata</code>.
      *
-     * @param lock An exclusive lock on the Strata.
+     * @param lock An exclusive lock on the <code>Strata</code>.
      * @param mapOfDirtyTiers The map of dirty tiers.
      * @param max The dirty tier cache size that when reached, will cause
      * the cache to empty and the tiers to be written.

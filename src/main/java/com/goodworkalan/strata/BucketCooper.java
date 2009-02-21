@@ -15,11 +15,6 @@ implements Cooper<T, F, Bucket<T, F>>, Serializable
         return new Bucket<T, F>(extractor.extract(stash, object), object);
     }
 
-    public Bucket<T, F> newBucket(F fields, T object)
-    {
-        return new Bucket<T, F>(fields, object);
-    }
-
     public F getFields(Stash stash, Extractor<T, F> extractor, Bucket<T, F> bucket)
     {
         return bucket.getFields();

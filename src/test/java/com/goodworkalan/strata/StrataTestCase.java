@@ -35,7 +35,7 @@ public class StrataTestCase
 
     @Test public void create()
     {
-        Schema<Integer, Integer> schema = Stratas.newInMemorySchema();
+        Schema<Integer, Integer> schema = Stratas.<Integer, Integer>newInMemorySchema();
         schema.setInnerSize(5);
         schema.setLeafSize(7);
         Extractor<Integer, Integer> extractor = new Extractor<Integer, Integer>()

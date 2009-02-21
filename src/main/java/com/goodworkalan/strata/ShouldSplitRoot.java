@@ -1,7 +1,7 @@
 package com.goodworkalan.strata;
 
 
-public final class SplitRoot<B, A>
+public final class ShouldSplitRoot<B, A>
 implements RootDecision<B, A>
 {
     public boolean test(Mutation<B, A> mutation,
@@ -15,15 +15,15 @@ implements RootDecision<B, A>
                           Level<B, A> levelOfRoot,
                           InnerTier<B, A> root)
     {
-        levelOfRoot.listOfOperations.add(new SplitRoot.Split<B, A>(root));
+        levelOfRoot.listOfOperations.add(new ShouldSplitRoot.SplitRoot<B, A>(root));
     }
 
-    private final static class Split<B, A>
+    private final static class SplitRoot<B, A>
     implements Operation<B, A>
     {
         private final InnerTier<B, A> root;
 
-        public Split(InnerTier<B, A> root)
+        public SplitRoot(InnerTier<B, A> root)
         {
             this.root = root;
         }

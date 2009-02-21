@@ -91,13 +91,13 @@ implements Structure<B, A>
         writer.dirty(stash, leaf);
         writer.end(stash);
         
-        CoreTree<B, T, F, A> tree = new CoreTree<B, T, F, A>(root.getAddress(), schema, this);
+        CoreStrata<B, T, F, A> tree = new CoreStrata<B, T, F, A>(root.getAddress(), schema, this);
         
         return new Construction<T, F, A>(new CoreQuery<B, T, F, A>(stash, tree, this), root.getAddress());
     }
     
     public Strata<T, F> open(Stash stash, A rootAddress)
     {
-        return new CoreTree<B, T, F, A>(rootAddress, schema, this);
+        return new CoreStrata<B, T, F, A>(rootAddress, schema, this);
     }
 }

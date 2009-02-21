@@ -256,7 +256,7 @@ implements Decision<B, A>
 
             // FIXME I'm not sure that rewind is going to remove all the
             // operations. The number here indicates that two levels are
-            // supposed to be left locked exculsive, but I don't see in
+            // supposed to be left locked exclusive, but I don't see in
             // rewind, how the operations are removed.
 
             if (mutation.isDeleting())

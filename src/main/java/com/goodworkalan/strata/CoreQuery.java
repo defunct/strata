@@ -11,11 +11,11 @@ implements Query<T, F>
 {
     private final Stash stash;
     
-    private final CoreTree<B, T, F, A> strata;
+    private final CoreStrata<B, T, F, A> strata;
 
     private final Structure<B, A> structure;
 
-    public CoreQuery(Stash stash, CoreTree<B, T, F, A> strata, Structure<B, A> structure)
+    public CoreQuery(Stash stash, CoreStrata<B, T, F, A> strata, Structure<B, A> structure)
     {
         this.stash = stash;
         this.strata = strata;
@@ -171,10 +171,10 @@ implements Query<T, F>
     public void add(T object)
     {
         F fields = strata.getExtractor().extract(stash, object);
-        B bucket = strata.getCooper().newBucket(fields, object);
+        B bucket = strata.getCooper().newBucket(stash, strata.getExtractor(), object);
         BucketComparable<T, F, B> comparable = new BucketComparable<T, F, B>(stash, strata.getCooper(), strata.getExtractor(), fields);
         Mutation<B, A> mutation = new Mutation<B, A>(stash, structure, bucket, comparable, null);
-        generalized(mutation, new SplitRoot<B, A>(), new SplitInner<B, A>(), new InnerNever<B, A>(), new LeafInsert<B, A>());
+        generalized(mutation, new ShouldSplitRoot<B, A>(), new SplitInner<B, A>(), new InnerNever<B, A>(), new LeafInsert<B, A>());
     }
 
     public Deletable<T> deleteAny()
@@ -200,7 +200,7 @@ implements Query<T, F>
 
             mutation.clear();
 
-            generalized(mutation, new DeleteRoot<B, A>(),
+            generalized(mutation, new ShouldDeleteRoot<B, A>(),
                     new MergeInner<B, A>(), new SwapKey<B, A>(),
                     new LeafRemove<B, A>());
         }

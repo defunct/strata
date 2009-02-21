@@ -36,7 +36,7 @@ extends Tier<B, A>
         return low - 1;
     }
     
-    public <X> void link(Mutation<B, A> mutation, LeafTier<B, A> nextLeaf)
+    public void link(Mutation<B, A> mutation, LeafTier<B, A> nextLeaf)
     {
         Structure<B, A> structure = mutation.getStructure();
         TierWriter<B, A> writer = structure.getWriter();
@@ -46,7 +46,7 @@ extends Tier<B, A>
         setNext(nextLeaf.getAddress());
     }
     
-    public <X> LeafTier<B, A> getNextAndLock(Mutation<B, A> mutation, Level<B, A> leafLevel)
+    public LeafTier<B, A> getNextAndLock(Mutation<B, A> mutation, Level<B, A> leafLevel)
     {
         Structure<B, A> structure = mutation.getStructure();
         if (!structure.getAllocator().isNull(getNext()))
@@ -58,7 +58,7 @@ extends Tier<B, A>
         return null;
     }
     
-    public <X> void append(Mutation<B, A> mutation, Level<B, A> leafLevel)
+    public void append(Mutation<B, A> mutation, Level<B, A> leafLevel)
     {
         Structure<B, A> structure = mutation.getStructure();
         if (size() == structure.getLeafSize())
@@ -78,7 +78,7 @@ extends Tier<B, A>
         }
     }
 
-    public <X> LeafTier<B, A> getNext(Mutation<B, A> mutation)
+    public LeafTier<B, A> getNext(Mutation<B, A> mutation)
     {
         return mutation.getStructure().getPool().getLeafTier(mutation.getTxn(), getNext());
     }

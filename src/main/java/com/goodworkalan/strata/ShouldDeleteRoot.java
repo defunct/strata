@@ -4,7 +4,7 @@ package com.goodworkalan.strata;
 /**
  * Logic for deleting the 
  */
-final class DeleteRoot<B, A>
+final class ShouldDeleteRoot<B, A>
 implements RootDecision<B, A>
 {
     public boolean test(Mutation<B, A> mutation, Level<B, A> levelOfRoot, InnerTier<B, A> root)
@@ -22,15 +22,15 @@ implements RootDecision<B, A>
 
     public void operation(Mutation<B, A> mutation, Level<B, A> levelOfRoot, InnerTier<B, A> root)
     {
-        levelOfRoot.listOfOperations.add(new DeleteRoot.Merge<B, A>(root));
+        levelOfRoot.listOfOperations.add(new ShouldDeleteRoot.MergeRoot<B, A>(root));
     }
 
-    public final static class Merge<B, A>
+    public final static class MergeRoot<B, A>
     implements Operation<B, A>
     {
         private final InnerTier<B, A> root;
 
-        public Merge(InnerTier<B, A> root)
+        public MergeRoot(InnerTier<B, A> root)
         {
             this.root = root;
         }
