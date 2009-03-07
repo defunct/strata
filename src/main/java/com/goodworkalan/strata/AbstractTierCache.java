@@ -7,42 +7,62 @@ import java.util.concurrent.locks.Lock;
 import com.goodworkalan.stash.Stash;
 
 /**
- * Keeps a synchronized map of dirty tiers with a maximum size at which
- * the tiers are written to file and flushed. Used as the base class of
- * both the per query and per strata implementations of the tier cache.
+ * Keeps a synchronized map of dirty tiers with a maximum size at which the
+ * tiers are written to file and flushed. Used as the base class of both the per
+ * query and per strata implementations of the tier cache.
+ * 
+ * @param <B>
+ *            The bucket type used to store index fields.
+ * @param <T>
+ *            The value type of the indexed objects.
+ * @param <F>
+ *            The field type used to index the objects.
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ * @author Alan Gutierrez
  */
 class AbstractTierCache<B, T, F extends Comparable<? super F>, A>
 extends EmptyTierCache<B, A>
 {
+    /** The map of addresses to leaf tiers. */
     private final Map<A, LeafTier<B, A>> leafTiers;
     
+    /** The map of addresses to inner tiers. */
     private final Map<A, InnerTier<B, A>> innerTiers;
     
+    // TODO Document.
     private final Storage<T, F, A> storage;
     
+    // TODO Document.
     protected final Cooper<T, F, B> cooper;
     
+    // TODO Document.
     protected final Extractor<T, F> extractor;
 
+    // TODO Document.
     protected final Object mutex;
     
     /**
-     * The dirty tier cache size that when reached, will cause the cache
-     * to empty and the tiers to be written.
+     * The dirty tier cache size that when reached, will cause the cache to
+     * empty and the tiers to be written.
      */
     protected final int max;
 
     /**
-     * Create a tier cache using the specified map of dirty tiers and the
-     * that flushes when the maximum size is reached. The lock is an
-     * exclusive lock on the <code>Strata</code>.
-     *
-     * @param lock An exclusive lock on the <code>Strata</code>.
-     * @param mapOfDirtyTiers The map of dirty tiers.
-     * @param max The dirty tier cache size that when reached, will cause
-     * the cache to empty and the tiers to be written.
-     * @param autoCommit If true, the commit method of the storage
-     * strategy is called after the dirty tiers are written.
+     * Create a tier cache using the specified map of dirty tiers and the that
+     * flushes when the maximum size is reached. The lock is an exclusive lock
+     * on the <code>Strata</code>.
+     * 
+     * @param lock
+     *            An exclusive lock on the <code>Strata</code>.
+     * @param mapOfDirtyTiers
+     *            The map of dirty tiers.
+     * @param max
+     *            The dirty tier cache size that when reached, will cause the
+     *            cache to empty and the tiers to be written.
+     * @param autoCommit
+     *            If true, the commit method of the storage strategy is called
+     *            after the dirty tiers are written.
      */
     public AbstractTierCache(Storage<T, F, A> storage,
                              Cooper<T, F, B> cooper,
@@ -62,6 +82,7 @@ extends EmptyTierCache<B, A>
         this.innerTiers = new HashMap<A, InnerTier<B,A>>();
     }
 
+    // TODO Document.
     public void autoCommit(Stash stash)
     {
         if (isAutoCommit())
@@ -70,26 +91,30 @@ extends EmptyTierCache<B, A>
         }
     }
     
+    // TODO Document.
     public Storage<T, F, A> getStorage()
     {
         return storage;
     }
     
+    // TODO Document.
     public int size()
     {
         return innerTiers.size() + leafTiers.size();
     }
 
     /**
-     * Empty the dirty tier cache by writing out the dirty tiers and
-     * clearing the map of dirty tiers. If force is true, we do not
-     * check that the maximum size has been reached.  If the auto commit
-     * is true, then the commit method of the storage strategy is called.
-     *
-     * @param storage The storage strategy.
-     * @param txn A storage specific state object.
-     * @param force If true save unconditionally, do not check the
-     * maximum size.
+     * Empty the dirty tier cache by writing out the dirty tiers and clearing
+     * the map of dirty tiers. If force is true, we do not check that the
+     * maximum size has been reached. If the auto commit is true, then the
+     * commit method of the storage strategy is called.
+     * 
+     * @param storage
+     *            The storage strategy.
+     * @param txn
+     *            A storage specific state object.
+     * @param force
+     *            If true save unconditionally, do not check the maximum size.
      */
     protected void save(Stash stash, boolean force)
     {
@@ -115,6 +140,7 @@ extends EmptyTierCache<B, A>
         }
     }
     
+    // TODO Document.
     @Override
     public void dirty(Stash stash, InnerTier<B,A> inner)
     {
@@ -124,6 +150,7 @@ extends EmptyTierCache<B, A>
         }
     }
     
+    // TODO Document.
     @Override
     public void remove(InnerTier<B, A> inner)
     {
@@ -133,6 +160,7 @@ extends EmptyTierCache<B, A>
         }
     }
     
+    // TODO Document.
     @Override
     public void dirty(Stash stash, LeafTier<B,A> leaf)
     {
