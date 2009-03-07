@@ -13,7 +13,7 @@ implements Decision<B, A>
         Branch<B, A> branch = parent.find(mutation.getComparable());
         if (branch.getPivot() != null && mutation.getComparable().compareTo(branch.getPivot()) == 0)
         {
-            levelOfParent.listOfOperations.add(new Swap<B, A>(parent));
+            levelOfParent.listOfOperations.add(new SwapKey<B, A>(parent));
             return true;
         }
         return false;

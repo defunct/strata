@@ -1,13 +1,14 @@
 package com.goodworkalan.strata;
 
-final class Swap<B, A>
+//TODO Document.
+final class SwapKey<B, A>
 implements Operation<B, A>
 {
     // TODO Document.
     private final InnerTier<B, A> inner;
 
     // TODO Document.
-    public Swap(InnerTier<B, A> inner)
+    public SwapKey(InnerTier<B, A> inner)
     {
         this.inner = inner;
     }
