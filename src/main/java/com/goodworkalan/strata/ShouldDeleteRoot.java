@@ -7,6 +7,7 @@ package com.goodworkalan.strata;
 final class ShouldDeleteRoot<B, A>
 implements RootDecision<B, A>
 {
+    // TODO Document.
     public boolean test(Mutation<B, A> mutation, Level<B, A> levelOfRoot, InnerTier<B, A> root)
     {
         if (root.getChildType() == ChildType.INNER && root.size() == 2)
@@ -20,21 +21,26 @@ implements RootDecision<B, A>
         return false;
     }
 
+    // TODO Document.
     public void operation(Mutation<B, A> mutation, Level<B, A> levelOfRoot, InnerTier<B, A> root)
     {
         levelOfRoot.listOfOperations.add(new ShouldDeleteRoot.MergeRoot<B, A>(root));
     }
 
+    // TODO Document.
     public final static class MergeRoot<B, A>
     implements Operation<B, A>
     {
+        // TODO Document.
         private final InnerTier<B, A> root;
 
+        // TODO Document.
         public MergeRoot(InnerTier<B, A> root)
         {
             this.root = root;
         }
 
+        // TODO Document.
         public void operate(Mutation<B, A> mutation)
         {
             if (root.size() != 0)
@@ -57,6 +63,7 @@ implements RootDecision<B, A>
             writer.dirty(mutation.getTxn(), root);
         }
 
+        // TODO Document.
         public boolean canCancel()
         {
             return true;

@@ -6,23 +6,32 @@ import java.util.Map;
 
 import com.goodworkalan.stash.Stash;
 
+// TODO Document.
 final class BasicTierPool<T, F extends Comparable<? super F>, A, B>
 implements TierPool<B, A>
 {
+    // TODO Document.
     private final ReferenceQueue<InnerTier<B, A>> innerQueue = null;
     
+    // TODO Document.
     private final ReferenceQueue<LeafTier<B, A>> leafQueue = null;
     
+    // TODO Document.
     private final Map<A, Reference<InnerTier<B, A>>> innerTiers = null;
     
+    // TODO Document.
     private final Map<A, Reference<LeafTier<B, A>>> leafTiers = null;
     
+    // TODO Document.
     private final Storage<T, F, A> storage;
     
+    // TODO Document.
     private final Extractor<T, F> extractor;
     
+    // TODO Document.
     private final Cooper<T, F, B> cooper;
     
+    // TODO Document.
     public BasicTierPool(Storage<T, F, A> storage, Cooper<T, F, B> cooper, Extractor<T, F> extractor)
     {
         this.storage = storage;
@@ -30,6 +39,7 @@ implements TierPool<B, A>
         this.extractor = extractor;
     }
     
+    // TODO Document.
     private void collect()
     {
         synchronized (innerTiers)
@@ -50,6 +60,7 @@ implements TierPool<B, A>
         }
     }
     
+    // TODO Document.
     public InnerTier<B, A> getInnerTier(Stash stash, A address)
     {
         collect();
@@ -73,6 +84,7 @@ implements TierPool<B, A>
         return inner;
     }
     
+    // TODO Document.
     public LeafTier<B, A> getLeafTier(Stash stash, A address)
     {
         collect();

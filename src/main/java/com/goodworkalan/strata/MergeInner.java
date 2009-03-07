@@ -280,19 +280,24 @@ implements Decision<B, A>
         return false;
     }
 
+    // TODO Document.
     public final static class Merge<B, A>
     implements Operation<B, A>
     {
+        // TODO Document.
         private final InnerTier<B, A> parent;
 
+        // TODO Document.
         private final List<InnerTier<B, A>> listToMerge;
 
+        // TODO Document.
         public Merge(InnerTier<B, A> parent, List<InnerTier<B, A>> listToMerge)
         {
             this.parent = parent;
             this.listToMerge = listToMerge;
         }
 
+        // TODO Document.
         public void operate(Mutation<B, A> mutation)
         {
             InnerTier<B, A> left = listToMerge.get(0);
@@ -313,25 +318,31 @@ implements Decision<B, A>
             writer.dirty(mutation.getTxn(), left);
         }
 
+        // TODO Document.
         public boolean canCancel()
         {
             return true;
         }
     }
 
+    // TODO Document.
     public final static class Remove<B, A>
     implements Operation<B, A>
     {
+        // TODO Document.
         private final InnerTier<B, A> parent;
 
+        // TODO Document.
         private final InnerTier<B, A> child;
 
+        // TODO Document.
         public Remove(InnerTier<B, A> parent, InnerTier<B, A> child)
         {
             this.parent = parent;
             this.child = child;
         }
 
+        // TODO Document.
         public void operate(Mutation<B, A> mutation)
         {
             int index = parent.getIndex(child.getAddress());
@@ -347,6 +358,7 @@ implements Decision<B, A>
             writer.dirty(mutation.getTxn(), parent);
         }
 
+        // TODO Document.
         public boolean canCancel()
         {
             return true;

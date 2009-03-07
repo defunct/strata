@@ -1,9 +1,10 @@
 package com.goodworkalan.strata;
 
-
+// TODO Document.
 final class SplitInner<B, A>
 implements Decision<B, A>
 {
+    // TODO Document.
     public boolean test(Mutation<B, A> mutation, Level<B, A> levelOfParent, Level<B, A> levelOfChild, InnerTier<B, A> parent)
     {
         Structure<B, A> structure = mutation.getStructure();
@@ -18,19 +19,24 @@ implements Decision<B, A>
         return false;
     }
 
+    // TODO Document.
     public final static class Split<B, A>
     implements Operation<B, A>
     {
+        // TODO Document.
         private final InnerTier<B, A> parent;
 
+        // TODO Document.
         private final InnerTier<B, A> child;
 
+        // TODO Document.
         public Split(InnerTier<B, A> parent, InnerTier<B, A> child)
         {
             this.parent = parent;
             this.child = child;
         }
 
+        // TODO Document.
         public void operate(Mutation<B, A> mutation)
         {
             InnerTier<B, A> right = mutation.newInnerTier(child.getChildType());
@@ -54,6 +60,7 @@ implements Decision<B, A>
             writer.dirty(mutation.getTxn(), right);
         }
 
+        // TODO Document.
         public boolean canCancel()
         {
             return true;

@@ -3,6 +3,7 @@ package com.goodworkalan.strata;
 import com.goodworkalan.stash.Stash;
 
 // FIXME Add field to strata.
+// TODO Document.
 public interface Strata<T, F extends Comparable<? super F>>
 {
     /**
@@ -15,5 +16,6 @@ public interface Strata<T, F extends Comparable<? super F>>
      */
     public Query<T, F> query(Stash stash);
 
+    // TODO Document.
     public Query<T, F> query();
 }

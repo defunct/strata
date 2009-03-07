@@ -1,13 +1,16 @@
 package com.goodworkalan.strata;
 
-
+// TODO Document.
 public final class LeafTier<B, A>
 extends Tier<B, A>
 {
+    // TODO Document.
     private static final long serialVersionUID = 1L;
 
+    // TODO Document.
     private A next;
     
+    // TODO Document.
     public int find(Comparable<B> comparable)
     {
         int low = 1;
@@ -36,6 +39,7 @@ extends Tier<B, A>
         return low - 1;
     }
     
+    // TODO Document.
     public void link(Mutation<B, A> mutation, LeafTier<B, A> nextLeaf)
     {
         Structure<B, A> structure = mutation.getStructure();
@@ -46,6 +50,7 @@ extends Tier<B, A>
         setNext(nextLeaf.getAddress());
     }
     
+    // TODO Document.
     public LeafTier<B, A> getNextAndLock(Mutation<B, A> mutation, Level<B, A> leafLevel)
     {
         Structure<B, A> structure = mutation.getStructure();
@@ -58,6 +63,7 @@ extends Tier<B, A>
         return null;
     }
     
+    // TODO Document.
     public void append(Mutation<B, A> mutation, Level<B, A> leafLevel)
     {
         Structure<B, A> structure = mutation.getStructure();
@@ -78,16 +84,19 @@ extends Tier<B, A>
         }
     }
 
+    // TODO Document.
     public LeafTier<B, A> getNext(Mutation<B, A> mutation)
     {
         return mutation.getStructure().getPool().getLeafTier(mutation.getTxn(), getNext());
     }
     
+    // TODO Document.
     public A getNext()
     {
         return next;
     }
     
+    // TODO Document.
     public void setNext(A next)
     {
         this.next = next;

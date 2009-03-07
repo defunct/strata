@@ -2,18 +2,23 @@ package com.goodworkalan.strata;
 
 import java.util.Iterator;
 
+// TODO Document.
 public class InnerTier<B, A>
 extends Tier<Branch<B, A>, A>
 {
+    // TODO Document.
     private static final long serialVersionUID = 1L;
 
+    // TODO Document.
     private ChildType childType;
 
+    // TODO Document.
     public ChildType getChildType()
     {
         return childType;
     }
     
+    // TODO Document.
     public int getIndex(A address)
     {
         int index = 0;
@@ -30,11 +35,13 @@ extends Tier<Branch<B, A>, A>
         return -1;
     }
     
+    // TODO Document.
     public void setChildType(ChildType childType)
     {
         this.childType = childType;
     }
 
+    // TODO Document.
     public Branch<B, A> find(Comparable<B> comparable)
     {
         int low = 1;

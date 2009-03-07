@@ -2,9 +2,11 @@ package com.goodworkalan.strata;
 
 import java.util.ListIterator;
 
+// TODO Document.
 final class LeafInsert<B, A>
 implements Decision<B, A>
 {
+    // TODO Document.
     public boolean test(Mutation<B, A> mutation, Level<B, A> levelOfParent, Level<B, A> levelOfChild, InnerTier<B, A> parent)
     {
         Structure<B, A> structure = mutation.getStructure();
@@ -48,16 +50,20 @@ implements Decision<B, A>
         return split;
     }
 
+    // TODO Document.
     private final static class SplitLinkedListLeft<B, A>
     implements LeafOperation<B, A>
     {
+        // TODO Document.
         private final InnerTier<B, A> inner;
 
+        // TODO Document.
         public SplitLinkedListLeft(InnerTier<B, A> inner)
         {
             this.inner = inner;
         }
 
+        // TODO Document.
         public boolean operate(Mutation<B, A> mutation, Level<B, A> levelOfLeaf)
         {
             Structure<B, A> structure = mutation.getStructure();
@@ -89,21 +95,26 @@ implements Decision<B, A>
         }
     }
 
+    // TODO Document.
     private final static class SplitLinkedListRight<B, A>
     implements LeafOperation<B, A>
     {
+        // TODO Document.
         private final InnerTier<B, A> inner;
 
+        // TODO Document.
         public SplitLinkedListRight(InnerTier<B, A> inner)
         {
             this.inner = inner;
         }
 
+        // TODO Document.
         private boolean endOfList(Mutation<B, A> mutation, LeafTier<B, A> last)
         {
             return mutation.getStructure().getAllocator().isNull(last.getNext()) || mutation.newComparable(last.getNext(mutation).get(0)).compareTo(last.get(0)) != 0;
         }
 
+        // TODO Document.
         public boolean operate(Mutation<B, A> mutation, Level<B, A> levelOfLeaf)
         {
             Structure<B, A> structure = mutation.getStructure();
@@ -131,16 +142,20 @@ implements Decision<B, A>
         }
     }
 
+    // TODO Document.
     private final static class SplitLeaf<B, A>
     implements Operation<B, A>
     {
+        // TODO Document.
         private final InnerTier<B, A> inner;
 
+        // TODO Document.
         public SplitLeaf(InnerTier<B, A> inner)
         {
             this.inner = inner;
         }
 
+        // TODO Document.
         public void operate(Mutation<B, A> mutation)
         {
             Structure<B, A> structure = mutation.getStructure();
@@ -187,22 +202,27 @@ implements Decision<B, A>
             writer.dirty(mutation.getTxn(), right);
         }
 
+        // TODO Document.
         public boolean canCancel()
         {
             return true;
         }
     }
 
+    // TODO Document.
     private final static class InsertSorted<B, A>
     implements LeafOperation<B, A>
     {
+        // TODO Document.
         private final InnerTier<B, A> inner;
 
+        // TODO Document.
         public InsertSorted(InnerTier<B, A> inner)
         {
             this.inner = inner;
         }
 
+        // TODO Document.
         public boolean operate(Mutation<B, A> mutation, Level<B, A> levelOfLeaf)
         {
             Structure<B, A> structure = mutation.getStructure();
@@ -235,16 +255,20 @@ implements Decision<B, A>
         }
     }
 
+    // TODO Document.
     private final static class InsertLinkedList<B, A>
     implements LeafOperation<B, A>
     {
+        // TODO Document.
         private final LeafTier<B, A> leaf;
 
+        // TODO Document.
         public InsertLinkedList(LeafTier<B, A> leaf)
         {
             this.leaf = leaf;
         }
 
+        // TODO Document.
         public boolean operate(Mutation<B, A> mutation, Level<B, A> levelOfLeaf)
         {
             leaf.append(mutation, levelOfLeaf);

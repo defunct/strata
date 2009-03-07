@@ -1,9 +1,10 @@
 package com.goodworkalan.strata;
 
-
+// TODO Document.
 final class SwapKey<B, A>
 implements Decision<B, A>
 {
+    // TODO Document.
     public boolean test(Mutation<B, A> mutation,
                         Level<B, A> levelOfParent,
                         Level<B, A> levelOfChild,
@@ -18,16 +19,20 @@ implements Decision<B, A>
         return false;
     }
 
+    // TODO Document.
     private final static class Swap<B, A>
     implements Operation<B, A>
     {
+        // TODO Document.
         private final InnerTier<B, A> inner;
 
+        // TODO Document.
         public Swap(InnerTier<B, A> inner)
         {
             this.inner = inner;
         }
 
+        // TODO Document.
         public void operate(Mutation<B, A> mutation)
         {
             if (mutation.getReplacement() != null)
@@ -38,6 +43,7 @@ implements Decision<B, A>
             }
         }
 
+        // TODO Document.
         public boolean canCancel()
         {
             return false;

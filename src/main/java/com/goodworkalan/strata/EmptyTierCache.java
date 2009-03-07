@@ -38,6 +38,7 @@ implements TierWriter<B, A>, AutoCommit
      */
     private boolean autoCommit;
     
+    // TODO Document.
     public EmptyTierCache()
     {
         this(new ReentrantLock(), true);
@@ -52,6 +53,7 @@ implements TierWriter<B, A>, AutoCommit
         this.autoCommit = autoCommit;
     }
     
+    // TODO Document.
     public void autoCommit(Stash stash)
     {
     }
@@ -101,18 +103,22 @@ implements TierWriter<B, A>, AutoCommit
     {
     }
 
+    // TODO Document.
     public void dirty(Stash stash, InnerTier<B, A> inner)
     {
     }
 
+    // TODO Document.
     public void remove(InnerTier<B, A> inner)
     {
     }
 
+    // TODO Document.
     public void dirty(Stash stash, LeafTier<B, A> leaf)
     {
     }
 
+    // TODO Document.
     public void remove(LeafTier<B, A> leaf)
     {
     }

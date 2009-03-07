@@ -6,15 +6,20 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import com.goodworkalan.stash.Stash;
 
+// TODO Document.
 public final class CoreQuery<B, T, F extends Comparable<? super F>, A>
 implements Query<T, F>
 {
+    // TODO Document.
     private final Stash stash;
     
+    // TODO Document.
     private final CoreStrata<B, T, F, A> strata;
 
+    // TODO Document.
     private final Structure<B, A> structure;
 
+    // TODO Document.
     public CoreQuery(Stash stash, CoreStrata<B, T, F, A> strata, Structure<B, A> structure)
     {
         this.stash = stash;
@@ -22,21 +27,25 @@ implements Query<T, F>
         this.structure = structure;
     }
 
+    // TODO Document.
     public Stash getStash()
     {
         return stash;
     }
     
+    // TODO Document.
     public Strata<T, F> getStrata()
     {
         return strata;
     }
 
+    // TODO Document.
     private InnerTier<B, A> getRoot()
     {
         return structure.getPool().getInnerTier(stash, strata.getRootAddress());
     }
 
+    // TODO Document.
     private void testInnerTier(Mutation<B, A> mutation,
             Decision<B, A> subsequent, Decision<B, A> swap,
             Level<B, A> levelOfParent, Level<B, A> levelOfChild,
@@ -168,6 +177,7 @@ implements Query<T, F>
         return mutation.getResult();
     }
 
+    // TODO Document.
     public void add(T object)
     {
         F fields = strata.getExtractor().extract(stash, object);
@@ -177,6 +187,7 @@ implements Query<T, F>
         generalized(mutation, new ShouldSplitRoot<B, A>(), new SplitInner<B, A>(), new InnerNever<B, A>(), new LeafInsert<B, A>());
     }
 
+    // TODO Document.
     public Deletable<T> deleteAny()
     {
         return new Deletable<T>()
@@ -211,6 +222,7 @@ implements Query<T, F>
         return strata.getCooper().getObject(removed);
     }
 
+    // TODO Document.
     public T remove(Comparable<? super F> comparable)
     {
         return remove(deleteAny(), comparable);
@@ -242,20 +254,24 @@ implements Query<T, F>
         }
     }
 
+    // TODO Document.
     public Cursor<T> first()
     {
         return null;
     }
 
+    // TODO Document.
     public F extract(T object)
     {
         return strata.getExtractor().extract(stash, object);
     }
     
+    // TODO Document.
     public void flush()
     {
     }
     
+    // TODO Document.
     public void destroy()
     {
     }

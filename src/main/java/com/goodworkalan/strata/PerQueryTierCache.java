@@ -31,6 +31,7 @@ extends AbstractTierCache<B, T, F, A>
         this(storage, cooper, extractor, new ReentrantLock(), max, true);
     }
     
+    // TODO Document.
     private PerQueryTierCache(Storage<T, F, A> storage, Cooper<T, F, B> cooper, Extractor<T, F> extractor, Lock lock, int max, boolean autoCommit)
     {
         super(storage, cooper, extractor,
@@ -40,6 +41,7 @@ extends AbstractTierCache<B, T, F, A>
               autoCommit);
     }
     
+    // TODO Document.
     public void begin()
     {
         if (size() == 0)
@@ -48,6 +50,7 @@ extends AbstractTierCache<B, T, F, A>
         }
     }
     
+    // TODO Document.
     public void end(Stash stash)
     {
         save(stash, false);
@@ -57,6 +60,7 @@ extends AbstractTierCache<B, T, F, A>
         }
     }
     
+    // TODO Document.
     public TierWriter<B, A> newTierCache()
     {
         return new PerQueryTierCache<B, T, F, A>(getStorage(), cooper, extractor, lock, max, isAutoCommit());

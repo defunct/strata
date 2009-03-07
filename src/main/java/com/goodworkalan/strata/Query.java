@@ -2,6 +2,7 @@ package com.goodworkalan.strata;
 
 import com.goodworkalan.stash.Stash;
 
+// TODO Document.
 public interface Query<T, F extends Comparable<? super F>>
 {
     /**

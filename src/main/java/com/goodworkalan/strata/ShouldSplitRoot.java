@@ -1,9 +1,10 @@
 package com.goodworkalan.strata;
 
-
+// TODO Document.
 public final class ShouldSplitRoot<B, A>
 implements RootDecision<B, A>
 {
+    // TODO Document.
     public boolean test(Mutation<B, A> mutation,
                         Level<B, A> levelOfRoot,
                         InnerTier<B, A> root)
@@ -11,6 +12,7 @@ implements RootDecision<B, A>
         return mutation.getStructure().getInnerSize() == root.size();
     }
 
+    // TODO Document.
     public void operation(Mutation<B, A> mutation,
                           Level<B, A> levelOfRoot,
                           InnerTier<B, A> root)
@@ -18,16 +20,20 @@ implements RootDecision<B, A>
         levelOfRoot.listOfOperations.add(new ShouldSplitRoot.SplitRoot<B, A>(root));
     }
 
+    // TODO Document.
     private final static class SplitRoot<B, A>
     implements Operation<B, A>
     {
+        // TODO Document.
         private final InnerTier<B, A> root;
 
+        // TODO Document.
         public SplitRoot(InnerTier<B, A> root)
         {
             this.root = root;
         }
 
+        // TODO Document.
         public void operate(Mutation<B, A> mutation)
         {
             InnerTier<B, A> left = mutation.newInnerTier(root.getChildType());
@@ -57,6 +63,7 @@ implements RootDecision<B, A>
             writer.dirty(mutation.getTxn(), right);
         }
 
+        // TODO Document.
         public boolean canCancel()
         {
             return true;

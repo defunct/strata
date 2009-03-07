@@ -5,16 +5,20 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.goodworkalan.stash.Stash;
 
+//TODO Document.
 public class PerStrataTierWriter<B, T, F extends Comparable<? super F>, A>
 extends AbstractTierCache<B, T, F, A>
 {
+ // TODO Document.
     private final ReadWriteLock readWriteLock;
 
+    // TODO Document.
     public PerStrataTierWriter(Storage<T, F, A> storage, Cooper<T, F, B> cooper, Extractor<T, F> extractor, int max)
     {
         this(storage, cooper, extractor, new ReentrantReadWriteLock(), new Object(), max);
     }
 
+    // TODO Document.
     private PerStrataTierWriter(Storage<T, F, A> storage, Cooper<T, F, B> cooper, Extractor<T, F> extractor,
                                 ReadWriteLock readWriteLock,
                                 Object mutex,
@@ -27,6 +31,7 @@ extends AbstractTierCache<B, T, F, A>
              true);
     }
 
+    // TODO Document.
     private PerStrataTierWriter(Storage<T, F, A> storage, Cooper<T, F, B> cooper, Extractor<T, F> extractor,
                                 ReadWriteLock readWriteLock,
                                 Object mutex,
@@ -37,6 +42,7 @@ extends AbstractTierCache<B, T, F, A>
         this.readWriteLock = readWriteLock;
     }
     
+    // TODO Document.
     public void begin()
     {
         if (lockCount == 0)
@@ -45,6 +51,7 @@ extends AbstractTierCache<B, T, F, A>
         }
     }
     
+    // TODO Document.
     public void end(Stash stash)
     {
         save(stash, false);
@@ -54,6 +61,7 @@ extends AbstractTierCache<B, T, F, A>
         }
     }
     
+    // TODO Document.
     public TierWriter<B, A> newTierCache()
     {
         return new PerStrataTierWriter<B, T, F, A>(getStorage(), cooper, extractor, readWriteLock, mutex, max, isAutoCommit());

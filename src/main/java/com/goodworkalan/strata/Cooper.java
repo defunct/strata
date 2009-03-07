@@ -33,9 +33,12 @@ public interface Cooper<T, F extends Comparable<? super F>, B>
      */
     public B newBucket(Stash stash, Extractor<T, F> extractor, T object);
 
+    // TODO Document.
     public T getObject(B bucket);
 
+    // TODO Document.
     public F getFields(Stash stash, Extractor<T, F> extractor, B bucket);
     
+    // TODO Document.
     public Cursor<T> wrap(Cursor<B> cursor);
 }

@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+// TODO Document.
 final class LeafRemove<B, A>
 implements Decision<B, A>
 {
+    // TODO Document.
     public boolean test(Mutation<B, A> mutation,
                         Level<B, A> levelOfParent,
                         Level<B, A> levelOfChild,
@@ -96,16 +98,20 @@ implements Decision<B, A>
         return !listToMerge.isEmpty();
     }
 
+    // TODO Document.
     public final static class Remove<B, A>
     implements LeafOperation<B, A>
     {
+        // TODO Document.
         private final LeafTier<B, A> leaf;
 
+        // TODO Document.
         public Remove(LeafTier<B, A> leaf)
         {
             this.leaf = leaf;
         }
 
+        // TODO Document.
         public boolean operate(Mutation<B, A> mutation, Level<B, A> levelOfLeaf)
         {
             Structure<B, A> structure = mutation.getStructure();
@@ -190,24 +196,31 @@ implements Decision<B, A>
         }
     }
 
+    // TODO Document.
     public final static class Fail<B, A>
     implements LeafOperation<B, A>
     {
+        // TODO Document.
         public boolean operate(Mutation<B, A> mutation, Level<B, A> levelOfLeaf)
         {
             return false;
         }
     }
 
+    // TODO Document.
     public final static class Merge<B, A>
     implements Operation<B, A>
     {
+        // TODO Document.
         private final InnerTier<B, A> parent;
 
+        // TODO Document.
         private final LeafTier<B, A> left;
 
+        // TODO Document.
         private final LeafTier<B, A> right;
 
+        // TODO Document.
         public Merge(InnerTier<B, A> parent, LeafTier<B, A> left, LeafTier<B, A> right)
         {
             this.parent = parent;
@@ -215,6 +228,7 @@ implements Decision<B, A>
             this.right = right;
         }
 
+        // TODO Document.
         public void operate(Mutation<B, A> mutation)
         {
             parent.remove(parent.getIndex(right.getAddress()));
@@ -232,21 +246,27 @@ implements Decision<B, A>
             writer.dirty(mutation.getTxn(), left);
         }
 
+        // TODO Document.
         public boolean canCancel()
         {
             return true;
         }
     }
 
+    // TODO Document.
     public final static class RemoveLeaf<B, A>
     implements Operation<B, A>
     {
+        // TODO Document.
         private final InnerTier<B, A> parent;
 
+        // TODO Document.
         private final LeafTier<B, A> leaf;
 
+        // TODO Document.
         private final LeafTier<B, A> left;
 
+        // TODO Document.
         public RemoveLeaf(InnerTier<B, A> parent, LeafTier<B, A> leaf, LeafTier<B, A> left)
         {
             this.parent = parent;
@@ -254,6 +274,7 @@ implements Decision<B, A>
             this.left = left;
         }
 
+        // TODO Document.
         public void operate(Mutation<B, A> mutation)
         {
             parent.remove(parent.getIndex(leaf.getAddress()));
@@ -268,6 +289,7 @@ implements Decision<B, A>
             mutation.setOnlyChild(false);
         }
 
+        // TODO Document.
         public boolean canCancel()
         {
             return true;
