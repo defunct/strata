@@ -135,7 +135,7 @@ implements Query<T, F>
             {
                 testInnerTier(mutation, subsequent, swap, levelOfParent, levelOfChild, parent, 0);
                 Branch<B, A> branch = parent.find(mutation.getComparable());
-                InnerTier<B, A> child = structure.getPool().getInnerTier(mutation.getTxn(), branch.getAddress());
+                InnerTier<B, A> child = structure.getPool().getInnerTier(mutation.getStash(), branch.getAddress());
                 parent = child;
             }
             else
@@ -164,7 +164,7 @@ implements Query<T, F>
             }
 
             // FIXME Probably does not belong here?
-            mutation.getStructure().getWriter().end(mutation.getTxn());
+            mutation.getStructure().getWriter().end(mutation.getStash());
         }
 
         ListIterator<Level<B, A>> levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());

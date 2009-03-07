@@ -58,9 +58,9 @@ implements RootDecision<B, A>
             root.setChildType(ChildType.INNER);
 
             TierWriter<B, A> writer = mutation.getStructure().getWriter();
-            writer.dirty(mutation.getTxn(), root);
-            writer.dirty(mutation.getTxn(), left);
-            writer.dirty(mutation.getTxn(), right);
+            writer.dirty(mutation.getStash(), root);
+            writer.dirty(mutation.getStash(), left);
+            writer.dirty(mutation.getStash(), right);
         }
 
         // TODO Document.

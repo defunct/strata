@@ -25,9 +25,9 @@ implements Decision<B, A>
         List<LeafTier<B, A>> listToMerge = new ArrayList<LeafTier<B, A>>();
         if (index != 0)
         {
-            previous = pool.getLeafTier(mutation.getTxn(), parent.get(index - 1).getAddress());
+            previous = pool.getLeafTier(mutation.getStash(), parent.get(index - 1).getAddress());
             levelOfChild.lockAndAdd(previous);
-            leaf = pool.getLeafTier(mutation.getTxn(), branch.getAddress());
+            leaf = pool.getLeafTier(mutation.getStash(), branch.getAddress());
             levelOfChild.lockAndAdd(leaf);
             int capacity = previous.size() + leaf.size();
             if (capacity <= structure.getLeafSize() + 1)
@@ -43,7 +43,7 @@ implements Decision<B, A>
 
         if (leaf == null)
         {
-            leaf = pool.getLeafTier(mutation.getTxn(), branch.getAddress());
+            leaf = pool.getLeafTier(mutation.getStash(), branch.getAddress());
             levelOfChild.lockAndAdd(leaf);
         }
 
@@ -64,7 +64,7 @@ implements Decision<B, A>
         }
         else if (listToMerge.isEmpty() && index != parent.size() - 1)
         {
-            LeafTier<B, A> next = pool.getLeafTier(mutation.getTxn(), parent.get(index + 1).getAddress());
+            LeafTier<B, A> next = pool.getLeafTier(mutation.getStash(), parent.get(index + 1).getAddress());
             levelOfChild.lockAndAdd(next);
             int capacity = next.size() + leaf.size();
             if (capacity <= structure.getLeafSize() + 1)
@@ -157,7 +157,7 @@ implements Decision<B, A>
                                 }
                             }
                         }
-                        writer.dirty(mutation.getTxn(), current);
+                        writer.dirty(mutation.getStash(), current);
                         mutation.setResult(candidate);
                         break SEARCH;
                     }
@@ -186,7 +186,7 @@ implements Decision<B, A>
                     }
                     else
                     {
-                        writer.dirty(mutation.getTxn(), subsequent);
+                        writer.dirty(mutation.getStash(), subsequent);
                     }
                     current = subsequent;
                 }
@@ -242,8 +242,8 @@ implements Decision<B, A>
 
             TierWriter<B, A> writer = mutation.getStructure().getWriter();
             writer.remove(right);
-            writer.dirty(mutation.getTxn(), parent);
-            writer.dirty(mutation.getTxn(), left);
+            writer.dirty(mutation.getStash(), parent);
+            writer.dirty(mutation.getStash(), left);
         }
 
         // TODO Document.
@@ -283,8 +283,8 @@ implements Decision<B, A>
 
             TierWriter<B, A> writer = mutation.getStructure().getWriter();
             writer.remove(leaf);
-            writer.dirty(mutation.getTxn(), parent);
-            writer.dirty(mutation.getTxn(), left);
+            writer.dirty(mutation.getStash(), parent);
+            writer.dirty(mutation.getStash(), left);
 
             mutation.setOnlyChild(false);
         }

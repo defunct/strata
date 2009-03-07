@@ -9,7 +9,7 @@ implements Decision<B, A>
     {
         Structure<B, A> structure = mutation.getStructure();
         Branch<B, A> branch = parent.find(mutation.getComparable());
-        InnerTier<B, A> child = structure.getPool().getInnerTier(mutation.getTxn(), branch.getAddress());
+        InnerTier<B, A> child = structure.getPool().getInnerTier(mutation.getStash(), branch.getAddress());
         levelOfChild.lockAndAdd(child);
         if (child.size() == structure.getInnerSize())
         {
@@ -55,9 +55,9 @@ implements Decision<B, A>
             parent.add(index + 1, new Branch<B, A>(pivot, right.getAddress()));
 
             TierWriter<B, A> writer = mutation.getStructure().getWriter();
-            writer.dirty(mutation.getTxn(), parent);
-            writer.dirty(mutation.getTxn(), child);
-            writer.dirty(mutation.getTxn(), right);
+            writer.dirty(mutation.getStash(), parent);
+            writer.dirty(mutation.getStash(), child);
+            writer.dirty(mutation.getStash(), right);
         }
 
         // TODO Document.

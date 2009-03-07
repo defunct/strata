@@ -18,7 +18,7 @@ final class Mutation<B, A>
     final B bucket;
     
     // TODO Document.
-    private final Comparable<B> _comparable;
+    private final Comparable<B> comparable;
     
     // TODO Document.
     final Deletable<B> deletable;
@@ -52,7 +52,7 @@ final class Mutation<B, A>
                     Deletable<B> deletable)
     {
         this.stash = stash;
-        this._comparable = comparable;
+        this.comparable = comparable;
         this.deletable = deletable;
         this.bucket = bucket;
         this.structure = structure;
@@ -61,12 +61,11 @@ final class Mutation<B, A>
     // TODO Document.
     public Comparable<B> getComparable()
     {
-        return _comparable;
+        return comparable;
     }
     
-    // FIXME Rename.
     // TODO Document.
-    public Stash getTxn()
+    public Stash getStash()
     {
         return stash;
     }
@@ -147,7 +146,7 @@ final class Mutation<B, A>
     public InnerTier<B, A> newInnerTier(ChildType childType)
     {
         InnerTier<B, A> inner = new InnerTier<B, A>();
-        inner.setAddress(getStructure().getAllocator().allocate(getTxn(), inner, getStructure().getInnerSize()));
+        inner.setAddress(getStructure().getAllocator().allocate(getStash(), inner, getStructure().getInnerSize()));
         inner.setChildType(childType);
         return inner;
     }
@@ -156,7 +155,7 @@ final class Mutation<B, A>
     public LeafTier<B, A> newLeafTier()
     {
         LeafTier<B, A> leaf = new LeafTier<B, A>();
-        leaf.setAddress(getStructure().getAllocator().allocate(getTxn(), leaf, getStructure().getInnerSize()));
+        leaf.setAddress(getStructure().getAllocator().allocate(getStash(), leaf, getStructure().getInnerSize()));
         return leaf;
     }
     

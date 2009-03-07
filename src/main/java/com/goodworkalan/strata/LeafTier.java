@@ -44,8 +44,8 @@ extends Tier<B, A>
     {
         Structure<B, A> structure = mutation.getStructure();
         TierWriter<B, A> writer = structure.getWriter();
-        writer.dirty(mutation.getTxn(), this);
-        writer.dirty(mutation.getTxn(), nextLeaf);
+        writer.dirty(mutation.getStash(), this);
+        writer.dirty(mutation.getStash(), nextLeaf);
         nextLeaf.setNext(getNext());
         setNext(nextLeaf.getAddress());
     }
@@ -56,7 +56,7 @@ extends Tier<B, A>
         Structure<B, A> structure = mutation.getStructure();
         if (!structure.getAllocator().isNull(getNext()))
         {
-            LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), getNext());
+            LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), getNext());
             leafLevel.lockAndAdd(leaf);
             return leaf;
         }
@@ -70,7 +70,7 @@ extends Tier<B, A>
         if (size() == structure.getLeafSize())
         {
             LeafTier<B, A> nextLeaf = getNextAndLock(mutation, leafLevel);
-            if (null == nextLeaf || structure.compare(mutation.getTxn(), mutation.getBucket(), nextLeaf.get(0)) != 0)
+            if (null == nextLeaf || structure.compare(mutation.getStash(), mutation.getBucket(), nextLeaf.get(0)) != 0)
             {
                 nextLeaf = mutation.newLeafTier();
                 link(mutation, nextLeaf);
@@ -80,14 +80,14 @@ extends Tier<B, A>
         else
         {
             add(mutation.getBucket());
-            structure.getWriter().dirty(mutation.getTxn(), this);
+            structure.getWriter().dirty(mutation.getStash(), this);
         }
     }
 
     // TODO Document.
     public LeafTier<B, A> getNext(Mutation<B, A> mutation)
     {
-        return mutation.getStructure().getPool().getLeafTier(mutation.getTxn(), getNext());
+        return mutation.getStructure().getPool().getLeafTier(mutation.getStash(), getNext());
     }
     
     // TODO Document.

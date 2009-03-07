@@ -13,8 +13,8 @@ implements RootDecision<B, A>
         if (root.getChildType() == ChildType.INNER && root.size() == 2)
         {
             Structure<B, A> structure = mutation.getStructure();
-            InnerTier<B, A> first = structure.getPool().getInnerTier(mutation.getTxn(), root.get(0).getAddress());
-            InnerTier<B, A> second = structure.getPool().getInnerTier(mutation.getTxn(), root.get(1).getAddress());
+            InnerTier<B, A> first = structure.getPool().getInnerTier(mutation.getStash(), root.get(0).getAddress());
+            InnerTier<B, A> second = structure.getPool().getInnerTier(mutation.getStash(), root.get(1).getAddress());
             // FIXME These numbers are off.
             return first.size() + second.size() == structure.getInnerSize();
         }
@@ -50,7 +50,7 @@ implements RootDecision<B, A>
             
             Structure<B, A> structure = mutation.getStructure();
 
-            InnerTier<B, A> child = structure.getPool().getInnerTier(mutation.getTxn(), root.remove(0).getAddress());
+            InnerTier<B, A> child = structure.getPool().getInnerTier(mutation.getStash(), root.remove(0).getAddress());
             while (child.size() != 0)
             {
                 root.add(child.remove(0));
@@ -60,7 +60,7 @@ implements RootDecision<B, A>
 
             TierWriter<B, A> writer = structure.getWriter();
             writer.remove(child);
-            writer.dirty(mutation.getTxn(), root);
+            writer.dirty(mutation.getStash(), root);
         }
 
         // TODO Document.

@@ -163,7 +163,7 @@ implements Decision<B, A>
         // Find the child tier.
 
         Branch<B, A> branch = parent.find(mutation.getComparable());
-        InnerTier<B, A> child = pool.getInnerTier(mutation.getTxn(), branch.getAddress());
+        InnerTier<B, A> child = pool.getInnerTier(mutation.getStash(), branch.getAddress());
 
         // If we are on our way down to remove the last item of a leaf
         // tier that is an only child, then we need to find the leaf to
@@ -184,11 +184,11 @@ implements Decision<B, A>
             InnerTier<B, A> inner = parent;
             while (inner.getChildType() == ChildType.INNER)
             {
-                inner = pool.getInnerTier(mutation.getTxn(), inner.get(index).getAddress());
+                inner = pool.getInnerTier(mutation.getStash(), inner.get(index).getAddress());
                 levelOfParent.lockAndAdd(inner);
                 index = inner.size() - 1;
             }
-            LeafTier<B, A> leaf = pool.getLeafTier(mutation.getTxn(), inner.get(index).getAddress());
+            LeafTier<B, A> leaf = pool.getLeafTier(mutation.getStash(), inner.get(index).getAddress());
             levelOfParent.lockAndAdd(leaf);
             mutation.setLeftLeaf(leaf);
         }
@@ -217,7 +217,7 @@ implements Decision<B, A>
         int index = parent.getIndex(child.getAddress());
         if (index != 0)
         {
-            InnerTier<B, A> left = pool.getInnerTier(mutation.getTxn(), parent.get(index - 1).getAddress());
+            InnerTier<B, A> left = pool.getInnerTier(mutation.getStash(), parent.get(index - 1).getAddress());
             levelOfChild.lockAndAdd(left);
             levelOfChild.lockAndAdd(child);
             if (left.size() + child.size() <= structure.getInnerSize())
@@ -234,7 +234,7 @@ implements Decision<B, A>
 
         if (listToMerge.isEmpty() && index != parent.size() - 1)
         {
-            InnerTier<B, A> right = pool.getInnerTier(mutation.getTxn(), parent.get(index + 1).getAddress());
+            InnerTier<B, A> right = pool.getInnerTier(mutation.getStash(), parent.get(index + 1).getAddress());
             levelOfChild.lockAndAdd(right);
             if ((child.size() + right.size() - 1) == structure.getInnerSize())
             {
@@ -314,8 +314,8 @@ implements Decision<B, A>
 
             TierWriter<B, A> writer = mutation.getStructure().getWriter();
             writer.remove(right);
-            writer.dirty(mutation.getTxn(), parent);
-            writer.dirty(mutation.getTxn(), left);
+            writer.dirty(mutation.getStash(), parent);
+            writer.dirty(mutation.getStash(), left);
         }
 
         // TODO Document.
@@ -355,7 +355,7 @@ implements Decision<B, A>
 
             TierWriter<B, A> writer = mutation.getStructure().getWriter();
             writer.remove(child);
-            writer.dirty(mutation.getTxn(), parent);
+            writer.dirty(mutation.getStash(), parent);
         }
 
         // TODO Document.

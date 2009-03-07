@@ -13,7 +13,7 @@ implements Decision<B, A>
         boolean split = true;
         levelOfChild.getSync = new WriteLockExtractor();
         Branch<B, A> branch = parent.find(mutation.getComparable());
-        LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
+        LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), branch.getAddress());
         levelOfChild.getSync = new WriteLockExtractor();
         levelOfChild.lockAndAdd(leaf);
         if (leaf.size() == structure.getLeafSize())
@@ -69,7 +69,7 @@ implements Decision<B, A>
             Structure<B, A> structure = mutation.getStructure();
 
             Branch<B, A> branch = inner.find(mutation.getComparable());
-            LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
+            LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), branch.getAddress());
 
             LeafTier<B, A> right = mutation.newLeafTier();
             while (leaf.size() != 0)
@@ -87,9 +87,9 @@ implements Decision<B, A>
             inner.add(index + 1, new Branch<B, A>(right.get(0), right.getAddress()));
 
             TierWriter<B, A> writer = structure.getWriter();
-            writer.dirty(mutation.getTxn(), inner);
-            writer.dirty(mutation.getTxn(), leaf);
-            writer.dirty(mutation.getTxn(), right);
+            writer.dirty(mutation.getStash(), inner);
+            writer.dirty(mutation.getStash(), leaf);
+            writer.dirty(mutation.getStash(), right);
 
             return new LeafInsert.InsertSorted<B, A>(inner).operate(mutation, levelOfLeaf);
         }
@@ -120,7 +120,7 @@ implements Decision<B, A>
             Structure<B, A> structure = mutation.getStructure();
 
             Branch<B, A> branch = inner.find(mutation.getComparable());
-            LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
+            LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), branch.getAddress());
 
             LeafTier<B, A> last = leaf;
             while (!endOfList(mutation, last))
@@ -134,9 +134,9 @@ implements Decision<B, A>
             inner.add(inner.getIndex(leaf.getAddress()) + 1, new Branch<B, A>(mutation.bucket, right.getAddress()));
 
             TierWriter<B, A> writer = structure.getWriter();
-            writer.dirty(mutation.getTxn(), inner);
-            writer.dirty(mutation.getTxn(), leaf);
-            writer.dirty(mutation.getTxn(), right);
+            writer.dirty(mutation.getStash(), inner);
+            writer.dirty(mutation.getStash(), leaf);
+            writer.dirty(mutation.getStash(), right);
 
             return new LeafInsert.InsertSorted<B, A>(inner).operate(mutation, levelOfLeaf);
         }
@@ -161,7 +161,7 @@ implements Decision<B, A>
             Structure<B, A> structure = mutation.getStructure();
 
             Branch<B, A> branch = inner.find(mutation.getComparable());
-            LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
+            LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), branch.getAddress());
 
             int middle = leaf.size() >> 1;
             boolean odd = (leaf.size() & 1) == 1;
@@ -197,9 +197,9 @@ implements Decision<B, A>
             inner.add(index + 1, new Branch<B, A>(right.get(0), right.getAddress()));
 
             TierWriter<B, A> writer = structure.getWriter();
-            writer.dirty(mutation.getTxn(), inner);
-            writer.dirty(mutation.getTxn(), leaf);
-            writer.dirty(mutation.getTxn(), right);
+            writer.dirty(mutation.getStash(), inner);
+            writer.dirty(mutation.getStash(), leaf);
+            writer.dirty(mutation.getStash(), right);
         }
 
         // TODO Document.
@@ -228,7 +228,7 @@ implements Decision<B, A>
             Structure<B, A> structure = mutation.getStructure();
 
             Branch<B, A> branch = inner.find(mutation.getComparable());
-            LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getTxn(), branch.getAddress());
+            LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), branch.getAddress());
 
             ListIterator<B> objects = leaf.listIterator();
             while (objects.hasNext())
@@ -249,7 +249,7 @@ implements Decision<B, A>
 
             // FIXME Now we are writing before we are splitting. Problem.
             // Empty cache does not work!
-            structure.getWriter().dirty(mutation.getTxn(), leaf);
+            structure.getWriter().dirty(mutation.getStash(), leaf);
 
             return true;
         }
