@@ -45,6 +45,13 @@ public interface Allocator<B, A>
     public A allocate(Stash stash, LeafTier<B, A> leaf, int size);
 
     /**
+     * Get the null address value for this allocation strategy.
+     * 
+     * @return The null address value.
+     */
+    public A getNull();
+
+    /**
      * Return true if the given address is the null value for this allocation
      * strategy.
      * 
@@ -53,11 +60,4 @@ public interface Allocator<B, A>
      * @return True if the address is null.
      */
     public boolean isNull(A address);
-    
-    /**
-     * Get the null address value for this allocation strategy.
-     * 
-     * @return The null address value.
-     */
-    public A getNull();
 }

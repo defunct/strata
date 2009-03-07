@@ -1,0 +1,8 @@
+rm -rf ./target
+mvn -Dsite.javadoc.show=private -Dsite.javadoc.visibility=private site
+rsync -az -e ssh ./target/site/apidocs/ maribor.blogometer.com:/cb/www/static/curlybraces/documentation/strata/api/private/
+rsync -az -e ssh ./target/site/xref maribor.blogometer.com:/cb/www/static/curlybraces/documentation/strata/
+rsync -az -e ssh ./target/site/cobertura maribor.blogometer.com:/cb/www/static/curlybraces/documentation/strata/
+rm -rf ./target
+mvn site
+rsync -az -e ssh ./target/site/apidocs/ maribor.blogometer.com:/cb/www/static/curlybraces/documentation/strata/api/public/

@@ -64,6 +64,6 @@ extends AbstractTierCache<B, T, F, A>
     // TODO Document.
     public TierWriter<B, A> newTierCache()
     {
-        return new PerStrataTierWriter<B, T, F, A>(getStorage(), cooper, extractor, readWriteLock, mutex, max, isAutoCommit());
+        return new PerStrataTierWriter<B, T, F, A>(getStorage(), cooper, extractor, readWriteLock, monitor, max, isAutoCommit());
     }
 }

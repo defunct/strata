@@ -19,7 +19,7 @@ public class StrataTestCase
 {
     private Query<Integer, Integer> newTransaction()
     {
-        Schema<Integer, Integer> schema = Stratas.newInMemorySchema();
+        Schema<Integer, Integer> schema = Stratas.<Integer, Integer>newInMemorySchema();
         schema.setInnerSize(5);
         schema.setLeafSize(7);
         Extractor<Integer, Integer> extractor = new Extractor<Integer, Integer>()
@@ -70,7 +70,7 @@ public class StrataTestCase
     @Test
     public void tuple()
     {
-        Schema<Person, Pair<String, String>> schema = Stratas.newInMemorySchema();
+        Schema<Person, Pair<String, String>> schema = Stratas.<Person, Pair<String, String>>newInMemorySchema();
         schema.setInnerSize(5);
         schema.setLeafSize(7);
         schema.setExtractor(new Extractor<Person, Pair<String, String>>()

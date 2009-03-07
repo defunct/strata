@@ -1,46 +1,73 @@
 package com.goodworkalan.strata;
 
-// TODO Document.
-public final class Branch<T, A>
+/**
+ * A mapping of a pivot value to a tier address where values greater than or
+ * equal to the pivot value are stored.
+ * 
+ * @author Alan Gutierrez
+ *
+ * @param <B>
+ *            The bucket type used to store index fields.
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ */
+public final class Branch<B, A>
 {
-    // TODO Document.
+    /** The child tier address. */
     private final A address;
 
-    // TODO Document.
-    private T pivot;
+    /** The bucket containing index fields of this branch. */
+    private B pivot;
 
-    // TODO Document.
-    public Branch(T pivot, A address)
+    /**
+     * Create a branch that maps the pivot value in the given bucket to the
+     * given child tier address.
+     * 
+     * @param pivot The bucket containing index fields of this branch.
+     * @param address The child tier address.
+     */
+    public Branch(B pivot, A address)
     {
         this.address = address;
         this.pivot = pivot;
     }
 
-    // TODO Document.
+    /**
+     * Get the address of the child tier.
+     * 
+     * @return The child tier address.
+     */
     public A getAddress()
     {
         return address;
     }
 
-    // TODO Document.
-    public T getPivot()
+    /**
+     * Get the bucket containing index fields of this branch.
+     * 
+     * @return The bucket.
+     */
+    public B getPivot()
     {
         return pivot;
     }
 
-    // TODO Document.
-    public void setPivot(T pivot)
+    /**
+     * Set the bucket containing index fields of this branch.
+     * 
+     * @param pivot
+     *            The bucket.
+     */
+    public void setPivot(B pivot)
     {
         this.pivot = pivot;
     }
 
-    // TODO Document.
-    public boolean isMinimal()
-    {
-        return pivot == null;
-    }
-
-    // TODO Document.
+    /**
+     * Create a string representation of the branch.
+     * 
+     * @return A string representation.
+     */
     public String toString()
     {
         return pivot == null ? "MINIMAL" : pivot.toString();

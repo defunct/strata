@@ -71,6 +71,18 @@
         </dependency>
     </dependencies>
 
+    <distributionManagement>
+      <repository>
+        <id>ssh-repository</id>
+        <url>scpexe://maribor.blogometer.com/cb/www/static/goodworkalan/m2/repository</url>
+      </repository>
+    </distributionManagement>
+
+    <properties>
+        <site.javadoc.show>protected</site.javadoc.show>
+        <site.javadoc.visiblity>public</site.javadoc.visiblity>
+    </properties>
+
     <build>
         <resources>
             <resource>
@@ -169,7 +181,21 @@
                     <reportSet>
                         <id>html</id>
                         <configuration>
-                            <show>private</show>
+                            <show>${site.javadoc.show}</show>
+                            <offlineLinks>
+                                <offlineLink>
+                                    <url>http://java.sun.com/j2se/1.5.0/docs/api/</url>
+                                    <location>etc/javadoc/jdk-5.0/</location>
+                                </offlineLink>
+                                <offlineLink>
+                                    <url>http://curlybraces.org/documentation/ilk/api/${site.javadoc.visiblity}/</url>
+                                    <location>etc/javadoc/ilk/</location>
+                                </offlineLink>
+                                <offlineLink>
+                                    <url>http://curlybraces.org/documentation/stash/api/${site.javadoc.visiblity}/</url>
+                                    <location>etc/javadoc/ilk/</location>
+                                </offlineLink>
+                            </offlineLinks>
                         </configuration>
                         <reports>
                             <report>javadoc</report>

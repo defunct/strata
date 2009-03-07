@@ -3,8 +3,8 @@ package com.goodworkalan.strata;
 import com.goodworkalan.stash.Stash;
 
 /**
- * A factory interface for creating the buckets that reference the fields used
- * to order the tree in the inner and leaf tiers of the tree.
+ * A factory interface for creating the buckets that cache the fields used to
+ * order the tree in the inner and leaf tiers of the tree.
  * 
  * @author Alan Gutierrez
  * 
@@ -24,7 +24,7 @@ public interface Cooper<T, F extends Comparable<? super F>, B>
      * storage solution.
      * 
      * @param stash
-     *            Additional participants in the storage solution.
+     *             A type-safe container of out of band data.
      * @param extractor
      *            The extractor to use to extract the index fields.
      * @param object
@@ -33,12 +33,35 @@ public interface Cooper<T, F extends Comparable<? super F>, B>
      */
     public B newBucket(Stash stash, Extractor<T, F> extractor, T object);
 
-    // TODO Document.
+    /**
+     * Get the object value from the given bucket.
+     * 
+     * @param bucket
+     *            The bucket.
+     * @return The object value.
+     */
     public T getObject(B bucket);
 
-    // TODO Document.
+    /**
+     * Get the index fields from the given bucket.
+     * 
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param extractor
+     *            The extractor to use to extract the index fields if necessary.
+     * @param bucket
+     *            The bucket.
+     * @return The index fields.
+     */
     public F getFields(Stash stash, Extractor<T, F> extractor, B bucket);
-    
-    // TODO Document.
+
+    /**
+     * Wrap a bucket cursor with a cursor that will extract the object value
+     * from the buckets returned by the cursor.
+     * 
+     * @param cursor
+     *            The bucket cursor.
+     * @return An object value cursor.
+     */
     public Cursor<T> wrap(Cursor<B> cursor);
 }

@@ -30,17 +30,17 @@ extends EmptyTierCache<B, A>
     /** The map of addresses to inner tiers. */
     private final Map<A, InnerTier<B, A>> innerTiers;
     
-    // TODO Document.
+    /** The strategy for persistent storage of inner and leaf tiers. */
     private final Storage<T, F, A> storage;
     
-    // TODO Document.
+    /** The cooper to use to create a bucket to store the index fields. */
     protected final Cooper<T, F, B> cooper;
     
-    // TODO Document.
+    /** The extractor to use to extract the index fields. */
     protected final Extractor<T, F> extractor;
 
-    // TODO Document.
-    protected final Object mutex;
+    /** A monitor used to guard the maps of inner and leaf tiers. */
+    protected final Object monitor;
     
     /**
      * The dirty tier cache size that when reached, will cause the cache to
@@ -51,12 +51,19 @@ extends EmptyTierCache<B, A>
     /**
      * Create a tier cache using the specified map of dirty tiers and the that
      * flushes when the maximum size is reached. The lock is an exclusive lock
-     * on the <code>Strata</code>.
+     * on the tree.
      * 
+     * @param storage
+     *            The persistent storage strategy.
+     * @param cooper
+     *            The cooper to use to create a bucket to store the index
+     *            fields.
+     * @param extractor
+     *            The extractor to use to extract the index fields.
      * @param lock
-     *            An exclusive lock on the <code>Strata</code>.
-     * @param mapOfDirtyTiers
-     *            The map of dirty tiers.
+     *            An exclusive lock on the tree.
+     * @param monitor
+     *            A monitor used to guard the maps of inner and leaf tiers.
      * @param max
      *            The dirty tier cache size that when reached, will cause the
      *            cache to empty and the tiers to be written.
@@ -68,7 +75,7 @@ extends EmptyTierCache<B, A>
                              Cooper<T, F, B> cooper,
                              Extractor<T, F> extractor,
                              Lock lock,
-                             Object mutex,
+                             Object monitor,
                              int max,
                              boolean autoCommit)
     {
@@ -76,28 +83,42 @@ extends EmptyTierCache<B, A>
         this.storage = storage;
         this.cooper = cooper;
         this.extractor = extractor;
-        this.mutex = mutex;
+        this.monitor = monitor;
         this.max = max;
         this.leafTiers = new HashMap<A, LeafTier<B,A>>();
         this.innerTiers = new HashMap<A, InnerTier<B,A>>();
     }
 
-    // TODO Document.
-    public void autoCommit(Stash stash)
+    /**
+     * Auto commit by calling the commit method of the storage strategy if the
+     * auto commit flag is set.
+     * 
+     * @param stash
+     *            A type-safe container of out of band data.
+     */
+    protected void autoCommit(Stash stash)
     {
         if (isAutoCommit())
         {
             storage.commit(stash);
         }
     }
-    
-    // TODO Document.
-    public Storage<T, F, A> getStorage()
+
+    /**
+     * Get the persistent storage strategy.
+     * 
+     * @return The persistent storage strategy.
+     */
+    protected Storage<T, F, A> getStorage()
     {
         return storage;
     }
-    
-    // TODO Document.
+
+    /**
+     * Get the count of leaf and inner tiers cached by the tier writer.
+     * 
+     * @return The count of leaf and inner tiers.
+     */
     public int size()
     {
         return innerTiers.size() + leafTiers.size();
@@ -118,7 +139,7 @@ extends EmptyTierCache<B, A>
      */
     protected void save(Stash stash, boolean force)
     {
-        synchronized (mutex)
+        synchronized (monitor)
         {
             if (force || innerTiers.size() + leafTiers.size() >= max)
             {
@@ -140,31 +161,49 @@ extends EmptyTierCache<B, A>
         }
     }
     
-    // TODO Document.
+    /**
+     * Record the given inner tier as dirty in the tier cache.
+     * 
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param inner
+     *            The dirty tier.
+     */
     @Override
     public void dirty(Stash stash, InnerTier<B,A> inner)
     {
-        synchronized (mutex)
+        synchronized (monitor)
         {
             innerTiers.put(inner.getAddress(), inner);
         }
     }
     
-    // TODO Document.
+    /**
+     * Remove the given dirty inner tier from the tier cache.
+     * 
+     * @param inner The tier to remove.
+     */
     @Override
     public void remove(InnerTier<B, A> inner)
     {
-        synchronized (mutex)
+        synchronized (monitor)
         {
             innerTiers.remove(inner);
         }
     }
     
-    // TODO Document.
+    /**
+     * Record the given leaf tier as dirty in the tier cache.
+     * 
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param leaf
+     *            The dirty leaf tier.
+     */
     @Override
     public void dirty(Stash stash, LeafTier<B,A> leaf)
     {
-        synchronized (mutex)
+        synchronized (monitor)
         {
             leafTiers.put(leaf.getAddress(), leaf);
         }
