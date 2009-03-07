@@ -212,7 +212,7 @@ implements Query<T, F>
             mutation.clear();
 
             generalized(mutation, new ShouldDeleteRoot<B, A>(),
-                    new MergeInner<B, A>(), new SwapKey<B, A>(),
+                    new MergeInner<B, A>(), new ShouldSwapKey<B, A>(),
                     new LeafRemove<B, A>());
         }
         while (mutation.isOnlyChild());
