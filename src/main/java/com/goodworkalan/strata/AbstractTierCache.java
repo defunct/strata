@@ -9,7 +9,7 @@ import com.goodworkalan.stash.Stash;
 /**
  * Keeps a synchronized map of dirty tiers with a maximum size at which the
  * tiers are written to file and flushed. Used as the base class of both the per
- * query and per strata implementations of the tier cache.
+ * query and per tree implementations of the tier cache.
  * 
  * @param <B>
  *            The bucket type used to store index fields.
@@ -20,6 +20,7 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  * @author Alan Gutierrez
+ * FIXME Rename AbstractTierWriter.
  */
 class AbstractTierCache<B, T, F extends Comparable<? super F>, A>
 extends EmptyTierCache<B, A>
@@ -49,9 +50,7 @@ extends EmptyTierCache<B, A>
     protected final int max;
 
     /**
-     * Create a tier cache using the specified map of dirty tiers and the that
-     * flushes when the maximum size is reached. The lock is an exclusive lock
-     * on the tree.
+     * Create a copy of this tier writer.
      * 
      * @param storage
      *            The persistent storage strategy.
@@ -61,7 +60,8 @@ extends EmptyTierCache<B, A>
      * @param extractor
      *            The extractor to use to extract the index fields.
      * @param lock
-     *            An exclusive lock on the tree.
+     *            A lock instance that will exclusively lock the tree for insert
+     *            and delete.
      * @param monitor
      *            A monitor used to guard the maps of inner and leaf tiers.
      * @param max
@@ -71,13 +71,9 @@ extends EmptyTierCache<B, A>
      *            If true, the commit method of the storage strategy is called
      *            after the dirty tiers are written.
      */
-    public AbstractTierCache(Storage<T, F, A> storage,
-                             Cooper<T, F, B> cooper,
-                             Extractor<T, F> extractor,
-                             Lock lock,
-                             Object monitor,
-                             int max,
-                             boolean autoCommit)
+    protected AbstractTierCache(Storage<T, F, A> storage,
+            Cooper<T, F, B> cooper, Extractor<T, F> extractor, Lock lock,
+            Object monitor, int max, boolean autoCommit)
     {
         super(lock, autoCommit);
         this.storage = storage;

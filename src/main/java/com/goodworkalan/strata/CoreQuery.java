@@ -100,7 +100,7 @@ implements Query<T, F>
             RootDecision<B, A> initial, Decision<B, A> subsequent,
             Decision<B, A> swap, Decision<B, A> penultimate)
     {
-        // TODO Replace this with our caching pattern.
+        // FIXME Replace this with our caching pattern.
 
         // Inform the tier cache that we are about to perform a mutation
         // of the tree.

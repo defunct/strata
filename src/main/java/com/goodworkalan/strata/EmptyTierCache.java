@@ -14,12 +14,16 @@ import com.goodworkalan.stash.Stash;
  * <p>
  * The auto commit property will retain the value set, but it does not actually
  * effect the behavior of storage.
+ * <p>
+ * @author Alan Gutierrez
+ * <p>
+ * FIXME Rename EmptyTierWriter.
  */
 public class EmptyTierCache<B, A>
 implements TierWriter<B, A>
 {
     /**
-     * A lock instance that will exclusively lock the Strata for insert and
+     * A lock instance that will exclusively lock the tree for insert and
      * delete. This lock instance is common to all tier caches generated
      * by the tier cache prototype.
      */
@@ -50,7 +54,8 @@ implements TierWriter<B, A>
      * commit according to the given auto commit flag.
      * 
      * @param lock
-     *            A lock that guards the tier writer.
+     *            A lock instance that will exclusively lock the tree for insert
+     *            and delete.
      * @param If
      *            true the tier writer will auto commit after it writes a set of
      *            dirty tiers.

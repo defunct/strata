@@ -33,7 +33,7 @@ public interface TierWriter<B, A>
     public void lock();
 
     /**
-     * Notify the tier cache that an insert or delete is about to begin so that
+     * Notify the tier writer that an insert or delete is about to begin so that
      * the tier cache can acquire locks if necessary.
      */
     public void begin();
@@ -108,6 +108,8 @@ public interface TierWriter<B, A>
      * This is part of a prototype construction pattern.
      * 
      * @return A new tier cache based on this prototype instance.
+     * <p>
+     * FIXME Dead code.
      */
     public TierWriter<B, A> newTierWriter();
 }
