@@ -1,22 +1,30 @@
 package com.goodworkalan.strata;
 
+import com.goodworkalan.ilk.Ilk;
 import com.goodworkalan.stash.Stash;
 
 // TODO Document.
-final class ObjectReferenceTierPool<B, A>
-implements TierPool<B, A>
+final class ObjectReferenceTierPool<T>
+implements TierPool<T, Ilk.Pair>
 {
     // TODO Document.
-    @SuppressWarnings("unchecked")
-    public InnerTier<B, A> getInnerTier(Stash stash, A address)
+    private final Ilk.Key key;
+    
+    // TODO Document.
+    public ObjectReferenceTierPool(Ilk.Key key)
     {
-        return (InnerTier<B, A>) address;
+        this.key = key;
     }
     
     // TODO Document.
-    @SuppressWarnings("unchecked")
-    public LeafTier<B, A> getLeafTier(Stash stash, A address)
+    public InnerTier<T, Ilk.Pair> getInnerTier(Stash stash, Ilk.Pair address)
     {
-        return (LeafTier<B, A>) address;
+        return address.cast(new Ilk<InnerTier<T, Ilk.Pair>>(key) { });
+    }
+    
+    // TODO Document.
+    public LeafTier<T, Ilk.Pair> getLeafTier(Stash stash, Ilk.Pair address)
+    {
+        return address.cast(new Ilk<LeafTier<T, Ilk.Pair>>(key) { });
     }
 }

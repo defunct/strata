@@ -4,51 +4,87 @@ import java.util.ArrayList;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-// TODO Document.
-public abstract class Tier<B, A>
-extends ArrayList<B>
+/**
+ * A level in the b+tree and the base class for inner and leaf tiers.
+ * 
+ * @author Alan Gutierrez
+ * 
+ * @param <T>
+ *            The value type of the indexed objects.
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ */
+public abstract class Tier<T, A>
+extends ArrayList<T>
 {
-    // TODO Document.
+    /** The serial version id. */
     private static final long serialVersionUID = 1L;
 
-    // TODO Document.
+    /** The read/write lock used to guard this tier. */
     private final ReadWriteLock readWriteLock;
 
-    // TODO Document.
+    /** The address of the tier in persistent storage. */
     private A address;
     
-    // TODO Document.
+    /**
+     * Create a new tier.
+     */
     public Tier()
     {
         this.readWriteLock = new ReentrantReadWriteLock();
     }
-    
-    // TODO Document.
+
+    /**
+     * Get the read/write lock used to guard this tier.
+     * 
+     * @return The read/write lock used to guard this tier.
+     */
     public ReadWriteLock getReadWriteLock()
     {
         return readWriteLock;
     }
 
-    // TODO Document.
+    /**
+     * Get the address of the tier in persistent storage.
+     * 
+     * @return The address of the tier in persistent storage.
+     */
     public A getAddress()
     {
         return address;
     }
-    
-    // TODO Document.
+
+    /**
+     * Set the address of the tier in persistent storage.
+     * 
+     * @param address
+     *            The address of the tier in persistent storage.
+     */
     public void setAddress(A address)
     {
         this.address = address;
     }
-    
-    // TODO Document.
+
+    /**
+     * The equals method is overridden from array list to implement identity
+     * equality since tiers are not copied or duplicated. This allows tiers to
+     * be used in sets and as hash keys.
+     * 
+     * @return True if the given object is this object.
+     */
     @Override
-    public boolean equals(Object o)
+    public boolean equals(Object object)
     {
-        return o == this;
+        return object == this;
     }
-    
-    // TODO Document.
+
+    /**
+     * The hash code method is overridden from array list to implement identity
+     * equality since tiers are not copied or duplicated. This allows tiers to
+     * be used in sets and as hash keys.
+     * 
+     * @return True if the given object is this object.
+     */
     @Override
     public int hashCode()
     {

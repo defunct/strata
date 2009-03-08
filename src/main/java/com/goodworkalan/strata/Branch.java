@@ -6,18 +6,18 @@ package com.goodworkalan.strata;
  * 
  * @author Alan Gutierrez
  *
- * @param <B>
- *            The bucket type used to store index fields.
+ * @param <T>
+ *            The value type of the indexed objects.
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public final class Branch<B, A>
+public final class Branch<T, A>
 {
     /** The child tier address. */
     private final A address;
 
     /** The bucket containing index fields of this branch. */
-    private B pivot;
+    private T pivot;
 
     /**
      * Create a branch that maps the pivot value in the given bucket to the
@@ -26,7 +26,7 @@ public final class Branch<B, A>
      * @param pivot The bucket containing index fields of this branch.
      * @param address The child tier address.
      */
-    public Branch(B pivot, A address)
+    public Branch(T pivot, A address)
     {
         this.address = address;
         this.pivot = pivot;
@@ -47,7 +47,7 @@ public final class Branch<B, A>
      * 
      * @return The bucket.
      */
-    public B getPivot()
+    public T getPivot()
     {
         return pivot;
     }
@@ -58,7 +58,7 @@ public final class Branch<B, A>
      * @param pivot
      *            The bucket.
      */
-    public void setPivot(B pivot)
+    public void setPivot(T pivot)
     {
         this.pivot = pivot;
     }

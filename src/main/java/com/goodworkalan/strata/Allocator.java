@@ -7,12 +7,12 @@ import com.goodworkalan.stash.Stash;
  * 
  * @author Alan Gutierrez
  * 
- * @param <B>
- *            The bucket type used to store index fields.
+ * @param <T>
+ *            The value type of the indexed objects.
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public interface Allocator<B, A>
+public interface Allocator<T, A>
 {
     /**
      * Allocate persistent storage for the given inner tier that can hold the
@@ -20,14 +20,14 @@ public interface Allocator<B, A>
      * memory strategy can return a reference to it as the address value.
      * 
      * @param stash
-     *            A stash of out of band data.
+     *          A type-safe container of out of band data.
      * @param inner
      *            The inner tier.
      * @param capacity
      *            The number of branches in the inner tier.
      * @return The address of the persistent storage.
      */
-    public A allocate(Stash stash, InnerTier<B, A> inner, int capacity);
+    public A allocate(Stash stash, InnerTier<T, A> inner, int capacity);
 
     /**
      * Allocate persistent storage for the given inner tier that can hold the
@@ -35,15 +35,84 @@ public interface Allocator<B, A>
      * the in memory strategy can return a reference to it as the address value.
      * 
      * @param stash
-     *            A stash of out of band data.
+     *            A type-safe container of out of band data.
      * @param inner
      *            The inner tier.
      * @param capacity
      *            The number of values in the leaf tier.
      * @return The address of the persistent storage.
      */
-    public A allocate(Stash stash, LeafTier<B, A> leaf, int size);
+    public A allocate(Stash stash, LeafTier<T, A> leaf, int capacity);
+    
+    /**
+     * Load an inner tier from the persistent storage at the given address. Use
+     * the given cooper to create a bucket to store the indexed fields. Use the
+     * given extractor to extract the index fields.
+     * 
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param address
+     *            The address of the inner tier storage.
+     *@param inner
+     *            The leaf inner to load from storage.
+     */
+    public void load(Stash stash, A address, InnerTier<T, A> inner);
 
+    /**
+     * Load a leaf tier from the persistent storage at the given address. Use
+     * the given cooper to create a bucket to store the indexed fields. Use the
+     * given extractor to extract the index fields.
+     * 
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param address
+     *            The address of the leaf tier storage.
+     * @param leaf
+     *            The leaf tier to load from storage.
+     */
+    public void load(Stash stash, A address, LeafTier<T, A> leaf);
+
+    /**
+     * Write an inner tier to the persistent storage at the given address.
+     * 
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param address
+     *            The address of the inner tier storage.
+     */
+    public void dirty(Stash stash, InnerTier<T, A> inner);
+
+    /**
+     * Write a leaf tier to the persistent storage at the given address.
+     * 
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param leaf
+     *            The dirty leaf tier.
+     * @return The leaf tier loaded from storage.
+     */
+    public void dirty(Stash stash, LeafTier<T, A> leaf);
+    
+    /**
+     * Free an inner tier from the persistent storage at the given address.
+     * 
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param address
+     *            The address of the inner tier storage.
+     */
+    public void remove(Stash stash, InnerTier<T, A> inner);
+
+    /**
+     * Free a leaf tier from the persistent storage at the given address.
+     * 
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param address
+     *            The address of the leaf tier storage.
+     */
+    public void remove(Stash stash, LeafTier<T, A> leaf);
+    
     /**
      * Get the null address value for this allocation strategy.
      * 

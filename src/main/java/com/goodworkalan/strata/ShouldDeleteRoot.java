@@ -1,20 +1,17 @@
 package com.goodworkalan.strata;
 
 
-/**
- * Logic for deleting the 
- */
-final class ShouldDeleteRoot<B, A>
-implements RootDecision<B, A>
+// TODO Document.
+final class ShouldDeleteRoot<T, A>
+implements RootDecision<T, A>
 {
-    // TODO Document.
-    public boolean test(Mutation<B, A> mutation, Level<B, A> levelOfRoot, InnerTier<B, A> root)
+    public boolean test(Mutation<T, A> mutation, Level<T, A> levelOfRoot, InnerTier<T, A> root)
     {
         if (root.getChildType() == ChildType.INNER && root.size() == 2)
         {
-            Structure<B, A> structure = mutation.getStructure();
-            InnerTier<B, A> first = structure.getPool().getInnerTier(mutation.getStash(), root.get(0).getAddress());
-            InnerTier<B, A> second = structure.getPool().getInnerTier(mutation.getStash(), root.get(1).getAddress());
+            Structure<T, A> structure = mutation.getStructure();
+            InnerTier<T, A> first = structure.getPool().getInnerTier(mutation.getStash(), root.get(0).getAddress());
+            InnerTier<T, A> second = structure.getPool().getInnerTier(mutation.getStash(), root.get(1).getAddress());
             // FIXME These numbers are off.
             return first.size() + second.size() == structure.getInnerSize();
         }
@@ -22,9 +19,9 @@ implements RootDecision<B, A>
     }
 
     // TODO Document.
-    public void operation(Mutation<B, A> mutation, Level<B, A> levelOfRoot, InnerTier<B, A> root)
+    public void operation(Mutation<T, A> mutation, Level<T, A> levelOfRoot, InnerTier<T, A> root)
     {
-        levelOfRoot.listOfOperations.add(new ShouldDeleteRoot.MergeRoot<B, A>(root));
+        levelOfRoot.listOfOperations.add(new ShouldDeleteRoot.MergeRoot<T, A>(root));
     }
 
     // TODO Document.
@@ -58,9 +55,9 @@ implements RootDecision<B, A>
 
             root.setChildType(child.getChildType());
 
-            TierWriter<B, A> writer = structure.getWriter();
-            writer.remove(child);
-            writer.dirty(mutation.getStash(), root);
+            Allocator<B, A> allocator = structure.getAllocator();
+            allocator.remove(mutation.getStash(), child);
+            allocator.dirty(mutation.getStash(), root);
         }
 
         // TODO Document.

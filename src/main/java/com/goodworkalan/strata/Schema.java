@@ -1,152 +1,155 @@
 package com.goodworkalan.strata;
 
+import com.goodworkalan.ilk.Ilk;
 import com.goodworkalan.stash.Stash;
 
-// TODO Document.
-public final class Schema<T, F extends Comparable<? super F>>
+/**
+ * A builder pattern for b+trees that defines the ordering and size of
+ * leaves as properties of the builder, creating new b+trees from a given
+ * persistent storage strategy.  
+ * 
+ * @author Alan Gutierrez
+ *
+ * @param <T>
+ *            The value type of the indexed objects.
+ */
+public final class Schema<T>
 {
-    // TODO Document.
-    private int innerSize;
+    /** The capacity of branches of an inner tier. */
+    private int innerCapacity;
     
-    // TODO Document.
-    private int leafSize;
+    /** The capacity of object values of a leaf tier. */
+    private int leafCapacity;
     
-    // TODO Document.
-    private StorageBuilder<T, F> storageBuilder;
+    /**
+     * The factory to use to create comparables for objects in the b+tree to
+     * compare against other object in the b+tree.
+     */
+    private ComparableFactory<T> comparableFactory;
     
-    // TODO Document.
-    private AllocatorBuilder allocatorBuilder;
-    
-    // TODO Document.
-    private TierWriterBuilder tierWriterBuilder;
-    
-    // TODO Document.
-    private TierPoolBuilder tierPoolBuilder;
-    
-    // TODO Document.
-    private boolean fieldCaching;
-    
-    // TODO Document.
-    private Extractor<T, F> extractor;
-    
-    // TODO Document.
-    public void setInnerSize(int innerSize)
+    /**
+     * Set the capacity of branches of an inner tier.
+     * 
+     * @param capacity
+     *            The capacity of branches of an inner tier.
+     */
+    public void setInnerCapacity(int capacity)
     {
-        this.innerSize = innerSize;
-    }
-    
-    // TODO Document.
-    public int getInnerSize()
-    {
-        return innerSize;
+        this.innerCapacity = capacity;
     }
 
-    // TODO Document.
-    public void setLeafSize(int leafSize)
+    /**
+     * Get the capacity of branches of an inner tier.
+     * 
+     * @return The capacity of branches of an inner tier.
+     */
+    public int getInnerCapacity()
     {
-        this.leafSize = leafSize;
-    }
-    
-    // TODO Document.
-    public int getLeafSize()
-    {
-        return leafSize;
-    }
-    
-    // TODO Document.
-    public AllocatorBuilder getAllocatorBuilder()
-    {
-        return allocatorBuilder;
+        return innerCapacity;
     }
 
-    // TODO Document.
-    public void setAllocatorBuilder(AllocatorBuilder allocatorBuilder)
+    /**
+     * Set the capacity of object values of a leaf tier.
+     * 
+     * @param capacity
+     *            The capacity of object values of a leaf tier.
+     */
+    public void setLeafCapacity(int capacity)
     {
-        this.allocatorBuilder = allocatorBuilder;
-    }
-    
-    // TODO Document.
-    public boolean isFieldCaching()
-    {
-        return fieldCaching;
-    }
-    
-    // TODO Document.
-    public void setFieldCaching(boolean fieldCaching)
-    {
-        this.fieldCaching = fieldCaching;
-    }
-    
-    // TODO Document.
-    public StorageBuilder<T, F> getStorageBuilder_()
-    {
-        return storageBuilder;
-    }
-    
-    // TODO Document.
-    public void setStorageBuilder_(StorageBuilder<T, F> storageBuilder)
-    {
-        this.storageBuilder = storageBuilder;
-    }
-    
-    // TODO Document.
-    public TierWriterBuilder getTierWriterBuilder()
-    {
-        return tierWriterBuilder;
-    }
-    
-    // TODO Document.
-    public void setTierWriterBuilder(TierWriterBuilder tierWriterBuilder)
-    {
-        this.tierWriterBuilder = tierWriterBuilder;
-    }
-    
-    // TODO Document.
-    public TierPoolBuilder getTierPoolBuilder()
-    {
-        return tierPoolBuilder;
-    }
-    
-    // TODO Document.
-    public void setTierPoolBuilder(TierPoolBuilder tierPoolBuilder)
-    {
-        this.tierPoolBuilder = tierPoolBuilder;
+        this.leafCapacity = capacity;
     }
 
-    // TODO Document.
-    public Extractor<T, F> getExtractor()
+    /**
+     * Set the capacity of object values of a leaf tier.
+     * 
+     * @return The capacity of object values of a leaf tier.
+     */
+    public int getLeafCapacity()
     {
-        return extractor;
+        return leafCapacity;
     }
 
-    // TODO Document.
-    public void setExtractor(Extractor<T, F> extractor)
+    /**
+     * Set the factory to use to create comparables for objects in the b+tree to
+     * compare against other object in the b+tree.
+     * 
+     * @param comparableFactory
+     *            The factory to use to create comparables.
+     */
+    public void setComparableFactory(ComparableFactory<T> comparableFactory)
     {
-        this.extractor = extractor;
-    }
-    
-    // TODO Document.
-    public <A> Construction<T, F, A> create(Stash stash, Storage<T, F, A> storage)
-    {
-        TreeBuilder builder = isFieldCaching() ? new BucketTreeBuilder() : new LookupTreeBuilder();
-        return builder.create(stash, this, storage);
-    }
-    
-    // TODO Document.
-    public <A> Strata<T, F> open(Stash stash, Storage<T, F, A> storage, A address) 
-    {
-        TreeBuilder builder = isFieldCaching() ? new BucketTreeBuilder() : new LookupTreeBuilder();
-        return builder.open(stash, this, storage, address);
-    }
-    
-    // TODO Document.
-    public Query<T, F> create(Stash stash, StorageBuilder<T, F> storageBuilder)
-    {
-        return storageBuilder.create(stash, this);
+        this.comparableFactory = comparableFactory;
     }
 
-//    public Query<T, F> create(Stash stash)
-//    {
-//        return storageBuilder.create(stash, this);
-//    }
+    /**
+     * Get the factory to use to create comparables for objects in the b+tree to
+     * compare against other object in the b+tree.
+     * 
+     * @return The factory to use to create comparables.
+     */
+    public ComparableFactory<T> getComparableFactory()
+    {
+        return comparableFactory;
+    }
+
+    /**
+     * Create a new b+tree with the given storage strategy using the properties
+     * of this schema.
+     * 
+     * @param <A>
+     *            The address type used to identify an inner or leaf tier.
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param storage
+     *            The persistent storage strategy.
+     * @return A new b+tree.
+     */
+    public <A> A create(Stash stash, Storage<T, A> storage)
+    {
+        Allocator<T, A> allocator = storage.getAllocator();
+        
+        InnerTier<T, A> root = new InnerTier<T, A>();
+        root.setChildType(ChildType.LEAF);
+        root.setAddress(allocator.allocate(stash, root, innerCapacity));
+        
+        LeafTier<T, A> leaf = new LeafTier<T, A>();
+        leaf.setAddress(allocator.allocate(stash, leaf, leafCapacity));
+        
+        root.add(new Branch<T, A>(null, leaf.getAddress()));
+ 
+        allocator.dirty(stash, root);
+        allocator.dirty(stash, leaf);
+        
+        return root.getAddress();
+    }
+    
+    // TODO Document.
+    public <A> Strata<T> inMemory(Stash stash, Ilk<T> ilk)
+    {
+        InMemoryStorage<T> inMemoryStorage = new InMemoryStorage<T>(ilk);
+        Ilk.Pair root = create(stash, inMemoryStorage);
+        return open(stash, root, inMemoryStorage);
+    }
+    
+    /**
+     * Open an existing b+tree at the given root address with the given
+     * persistent storage strategy.
+     * 
+     * @param <A>
+     *            The address type used to identify an inner or leaf tier.
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param rootAddress
+     *            The root address of the b+tree root inner tier.
+     * @param storage
+     *            The persistent storage strategy.
+     * @return The opened b+tree.
+     */
+    public <A> Strata<T> open(Stash stash, A rootAddress, Storage<T, A> storage)
+    {
+        Allocator<T, A> allocator = storage.getAllocator();
+        TierPool<T, A> pool = storage.getTierPool();
+        Structure<T, A> structure = new Structure<T, A>(innerCapacity, leafCapacity, allocator, pool, comparableFactory);
+        return new CoreStrata<T, A>(rootAddress, structure);
+    }
 }

@@ -1,37 +1,36 @@
 package com.goodworkalan.strata;
 
-import java.util.List;
-
-public final class MergeInner<T, A>
+public final class MergeLeaf<T, A>
 implements Operation<T, A>
 {
     // TODO Document.
     private final InnerTier<T, A> parent;
 
     // TODO Document.
-    private final List<InnerTier<T, A>> listToMerge;
+    private final LeafTier<T, A> left;
 
     // TODO Document.
-    public MergeInner(InnerTier<T, A> parent, List<InnerTier<T, A>> listToMerge)
+    private final LeafTier<T, A> right;
+
+    // TODO Document.
+    public MergeLeaf(InnerTier<T, A> parent, LeafTier<T, A> left, LeafTier<T, A> right)
     {
         this.parent = parent;
-        this.listToMerge = listToMerge;
+        this.left = left;
+        this.right = right;
     }
 
     // TODO Document.
     public void operate(Mutation<T, A> mutation)
     {
-        InnerTier<T, A> left = listToMerge.get(0);
-        InnerTier<T, A> right = listToMerge.get(1);
+        parent.remove(parent.getIndex(right.getAddress()));
 
-        int index = parent.getIndex(right.getAddress());
-        Branch<T, A> branch = parent.remove(index);
-
-        right.get(0).setPivot(branch.getPivot());
         while (right.size() != 0)
         {
             left.add(right.remove(0));
         }
+        // FIXME Get last leaf. 
+        left.setNext(right.getNext());
 
         Allocator<T, A> writer = mutation.getStructure().getAllocator();
         writer.remove(mutation.getStash(), right);

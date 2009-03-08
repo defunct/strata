@@ -1,10 +1,10 @@
 package com.goodworkalan.strata;
 
 // TODO Document.
-interface Operation<B, A>
+interface Operation<T, A>
 {
     // TODO Document.
-    public void operate(Mutation<B, A> mutation);
+    public void operate(Mutation<T, A> mutation);
 
     // TODO Document.
     public boolean canCancel();

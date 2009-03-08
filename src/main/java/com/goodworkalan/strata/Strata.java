@@ -4,7 +4,7 @@ import com.goodworkalan.stash.Stash;
 
 // FIXME Add field to strata.
 // TODO Document.
-public interface Strata<T, F extends Comparable<? super F>>
+public interface Strata<T>
 {
     /**
      * Create a query of the strata using the given <code>stash</code> to
@@ -14,8 +14,8 @@ public interface Strata<T, F extends Comparable<? super F>>
      *            Additional participants in the storage strategy.
      * @return A new query of the strata.
      */
-    public Query<T, F> query(Stash stash);
+    public Query<T> query(Stash stash);
 
     // TODO Document.
-    public Query<T, F> query();
+    public Query<T> query();
 }

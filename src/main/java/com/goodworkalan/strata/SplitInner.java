@@ -1,69 +1,48 @@
 package com.goodworkalan.strata;
 
-// TODO Document.
-final class SplitInner<B, A>
-implements Decision<B, A>
+public final class SplitInner<T, A>
+implements Operation<T, A>
 {
     // TODO Document.
-    public boolean test(Mutation<B, A> mutation, Level<B, A> levelOfParent, Level<B, A> levelOfChild, InnerTier<B, A> parent)
+    private final InnerTier<T, A> parent;
+
+    // TODO Document.
+    private final InnerTier<T, A> child;
+
+    // TODO Document.
+    public SplitInner(InnerTier<T, A> parent, InnerTier<T, A> child)
     {
-        Structure<B, A> structure = mutation.getStructure();
-        Branch<B, A> branch = parent.find(mutation.getComparable());
-        InnerTier<B, A> child = structure.getPool().getInnerTier(mutation.getStash(), branch.getAddress());
-        levelOfChild.lockAndAdd(child);
-        if (child.size() == structure.getInnerSize())
-        {
-            levelOfParent.listOfOperations.add(new SplitInner.Split<B, A>(parent, child));
-            return true;
-        }
-        return false;
+        this.parent = parent;
+        this.child = child;
     }
 
     // TODO Document.
-    public final static class Split<B, A>
-    implements Operation<B, A>
+    public void operate(Mutation<T, A> mutation)
     {
-        // TODO Document.
-        private final InnerTier<B, A> parent;
+        InnerTier<T, A> right = mutation.newInnerTier(child.getChildType());
 
-        // TODO Document.
-        private final InnerTier<B, A> child;
+        int partition = child.size() / 2;
 
-        // TODO Document.
-        public Split(InnerTier<B, A> parent, InnerTier<B, A> child)
+        while (partition < child.size())
         {
-            this.parent = parent;
-            this.child = child;
+            right.add(child.remove(partition));
         }
 
-        // TODO Document.
-        public void operate(Mutation<B, A> mutation)
-        {
-            InnerTier<B, A> right = mutation.newInnerTier(child.getChildType());
+        T pivot = right.get(0).getPivot();
+        right.get(0).setPivot(null);
 
-            int partition = child.size() / 2;
+        int index = parent.getIndex(child.getAddress());
+        parent.add(index + 1, new Branch<T, A>(pivot, right.getAddress()));
 
-            while (partition < child.size())
-            {
-                right.add(child.remove(partition));
-            }
+        Allocator<T, A> allocator = mutation.getStructure().getAllocator();
+        allocator.dirty(mutation.getStash(), parent);
+        allocator.dirty(mutation.getStash(), child);
+        allocator.dirty(mutation.getStash(), right);
+    }
 
-            B pivot = right.get(0).getPivot();
-            right.get(0).setPivot(null);
-
-            int index = parent.getIndex(child.getAddress());
-            parent.add(index + 1, new Branch<B, A>(pivot, right.getAddress()));
-
-            TierWriter<B, A> writer = mutation.getStructure().getWriter();
-            writer.dirty(mutation.getStash(), parent);
-            writer.dirty(mutation.getStash(), child);
-            writer.dirty(mutation.getStash(), right);
-        }
-
-        // TODO Document.
-        public boolean canCancel()
-        {
-            return true;
-        }
+    // TODO Document.
+    public boolean canCancel()
+    {
+        return true;
     }
 }

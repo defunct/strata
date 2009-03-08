@@ -3,12 +3,12 @@ package com.goodworkalan.strata;
 import com.goodworkalan.stash.Stash;
 
 // TODO Document.
-public interface Query<T, F extends Comparable<? super F>>
+public interface Query<T>
 {
     /**
-     * Get the stash used to store query state.
+     * Get type-safe container of out of band data.
      * 
-     * @return The stash.
+     * @return The type-safe container of out of band data.
      */
     public Stash getStash();
     
@@ -17,7 +17,7 @@ public interface Query<T, F extends Comparable<? super F>>
      * 
      * @return The <code>Strata</code>.
      */
-    public Strata<T, F> getStrata();
+    public Strata<T> getStrata();
 
     /**
      * Add the given object to the <code>Strata</code> B+Tree.
@@ -27,11 +27,13 @@ public interface Query<T, F extends Comparable<? super F>>
      */
     public void add(T object);
     
-    // TODO Rename find fields? (Erasure)
-    public Cursor<T> find(Comparable<? super F> comparable);
-    
-    public T remove(Deletable<T> deletable, Comparable<? super F> comparable);
+    public Comparable<? super T> newComparable(T object);
 
+    // TODO Rename find fields? (Erasure)
+    public Cursor<T> find(Comparable<? super T> comparable);
+    
+    public T remove(Deletable<T> deletable, Comparable<? super T> comparable);
+    
     /**
      * Remove the first object whose index fields are equal to the given
      * comparable.
@@ -41,7 +43,7 @@ public interface Query<T, F extends Comparable<? super F>>
      * @return The removed object or null if no object is equal to the given
      *         comparable.
      */
-    public T remove(Comparable<? super F> comparable);
+    public T remove(Comparable<? super T> comparable);
 
     /**
      * Constructs an instance of <code>Deletable</code> whose
@@ -60,20 +62,6 @@ public interface Query<T, F extends Comparable<? super F>>
      * @return A cursor that references the first object in the B-Tree.
      */
     public Cursor<T> first();
-
-    /**
-     * Extracts the fields used to index the object from the given object.
-     * 
-     * @param object
-     *            The object to extract from.
-     * @return The fields used to index the object.
-     */
-    public F extract(T object);
-    
-    /**
-     * Flush the query to its persistent storage.
-     */
-    public void flush();
 
     /**
      * Destroy the <code>Strata</code> B-Tree by deallocating all of its pages

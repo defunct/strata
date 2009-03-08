@@ -1,8 +1,8 @@
 package com.goodworkalan.strata;
 
 // TODO Document.
-public final class LeafTier<B, A>
-extends Tier<B, A>
+public final class LeafTier<T, A>
+extends Tier<T, A>
 {
     // TODO Document.
     private static final long serialVersionUID = 1L;
@@ -11,7 +11,7 @@ extends Tier<B, A>
     private A next;
     
     // TODO Document.
-    public int find(Comparable<B> comparable)
+    public int find(Comparable<? super T> comparable)
     {
         int low = 1;
         int high = size() - 1;
@@ -40,10 +40,10 @@ extends Tier<B, A>
     }
     
     // TODO Document.
-    public void link(Mutation<B, A> mutation, LeafTier<B, A> nextLeaf)
+    public void link(Mutation<T, A> mutation, LeafTier<T, A> nextLeaf)
     {
-        Structure<B, A> structure = mutation.getStructure();
-        TierWriter<B, A> writer = structure.getWriter();
+        Structure<T, A> structure = mutation.getStructure();
+        Allocator<T, A> writer = structure.getAllocator();
         writer.dirty(mutation.getStash(), this);
         writer.dirty(mutation.getStash(), nextLeaf);
         nextLeaf.setNext(getNext());
@@ -51,12 +51,12 @@ extends Tier<B, A>
     }
     
     // TODO Document.
-    public LeafTier<B, A> getNextAndLock(Mutation<B, A> mutation, Level<B, A> leafLevel)
+    public LeafTier<T, A> getNextAndLock(Mutation<T, A> mutation, Level<T, A> leafLevel)
     {
-        Structure<B, A> structure = mutation.getStructure();
+        Structure<T, A> structure = mutation.getStructure();
         if (!structure.getAllocator().isNull(getNext()))
         {
-            LeafTier<B, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), getNext());
+            LeafTier<T, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), getNext());
             leafLevel.lockAndAdd(leaf);
             return leaf;
         }
@@ -64,13 +64,13 @@ extends Tier<B, A>
     }
     
     // TODO Document.
-    public void append(Mutation<B, A> mutation, Level<B, A> leafLevel)
+    public void append(Mutation<T, A> mutation, Level<T, A> leafLevel)
     {
-        Structure<B, A> structure = mutation.getStructure();
+        Structure<T, A> structure = mutation.getStructure();
         if (size() == structure.getLeafSize())
         {
-            LeafTier<B, A> nextLeaf = getNextAndLock(mutation, leafLevel);
-            if (null == nextLeaf || structure.compare(mutation.getStash(), mutation.getBucket(), nextLeaf.get(0)) != 0)
+            LeafTier<T, A> nextLeaf = getNextAndLock(mutation, leafLevel);
+            if (null == nextLeaf || structure.getComparableFactory().newComparable(mutation.getStash(), mutation.getObject()).compareTo(nextLeaf.get(0)) != 0)
             {
                 nextLeaf = mutation.newLeafTier();
                 link(mutation, nextLeaf);
@@ -79,13 +79,13 @@ extends Tier<B, A>
         }
         else
         {
-            add(mutation.getBucket());
-            structure.getWriter().dirty(mutation.getStash(), this);
+            add(mutation.getObject());
+            structure.getAllocator().dirty(mutation.getStash(), this);
         }
     }
 
     // TODO Document.
-    public LeafTier<B, A> getNext(Mutation<B, A> mutation)
+    public LeafTier<T, A> getNext(Mutation<T, A> mutation)
     {
         return mutation.getStructure().getPool().getLeafTier(mutation.getStash(), getNext());
     }

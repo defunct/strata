@@ -6,25 +6,24 @@ import java.util.LinkedList;
 import com.goodworkalan.stash.Stash;
 
 // TODO Document.
-final class Mutation<B, A>
+final class Mutation<T, A>
 {
     // TODO Document.
     private final Stash stash;
 
     // TODO Document.
-    private final Structure<B, A> structure;
+    private final Structure<T, A> structure;
     
     // TODO Document.
-    final B bucket;
+    private final Comparable<? super T> comparable;
+    
+    private final T object;
     
     // TODO Document.
-    private final Comparable<B> comparable;
+    final Deletable<T> deletable;
     
     // TODO Document.
-    final Deletable<B> deletable;
-    
-    // TODO Document.
-    final LinkedList<Level<B, A>> listOfLevels = new LinkedList<Level<B, A>>();
+    final LinkedList<Level<T, A>> listOfLevels = new LinkedList<Level<T, A>>();
     
     // TODO Document.
     private boolean onlyChild;
@@ -32,34 +31,34 @@ final class Mutation<B, A>
     // TODO Document.
     private boolean deleting;
     
-    // TODO Document.
-    private B result;
+    /** The mutation result. */
+    private T result;
     
     // TODO Document.
-    private B replacement;
+    private T replacement;
     
     // TODO Document.
-    private LeafTier<B, A> leftLeaf;
+    private LeafTier<T, A> leftLeaf;
     
     // TODO Document.
-    public LeafOperation<B, A> leafOperation;
+    public LeafOperation<T, A> leafOperation;
 
     // TODO Document.
     public Mutation(Stash stash,
-                    Structure<B, A> structure,
-                    B bucket,
-                    Comparable<B> comparable,
-                    Deletable<B> deletable)
+                    Structure<T, A> structure,
+                    Comparable<? super T> comparable,
+                    T object,
+                    Deletable<T> deletable)
     {
         this.stash = stash;
         this.comparable = comparable;
         this.deletable = deletable;
-        this.bucket = bucket;
+        this.object = object;
         this.structure = structure;
     }
     
     // TODO Document.
-    public Comparable<B> getComparable()
+    public Comparable<? super T> getComparable()
     {
         return comparable;
     }
@@ -70,50 +69,70 @@ final class Mutation<B, A>
         return stash;
     }
     
-    // TODO Document.
-    public B getBucket()
+    public T getObject()
     {
-        return bucket;
+        return object;
     }
-
+    
     // TODO Document.
-    public Structure<B, A> getStructure()
+    public Structure<T, A> getStructure()
     {
         return structure;
     }
 
-    // TODO Document.
-    public B getResult()
+    /**
+     * Get the result of a delete operation, the object deleted from the tree if
+     * any.
+     * 
+     * @return The mutation result.
+     */
+    public T getResult()
     {
         return result;
     }
-    
-    // TODO Document.
-    public void setResult(B result)
+
+    /**
+     * Set the result of a delete operation, the object deleted from the tree if
+     * any.
+     * 
+     * @param result
+     *            The mutation result.
+     */
+    public void setResult(T result)
     {
         this.result = result;
     }
     
-    // TODO Document.
-    public B getReplacement()
+    /**
+     * Get the value to use to replace an inner tier pivot if the pivot
+     * value is going to be deleted entirely from the leaf.
+     *  
+     * @return The pivot replacement.
+     */
+    public T getReplacement()
     {
         return replacement;
     }
     
-    // TODO Document.
-    public void setReplacement(B replacement)
+    /**
+     * Set the value to use to replace an inner tier pivot if the pivot
+     * value is going to be deleted entirely from the leaf.
+     *  
+     * @param replacement The pivot replacement.
+     */
+    public void setReplacement(T replacement)
     {
         this.replacement = replacement;
     }
     
     // TODO Document.
-    public LeafTier<B, A> getLeftLeaf()
+    public LeafTier<T, A> getLeftLeaf()
     {
         return leftLeaf;
     }
     
     // TODO Document.
-    public void setLeftLeaf(LeafTier<B, A> leftLeaf)
+    public void setLeftLeaf(LeafTier<T, A> leftLeaf)
     {
         this.leftLeaf = leftLeaf;
     }
@@ -143,18 +162,18 @@ final class Mutation<B, A>
     }
     
     // TODO Document.
-    public InnerTier<B, A> newInnerTier(ChildType childType)
+    public InnerTier<T, A> newInnerTier(ChildType childType)
     {
-        InnerTier<B, A> inner = new InnerTier<B, A>();
+        InnerTier<T, A> inner = new InnerTier<T, A>();
         inner.setAddress(getStructure().getAllocator().allocate(getStash(), inner, getStructure().getInnerSize()));
         inner.setChildType(childType);
         return inner;
     }
     
     // TODO Document.
-    public LeafTier<B, A> newLeafTier()
+    public LeafTier<T, A> newLeafTier()
     {
-        LeafTier<B, A> leaf = new LeafTier<B, A>();
+        LeafTier<T, A> leaf = new LeafTier<T, A>();
         leaf.setAddress(getStructure().getAllocator().allocate(getStash(), leaf, getStructure().getInnerSize()));
         return leaf;
     }
@@ -162,17 +181,17 @@ final class Mutation<B, A>
     // TODO Document.
     public void rewind(int leaveExclusive)
     {
-        Iterator<Level<B, A>>levels = listOfLevels.iterator();
+        Iterator<Level<T, A>>levels = listOfLevels.iterator();
         int size = listOfLevels.size();
         boolean unlock = true;
 
         for (int i = 0; i < size - leaveExclusive; i++)
         {
-            Level<B, A> level = levels.next();
-            Iterator<Operation<B, A>> operations = level.listOfOperations.iterator();
+            Level<T, A> level = levels.next();
+            Iterator<Operation<T, A>> operations = level.listOfOperations.iterator();
             while (operations.hasNext())
             {
-                Operation<B, A> operation = operations.next();
+                Operation<T, A> operation = operations.next();
                 if (operation.canCancel())
                 {
                     operations.remove();
@@ -200,10 +219,10 @@ final class Mutation<B, A>
     // TODO Document.
     public void shift()
     {
-        Iterator<Level<B, A>> levels = listOfLevels.iterator();
+        Iterator<Level<T, A>> levels = listOfLevels.iterator();
         while (listOfLevels.size() > 3 && levels.hasNext())
         {
-            Level<B, A> level = levels.next();
+            Level<T, A> level = levels.next();
             if (level.listOfOperations.size() != 0)
             {
                 break;
@@ -215,7 +234,7 @@ final class Mutation<B, A>
     }
     
     // TODO Document.
-    public Comparable<B> newComparable(B object)
+    public Comparable<T> _newComparable(T object)
     {
         return null;
     }

@@ -1,11 +1,11 @@
 package com.goodworkalan.strata;
 
 // TODO Document.
-interface RootDecision<B, A>
+interface RootDecision<T, A>
 {
     // TODO Document.
-    public boolean test(Mutation<B, A> mutation, Level<B, A> levelOfRoot, InnerTier<B, A> root);
+    public boolean test(Mutation<T, A> mutation, Level<T, A> levelOfRoot, InnerTier<T, A> root);
 
     // TODO Document.
-    public void operation(Mutation<B, A> mutation, Level<B, A> levelOfRoot, InnerTier<B, A> root);
+    public void operation(Mutation<T, A> mutation, Level<T, A> levelOfRoot, InnerTier<T, A> root);
 }

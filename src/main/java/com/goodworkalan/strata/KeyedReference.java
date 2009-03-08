@@ -6,7 +6,7 @@ import java.lang.ref.SoftReference;
 import java.util.Map;
 
 // TODO Document.
-final class KeyedReference<A, T>
+final class KeyedReference<T, A>
 extends SoftReference<T> implements Unmappable
 {
     // TODO Document.

@@ -1,26 +1,26 @@
 package com.goodworkalan.strata;
 
 //TODO Document.
-final class SwapKey<B, A>
-implements Operation<B, A>
+final class SwapKey<T, A>
+implements Operation<T, A>
 {
     // TODO Document.
-    private final InnerTier<B, A> inner;
+    private final InnerTier<T, A> inner;
 
     // TODO Document.
-    public SwapKey(InnerTier<B, A> inner)
+    public SwapKey(InnerTier<T, A> inner)
     {
         this.inner = inner;
     }
 
     // TODO Document.
-    public void operate(Mutation<B, A> mutation)
+    public void operate(Mutation<T, A> mutation)
     {
         if (mutation.getReplacement() != null)
         {
-            Branch<B, A> branch = inner.find(mutation.getComparable());
+            Branch<T, A> branch = inner.find(mutation.getComparable());
             branch.setPivot(mutation.getReplacement());
-            mutation.getStructure().getWriter().dirty(mutation.getStash(), inner);
+            mutation.getStructure().getAllocator().dirty(mutation.getStash(), inner);
         }
     }
 

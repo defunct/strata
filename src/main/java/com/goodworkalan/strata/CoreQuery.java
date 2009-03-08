@@ -7,20 +7,20 @@ import java.util.concurrent.locks.ReentrantLock;
 import com.goodworkalan.stash.Stash;
 
 // TODO Document.
-public final class CoreQuery<B, T, F extends Comparable<? super F>, A>
-implements Query<T, F>
+public final class CoreQuery<T, A>
+implements Query<T>
 {
     // TODO Document.
     private final Stash stash;
     
     // TODO Document.
-    private final CoreStrata<B, T, F, A> strata;
+    private final CoreStrata<T, A> strata;
 
     // TODO Document.
-    private final Structure<B, A> structure;
+    private final Structure<T, A> structure;
 
     // TODO Document.
-    public CoreQuery(Stash stash, CoreStrata<B, T, F, A> strata, Structure<B, A> structure)
+    public CoreQuery(Stash stash, CoreStrata<T, A> strata, Structure<T, A> structure)
     {
         this.stash = stash;
         this.strata = strata;
@@ -34,22 +34,22 @@ implements Query<T, F>
     }
     
     // TODO Document.
-    public Strata<T, F> getStrata()
+    public Strata<T> getStrata()
     {
         return strata;
     }
 
     // TODO Document.
-    private InnerTier<B, A> getRoot()
+    private InnerTier<T, A> getRoot()
     {
         return structure.getPool().getInnerTier(stash, strata.getRootAddress());
     }
 
     // TODO Document.
-    private void testInnerTier(Mutation<B, A> mutation,
-            Decision<B, A> subsequent, Decision<B, A> swap,
-            Level<B, A> levelOfParent, Level<B, A> levelOfChild,
-            InnerTier<B, A> parent, int rewind)
+    private void testInnerTier(Mutation<T, A> mutation,
+            Decision<T, A> subsequent, Decision<T, A> swap,
+            Level<T, A> levelOfParent, Level<T, A> levelOfChild,
+            InnerTier<T, A> parent, int rewind)
     {
         boolean tiers = subsequent.test(mutation, levelOfParent, levelOfChild, parent);
         boolean keys = swap.test(mutation, levelOfParent, levelOfChild, parent);
@@ -96,24 +96,18 @@ implements Query<T, F>
      *            delete the leaf, the insert or delete action to take on the
      *            leaf, or whether to restart the descent.
      */
-    private B generalized(Mutation<B, A> mutation,
-            RootDecision<B, A> initial, Decision<B, A> subsequent,
-            Decision<B, A> swap, Decision<B, A> penultimate)
+    private T generalized(Mutation<T, A> mutation,
+            RootDecision<T, A> initial, Decision<T, A> subsequent,
+            Decision<T, A> swap, Decision<T, A> penultimate)
     {
-        // FIXME Replace this with our caching pattern.
+        mutation.listOfLevels.add(new Level<T, A>(false));
 
-        // Inform the tier cache that we are about to perform a mutation
-        // of the tree.
-        mutation.getStructure().getWriter().begin();
-
-        mutation.listOfLevels.add(new Level<B, A>(false));
-
-        InnerTier<B, A> parent = getRoot();
-        Level<B, A> levelOfParent = new Level<B, A>(false);
+        InnerTier<T, A> parent = getRoot();
+        Level<T, A> levelOfParent = new Level<T, A>(false);
         levelOfParent.lockAndAdd(parent);
         mutation.listOfLevels.add(levelOfParent);
 
-        Level<B, A> levelOfChild = new Level<B, A>(false);
+        Level<T, A> levelOfChild = new Level<T, A>(false);
         mutation.listOfLevels.add(levelOfChild);
 
         if (initial.test(mutation, levelOfParent, parent))
@@ -134,8 +128,8 @@ implements Query<T, F>
             if (parent.getChildType() == ChildType.INNER)
             {
                 testInnerTier(mutation, subsequent, swap, levelOfParent, levelOfChild, parent, 0);
-                Branch<B, A> branch = parent.find(mutation.getComparable());
-                InnerTier<B, A> child = structure.getPool().getInnerTier(mutation.getStash(), branch.getAddress());
+                Branch<T, A> branch = parent.find(mutation.getComparable());
+                InnerTier<T, A> child = structure.getPool().getInnerTier(mutation.getStash(), branch.getAddress());
                 parent = child;
             }
             else
@@ -144,33 +138,30 @@ implements Query<T, F>
                 break;
             }
             levelOfParent = levelOfChild;
-            levelOfChild = new Level<B, A>(levelOfChild.getSync.isExeclusive());
+            levelOfChild = new Level<T, A>(levelOfChild.getSync.isExeclusive());
             mutation.listOfLevels.add(levelOfChild);
             mutation.shift();
         }
 
         if (mutation.leafOperation.operate(mutation, levelOfChild))
         {
-            ListIterator<Level<B, A>> levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
+            ListIterator<Level<T, A>> levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
             while (levels.hasPrevious())
             {
-                Level<B, A> level = levels.previous();
-                ListIterator<Operation<B, A>> operations = level.listOfOperations.listIterator(level.listOfOperations.size());
+                Level<T, A> level = levels.previous();
+                ListIterator<Operation<T, A>> operations = level.listOfOperations.listIterator(level.listOfOperations.size());
                 while (operations.hasPrevious())
                 {
-                    Operation<B, A> operation = operations.previous();
+                    Operation<T, A> operation = operations.previous();
                     operation.operate(mutation);
                 }
             }
-
-            // FIXME Probably does not belong here?
-            mutation.getStructure().getWriter().end(mutation.getStash());
         }
 
-        ListIterator<Level<B, A>> levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
+        ListIterator<Level<T, A>> levels = mutation.listOfLevels.listIterator(mutation.listOfLevels.size());
         while (levels.hasPrevious())
         {
-            Level<B, A> level = levels.previous();
+            Level<T, A> level = levels.previous();
             level.releaseAndClear();
         }
 
@@ -180,11 +171,39 @@ implements Query<T, F>
     // TODO Document.
     public void add(T object)
     {
-        F fields = strata.getExtractor().extract(stash, object);
-        B bucket = strata.getCooper().newBucket(stash, strata.getExtractor(), object);
-        BucketComparable<T, F, B> comparable = new BucketComparable<T, F, B>(stash, strata.getCooper(), strata.getExtractor(), fields);
-        Mutation<B, A> mutation = new Mutation<B, A>(stash, structure, bucket, comparable, null);
-        generalized(mutation, new ShouldSplitRoot<B, A>(), new SplitInner<B, A>(), new InnerNever<B, A>(), new LeafInsert<B, A>());
+        Comparable<? super T> fields = structure.getComparableFactory().newComparable(stash, object);
+        Mutation<T, A> mutation = new Mutation<T,A>(stash, structure, fields, object, null);
+        generalized(mutation, new ShouldSplitRoot<T, A>(), new ShouldSplitInner<T, A>(), new InnerNever<T, A>(), new HowToInertLeaf<T, A>());
+    }
+    
+    public Comparable<? super T> newComparable(T object)
+    {
+        return structure.getComparableFactory().newComparable(stash, object);
+    }
+
+    // TODO Document.
+    // Here is where I get the power of not using comparator.
+    public Cursor<T> find(Comparable<? super T> fields)
+    {
+        Lock previous = new ReentrantLock();
+        previous.lock();
+        InnerTier<T, A> inner = getRoot();
+    
+        for (;;)
+        {
+            inner.getReadWriteLock().readLock().lock();
+            previous.unlock();
+            previous = inner.getReadWriteLock().readLock();
+            Branch<T, A> branch = inner.find(fields);
+            if (inner.getChildType() == ChildType.LEAF)
+            {
+                LeafTier<T, A> leaf = structure.getPool().getLeafTier(stash, branch.getAddress());
+                leaf.getReadWriteLock().readLock().lock();
+                previous.unlock();
+                return new CoreCursor<T, A>(stash, structure, leaf, leaf.find(fields));
+            }
+            inner = structure.getPool().getInnerTier(stash, branch.getAddress());
+        }
     }
 
     // TODO Document.
@@ -201,74 +220,34 @@ implements Query<T, F>
 
     // TODO Where do I actually use deletable? Makes sense, though. A
     // condition to choose which to delete.
-    public T remove(Deletable<T> deletable, Comparable<? super F> comparable)
+    public T remove(Deletable<T> deletable, Comparable<? super T> comparable)
     {
-        BucketComparable<T, F, B> bucketComparable = new BucketComparable<T, F, B>(stash, strata.getCooper(), strata.getExtractor(), comparable);
-        Mutation<B, A> mutation = new Mutation<B, A>(stash, structure, null, bucketComparable, new BucketDeletable<T, F, B>(strata.getCooper(), deletable));
+        Mutation<T, A> mutation = new Mutation<T, A>(stash, structure, comparable, null, deletable);
         do
         {
             mutation.listOfLevels.clear();
 
             mutation.clear();
 
-            generalized(mutation, new ShouldDeleteRoot<B, A>(),
-                    new MergeInner<B, A>(), new ShouldSwapKey<B, A>(),
-                    new LeafRemove<B, A>());
+            generalized(mutation, new ShouldDeleteRoot<T, A>(),
+                    new ShouldMergeInner<T, A>(), new ShouldSwapKey<T, A>(),
+                    new HowToRemoveLeaf<T, A>());
         }
         while (mutation.isOnlyChild());
 
-        B removed = mutation.getResult();
-
-        return strata.getCooper().getObject(removed);
+        return mutation.getResult();
     }
 
     // TODO Document.
-    public T remove(Comparable<? super F> comparable)
+    public T remove(Comparable<? super T> comparable)
     {
         return remove(deleteAny(), comparable);
     }
     
-    // Here is where I get the power of not using comparator.
-    public Cursor<T> find(Comparable<? super F> fields)
-    {
-        Lock previous = new ReentrantLock();
-        previous.lock();
-        InnerTier<B, A> inner = getRoot();
-       
-        Comparable<B> comparator = new BucketComparable<T, F, B>(stash, strata.getCooper(), strata.getExtractor(), fields);
-        for (;;)
-        {
-            inner.getReadWriteLock().readLock().lock();
-            previous.unlock();
-            previous = inner.getReadWriteLock().readLock();
-            Branch<B, A> branch = inner.find(comparator);
-            if (inner.getChildType() == ChildType.LEAF)
-            {
-                LeafTier<B, A> leaf = structure.getPool().getLeafTier(stash, branch.getAddress());
-                leaf.getReadWriteLock().readLock().lock();
-                previous.unlock();
-                Cursor<B> cursor = new CoreCursor<B, A>(stash, structure, leaf, leaf.find(comparator));
-                return strata.getCooper().wrap(cursor);
-            }
-            inner = structure.getPool().getInnerTier(stash, branch.getAddress());
-        }
-    }
-
     // TODO Document.
     public Cursor<T> first()
     {
         return null;
-    }
-
-    // TODO Document.
-    public F extract(T object)
-    {
-        return strata.getExtractor().extract(stash, object);
-    }
-    
-    // TODO Document.
-    public void flush()
-    {
     }
     
     // TODO Document.

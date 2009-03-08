@@ -3,8 +3,8 @@ package com.goodworkalan.strata;
 import java.util.Iterator;
 
 // TODO Document.
-public class InnerTier<B, A>
-extends Tier<Branch<B, A>, A>
+public class InnerTier<T, A>
+extends Tier<Branch<T, A>, A>
 {
     // TODO Document.
     private static final long serialVersionUID = 1L;
@@ -22,10 +22,10 @@ extends Tier<Branch<B, A>, A>
     public int getIndex(A address)
     {
         int index = 0;
-        Iterator<Branch<B, A>> branches = iterator();
+        Iterator<Branch<T, A>> branches = iterator();
         while (branches.hasNext())
         {
-            Branch<B, A> branch = branches.next();
+            Branch<T, A> branch = branches.next();
             if (branch.getAddress().equals(address))
             {
                 return index;
@@ -42,7 +42,7 @@ extends Tier<Branch<B, A>, A>
     }
 
     // TODO Document.
-    public Branch<B, A> find(Comparable<B> comparable)
+    public Branch<T, A> find(Comparable<? super T> comparable)
     {
         int low = 1;
         int high = size() - 1;
@@ -61,7 +61,7 @@ extends Tier<Branch<B, A>, A>
         }
         if (low < size())
         {
-            Branch<B, A> branch = get(low);
+            Branch<T, A> branch = get(low);
             if (comparable.compareTo(branch.getPivot()) == 0)
             {
                 return branch;

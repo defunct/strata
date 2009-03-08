@@ -1,8 +1,8 @@
 package com.goodworkalan.strata;
 
 // TODO Document.
-interface Decision<B, A>
+interface Decision<T, A>
 {
     // TODO Document.
-    public boolean test(Mutation<B, A> mutation, Level<B, A> levelOfParent, Level<B, A> levelOfChild, InnerTier<B, A> parent);
+    public boolean test(Mutation<T, A> mutation, Level<T, A> levelOfParent, Level<T, A> levelOfChild, InnerTier<T, A> parent);
 }

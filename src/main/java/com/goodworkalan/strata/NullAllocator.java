@@ -1,33 +1,71 @@
 package com.goodworkalan.strata;
 
+import com.goodworkalan.ilk.Ilk;
 import com.goodworkalan.stash.Stash;
 
 // TODO Document.
-final class NullAllocator<B, A>
-implements Allocator<B, A>
+final class NullAllocator<T>
+implements Allocator<T, Ilk.Pair>
 {
     // TODO Document.
-    @SuppressWarnings("unchecked")
-    public A allocate(Stash stash, InnerTier<B, A> inner, int size)
+    private final Ilk.Key key;
+    
+    // TODO Document.
+    public NullAllocator(Ilk.Key key)
     {
-        return (A) inner;
+        this.key = key;
     }
     
     // TODO Document.
-    @SuppressWarnings("unchecked")
-    public A allocate(Stash stash, LeafTier<B, A> leaf, int size)
+    public Ilk.Pair allocate(Stash stash, InnerTier<T, Ilk.Pair> inner, int size)
     {
-        return (A) leaf;
+        return new Ilk<InnerTier<T, Ilk.Pair>>(key) { }.pair(inner);
     }
     
     // TODO Document.
-    public boolean isNull(A address)
+    public Ilk.Pair allocate(Stash stash, LeafTier<T, Ilk.Pair> leaf, int size)
+    {
+        return new Ilk<LeafTier<T, Ilk.Pair>>(key) { }.pair(leaf);
+    }
+    
+    // TODO Document.
+    public void load(Stash stash, Ilk.Pair address, InnerTier<T, Ilk.Pair> inner)
+    {
+    }
+    
+    // TODO Document.
+    public void load(Stash stash, Ilk.Pair address, LeafTier<T, Ilk.Pair> leaf)
+    {
+    }
+
+    // TODO Document.
+    public void dirty(Stash stash, InnerTier<T, Ilk.Pair> inner)
+    {
+    }
+
+    // TODO Document.
+    public void dirty(Stash stash, LeafTier<T, Ilk.Pair> leaf)
+    {
+    }
+
+    // TODO Document.
+    public void remove(Stash stash, InnerTier<T, Ilk.Pair> inner)
+    {
+    }
+
+    // TODO Document.
+    public void remove(Stash stash, LeafTier<T, Ilk.Pair> leaf)
+    {
+    }
+
+    // TODO Document.
+    public boolean isNull(Ilk.Pair address)
     {
         return address == null;
     }
     
     // TODO Document.
-    public A getNull()
+    public Ilk.Pair getNull()
     {
         return null;
     }
