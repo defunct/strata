@@ -46,8 +46,10 @@ implements Pool<T, A>
     {
         this.allocator = allocator;
     }
-    
-    // TODO Document.
+
+    /**
+     * Remove unreferenced inner and leaf tiers from the address to tier maps.
+     */
     private void collect()
     {
         synchronized (innerTiers)
@@ -67,8 +69,19 @@ implements Pool<T, A>
             }
         }
     }
-    
-    // TODO Document.
+
+    /**
+     * Get the inner tier for the given address. The basic pool will keep a soft
+     * reference to the inner tier in an in memory cache. If the inner tier is
+     * available in the in memory cache, it is returned. If it is not available,
+     * it is loaded and cached.
+     * 
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param address
+     *            The address of an inner tier.
+     * @return The inner tier for the given address.
+     */
     public InnerTier<T, A> getInnerTier(Stash stash, A address)
     {
         collect();
@@ -93,7 +106,18 @@ implements Pool<T, A>
         return inner;
     }
     
-    // TODO Document.
+    /**
+     * Get the leaf tier for the given address. The basic pool will keep a soft
+     * reference to the inner tier in an in memory cache. If the inner tier is
+     * available in the in memory cache, it is returned. If it is not available,
+     * it is loaded and cached.
+     * 
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param address
+     *            The address of an inner tier.
+     * @return The inner tier for the given address.
+     */
     public LeafTier<T, A> getLeafTier(Stash stash, A address)
     {
         collect();

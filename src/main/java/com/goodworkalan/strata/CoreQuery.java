@@ -6,11 +6,22 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import com.goodworkalan.stash.Stash;
 
-// TODO Document.
+/**
+ * The core implementation of the query interface.
+ * <p>
+ * FIXME Why is this an interface?
+ * 
+ * @author Alan Gutierrez
+ *
+ * @param <T>
+ *            The value type of the b+tree objects.
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ */
 public final class CoreQuery<T, A>
 implements Query<T>
 {
-    // TODO Document.
+    /**  The type-safe container of out of band data. */
     private final Stash stash;
     
     // TODO Document.
