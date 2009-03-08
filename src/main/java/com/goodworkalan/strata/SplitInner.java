@@ -34,7 +34,7 @@ implements Operation<T, A>
         int index = parent.getIndex(child.getAddress());
         parent.add(index + 1, new Branch<T, A>(pivot, right.getAddress()));
 
-        Allocator<T, A> allocator = mutation.getStructure().getAllocator();
+        TierWriter<T, A> allocator = mutation.getStructure().getTierWriter();
         allocator.dirty(mutation.getStash(), parent);
         allocator.dirty(mutation.getStash(), child);
         allocator.dirty(mutation.getStash(), right);

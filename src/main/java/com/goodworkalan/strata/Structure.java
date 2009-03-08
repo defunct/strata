@@ -27,6 +27,9 @@ class Structure<T, A>
     /** A pool of tiers currently in memory. */
     private final TierPool<T, A> tierPool;
 
+    /** The writer used to stage dirty pages for writing. */
+    private final TierWriter<T, A> tierWriter;
+    
     /**
      * The factory to use to create comparables for objects in the b+tree to
      * compare against other object in the b+tree.
@@ -35,13 +38,29 @@ class Structure<T, A>
 
     /**
      * Create a new structure.
+     * 
+     * @param innerCapacity
+     *            The capacity of branches of an inner tier.
+     * @param leafCapacity
+     *            The capacity of object values of a leaf tier.
+     * @param allocator
+     *            The allocator to use to allocate persistent storage of inner
+     *            and leaf tiers.
+     * @param tierPool
+     *            A pool of tiers currently in memory.
+     * @param tierWriter
+     *            The writer used to stage dirty pages for writing.
+     * @param comparableFactory
+     *            The factory to use to create comparables for objects in the
+     *            b+tree to compare against other object in the b+tree.
      */
-    public Structure(int innerCapacity, int leafCapacity, Allocator<T, A> allocator, TierPool<T, A> tierPool, ComparableFactory<T> comparableFactory)
+    public Structure(int innerCapacity, int leafCapacity, Allocator<T, A> allocator, TierPool<T, A> tierPool, TierWriter<T, A> tierWriter, ComparableFactory<T> comparableFactory)
     {
         this.innerCapacity = innerCapacity;
         this.leafCapacity = leafCapacity;
         this.allocator = allocator;
         this.tierPool = tierPool;
+        this.tierWriter = tierWriter;
         this.comparableFactory = comparableFactory;
     }
 
@@ -86,6 +105,16 @@ class Structure<T, A>
     public TierPool<T, A> getPool()
     {
         return tierPool;
+    }
+
+    /**
+     * Get the writer used to stage dirty pages for writing.
+     * 
+     * @return The writer used to stage dirty pages for writing.
+     */
+    public TierWriter<T, A> getTierWriter()
+    {
+        return tierWriter;
     }
 
     /**

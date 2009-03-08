@@ -18,7 +18,7 @@ implements LeafOperation<T, A>
     public boolean operate(Mutation<T, A> mutation, Level<T, A> levelOfLeaf)
     {
         Structure<T, A> structure = mutation.getStructure();
-        Allocator<T, A> writer = structure.getAllocator();
+        TierWriter<T, A> writer = structure.getTierWriter();
         
         // TODO Remove single anywhere but far left.
         // TODO Remove single very left most.
@@ -85,7 +85,7 @@ implements LeafOperation<T, A>
                 if (subsequent.size() == 0)
                 {
                     current.setNext(subsequent.getNext());
-                    writer.remove(mutation.getStash(), subsequent);
+                    writer.free(mutation.getStash(), subsequent);
                 }
                 else
                 {

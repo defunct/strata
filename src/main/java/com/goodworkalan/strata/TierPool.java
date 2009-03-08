@@ -10,6 +10,8 @@ import com.goodworkalan.stash.Stash;
  * <p>
  * In memory tier pools will interpret the address to be an object reference and
  * will simply cast the address to an inner or leaf tier.
+ * <p>
+ * FIXME We need to reintroduce locking, global 
  * 
  * @author Alan Gutierrez
  * 

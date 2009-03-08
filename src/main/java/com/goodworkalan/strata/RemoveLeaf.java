@@ -27,8 +27,8 @@ implements Operation<T, A>
 
         left.setNext(leaf.getNext());
 
-        Allocator<T, A> writer = mutation.getStructure().getAllocator();
-        writer.remove(mutation.getStash(), leaf);
+        TierWriter<T, A> writer = mutation.getStructure().getTierWriter();
+        writer.free(mutation.getStash(), leaf);
         writer.dirty(mutation.getStash(), parent);
         writer.dirty(mutation.getStash(), left);
 

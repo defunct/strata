@@ -27,8 +27,8 @@ implements Operation<T, A>
             parent.get(0).setPivot(null);
         }
 
-        Allocator<T, A> writer = mutation.getStructure().getAllocator();
-        writer.remove(mutation.getStash(), child);
+        TierWriter<T, A> writer = mutation.getStructure().getTierWriter();
+        writer.free(mutation.getStash(), child);
         writer.dirty(mutation.getStash(), parent);
     }
 

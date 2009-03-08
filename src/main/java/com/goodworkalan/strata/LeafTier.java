@@ -43,7 +43,7 @@ extends Tier<T, A>
     public void link(Mutation<T, A> mutation, LeafTier<T, A> nextLeaf)
     {
         Structure<T, A> structure = mutation.getStructure();
-        Allocator<T, A> writer = structure.getAllocator();
+        TierWriter<T, A> writer = structure.getTierWriter();
         writer.dirty(mutation.getStash(), this);
         writer.dirty(mutation.getStash(), nextLeaf);
         nextLeaf.setNext(getNext());
@@ -80,7 +80,7 @@ extends Tier<T, A>
         else
         {
             add(mutation.getObject());
-            structure.getAllocator().dirty(mutation.getStash(), this);
+            structure.getTierWriter().dirty(mutation.getStash(), this);
         }
     }
 

@@ -55,8 +55,8 @@ implements RootDecision<T, A>
 
             root.setChildType(child.getChildType());
 
-            Allocator<B, A> allocator = structure.getAllocator();
-            allocator.remove(mutation.getStash(), child);
+            TierWriter<B, A> allocator = structure.getTierWriter();
+            allocator.free(mutation.getStash(), child);
             allocator.dirty(mutation.getStash(), root);
         }
 

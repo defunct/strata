@@ -20,7 +20,7 @@ implements Operation<T, A>
         {
             Branch<T, A> branch = inner.find(mutation.getComparable());
             branch.setPivot(mutation.getReplacement());
-            mutation.getStructure().getAllocator().dirty(mutation.getStash(), inner);
+            mutation.getStructure().getTierWriter().dirty(mutation.getStash(), inner);
         }
     }
 

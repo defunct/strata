@@ -2,33 +2,49 @@ package com.goodworkalan.strata;
 
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.goodworkalan.stash.Stash;
 
-// TODO Document.
-final class BasicTierPool<T, A>
+/**
+ * A basic caching tier pool that maintains a map of softly referenced tiers
+ * in memory.
+ * 
+ * @author Alan Gutierrez
+ *
+ * @param <T>
+ *            The value type of the indexed objects.
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ */
+public final class BasicTierPool<T, A>
 implements TierPool<T, A>
 {
-    // TODO Document.
-    private final ReferenceQueue<InnerTier<T, A>> innerQueue = null;
+    /** A queue of references to inner tiers. */
+    private final ReferenceQueue<InnerTier<T, A>> innerQueue = new ReferenceQueue<InnerTier<T,A>>();
     
-    // TODO Document.
-    private final ReferenceQueue<LeafTier<T, A>> leafQueue = null;
+    /** A queue of references to leaf tiers. */
+    private final ReferenceQueue<LeafTier<T, A>> leafQueue = new ReferenceQueue<LeafTier<T,A>>();
     
-    // TODO Document.
-    private final Map<A, Reference<InnerTier<T, A>>> innerTiers = null;
+    /** A map of addresses to inner tiers. */
+    private final Map<A, Reference<InnerTier<T, A>>> innerTiers = new HashMap<A, Reference<InnerTier<T,A>>>();
     
-    // TODO Document.
-    private final Map<A, Reference<LeafTier<T, A>>> leafTiers = null;
+    /** A map of addresses to leaf tiers. */
+    private final Map<A, Reference<LeafTier<T, A>>> leafTiers = new HashMap<A, Reference<LeafTier<T,A>>>();
     
-    // TODO Document.
+    /** The allocator to use to load pages from disk. */
     private final Allocator<T, A> allocator;
-    
-    // TODO Document.
-    public BasicTierPool(Allocator<T, A> storage)
+
+    /**
+     * Create a new basic tier pool.
+     * 
+     * @param allocator
+     *            The allocator to use to load pages from disk.
+     */
+    public BasicTierPool(Allocator<T, A> allocator)
     {
-        this.allocator = storage;
+        this.allocator = allocator;
     }
     
     // TODO Document.

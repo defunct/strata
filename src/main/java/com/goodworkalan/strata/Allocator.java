@@ -80,10 +80,12 @@ public interface Allocator<T, A>
      * @param address
      *            The address of the inner tier storage.
      */
-    public void dirty(Stash stash, InnerTier<T, A> inner);
+    public void write(Stash stash, InnerTier<T, A> inner);
 
     /**
      * Write a leaf tier to the persistent storage at the given address.
+     * <p>
+     * FIXME Rename write.
      * 
      * @param stash
      *            A type-safe container of out of band data.
@@ -91,7 +93,7 @@ public interface Allocator<T, A>
      *            The dirty leaf tier.
      * @return The leaf tier loaded from storage.
      */
-    public void dirty(Stash stash, LeafTier<T, A> leaf);
+    public void write(Stash stash, LeafTier<T, A> leaf);
     
     /**
      * Free an inner tier from the persistent storage at the given address.
@@ -101,18 +103,20 @@ public interface Allocator<T, A>
      * @param address
      *            The address of the inner tier storage.
      */
-    public void remove(Stash stash, InnerTier<T, A> inner);
+    public void free(Stash stash, InnerTier<T, A> inner);
 
     /**
      * Free a leaf tier from the persistent storage at the given address.
+     * <p>
+     * FIXME Rename free.
      * 
      * @param stash
      *            A type-safe container of out of band data.
      * @param address
      *            The address of the leaf tier storage.
      */
-    public void remove(Stash stash, LeafTier<T, A> leaf);
-    
+    public void free(Stash stash, LeafTier<T, A> leaf);
+
     /**
      * Get the null address value for this allocation strategy.
      * 

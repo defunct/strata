@@ -43,7 +43,7 @@ implements LeafOperation<T, A>
 
         inner.add(inner.getIndex(leaf.getAddress()) + 1, new Branch<T, A>(mutation.getObject(), right.getAddress()));
 
-        Allocator<T, A> writer = structure.getAllocator();
+        TierWriter<T, A> writer = structure.getTierWriter();
         writer.dirty(mutation.getStash(), inner);
         writer.dirty(mutation.getStash(), leaf);
         writer.dirty(mutation.getStash(), right);

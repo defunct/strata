@@ -18,8 +18,8 @@ public class StrataTestCase
         Schema<Integer> schema = new Schema<Integer>();
         schema.setInnerCapacity(5);
         schema.setLeafCapacity(7);
-        Ilk.Pair address = schema.create(new Stash(), new InMemoryStorage<Integer>(new Ilk<Integer>() { }));
-        return schema.open(new Stash(), address, new InMemoryStorage<Integer>(new Ilk<Integer>() { })).query();
+        Strata<Integer> strata = schema.inMemory(new Stash(), new Ilk<Integer>() { });
+        return strata.query();
     }
 
     @Test public void create()

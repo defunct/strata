@@ -21,6 +21,9 @@ public final class Schema<T>
     /** The capacity of object values of a leaf tier. */
     private int leafCapacity;
     
+    /** The number of tiers to keep in memory as dirty before writing. */
+    private int maxDirtyTiers;
+    
     /**
      * The factory to use to create comparables for objects in the b+tree to
      * compare against other object in the b+tree.
@@ -91,7 +94,28 @@ public final class Schema<T>
     {
         return comparableFactory;
     }
+    
+    /**
+     * Set the number of tiers to keep in memory as dirty before writing.
+     * 
+     * @param maxDirtyTiers
+     *            The number of tiers to keep in memory as dirty before writing.
+     */
+    public void setMaxDirtyTiers(int maxDirtyTiers)
+    {
+        this.maxDirtyTiers = maxDirtyTiers;
+    }
 
+    /**
+     * Get the number of tiers to keep in memory as dirty before writing.
+     * 
+     * @return The number of tiers to keep in memory as dirty before writing.
+     */
+    public int getMaxDirtyTiers()
+    {
+        return maxDirtyTiers;
+    }
+    
     /**
      * Create a new b+tree with the given storage strategy using the properties
      * of this schema.
@@ -104,10 +128,8 @@ public final class Schema<T>
      *            The persistent storage strategy.
      * @return A new b+tree.
      */
-    public <A> A create(Stash stash, Storage<T, A> storage)
+    public <A> A create(Stash stash, Allocator<T, A> allocator)
     {
-        Allocator<T, A> allocator = storage.getAllocator();
-        
         InnerTier<T, A> root = new InnerTier<T, A>();
         root.setChildType(ChildType.LEAF);
         root.setAddress(allocator.allocate(stash, root, innerCapacity));
@@ -117,18 +139,30 @@ public final class Schema<T>
         
         root.add(new Branch<T, A>(null, leaf.getAddress()));
  
-        allocator.dirty(stash, root);
-        allocator.dirty(stash, leaf);
+        allocator.write(stash, root);
+        allocator.write(stash, leaf);
         
         return root.getAddress();
     }
-    
-    // TODO Document.
+
+    /**
+     * Create an in memory b+tree.
+     * 
+     * @param <A>
+     *            The address type used to identify an inner or leaf tier.
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param ilk
+     *            A super type token of the value type.
+     * @return An in memory b+tree.
+     */
     public <A> Strata<T> inMemory(Stash stash, Ilk<T> ilk)
     {
-        InMemoryStorage<T> inMemoryStorage = new InMemoryStorage<T>(ilk);
-        Ilk.Pair root = create(stash, inMemoryStorage);
-        return open(stash, root, inMemoryStorage);
+        NullAllocator<T> allocator = new NullAllocator<T>(ilk.key);
+        ObjectReferenceTierPool<T> pool = new ObjectReferenceTierPool<T>(ilk.key);
+        Ilk.Pair rootAddress = create(stash, allocator);
+        TierWriter<T, Ilk.Pair> writer = new TierWriter<T, Ilk.Pair>(allocator, 0);
+        return open(stash, rootAddress, pool, writer, allocator);
     }
     
     /**
@@ -141,15 +175,38 @@ public final class Schema<T>
      *            A type-safe container of out of band data.
      * @param rootAddress
      *            The root address of the b+tree root inner tier.
-     * @param storage
+     * @param allocator
      *            The persistent storage strategy.
      * @return The opened b+tree.
      */
-    public <A> Strata<T> open(Stash stash, A rootAddress, Storage<T, A> storage)
+    public <A> Strata<T> open(Stash stash, A rootAddress, Allocator<T, A> allocator)
     {
-        Allocator<T, A> allocator = storage.getAllocator();
-        TierPool<T, A> pool = storage.getTierPool();
-        Structure<T, A> structure = new Structure<T, A>(innerCapacity, leafCapacity, allocator, pool, comparableFactory);
+        TierPool<T, A> pool = new BasicTierPool<T, A>(allocator);
+        TierWriter<T, A> writer = new TierWriter<T, A>(allocator, maxDirtyTiers);
+        return open(stash, rootAddress, pool, writer, allocator);
+    }
+
+    /**
+     * Open an existing b+tree at the given root address with the given
+     * persistent storage strategy.
+     * 
+     * @param <A>
+     *            The address type used to identify an inner or leaf tier.
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @param rootAddress
+     *            The root address of the b+tree root inner tier.
+     * @param pool
+     *            A pool of tiers currently in memory.
+     * @param writer
+     *            The writer used to stage dirty pages for writing.
+     * @param allocator
+     *            The persistent storage strategy.
+     * @return The opened b+tree.
+     */
+    private <A> Strata<T> open(Stash stash, A rootAddress, TierPool<T, A> pool, TierWriter<T, A> writer, Allocator<T, A> allocator)
+    {
+        Structure<T, A> structure = new Structure<T, A>(innerCapacity, leafCapacity, allocator, pool, writer, comparableFactory);
         return new CoreStrata<T, A>(rootAddress, structure);
     }
 }

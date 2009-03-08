@@ -32,8 +32,8 @@ implements Operation<T, A>
         // FIXME Get last leaf. 
         left.setNext(right.getNext());
 
-        Allocator<T, A> writer = mutation.getStructure().getAllocator();
-        writer.remove(mutation.getStash(), right);
+        TierWriter<T, A> writer = mutation.getStructure().getTierWriter();
+        writer.free(mutation.getStash(), right);
         writer.dirty(mutation.getStash(), parent);
         writer.dirty(mutation.getStash(), left);
     }

@@ -41,7 +41,7 @@ implements LeafOperation<T, A>
 
         // FIXME Now we are writing before we are splitting. Problem.
         // Empty cache does not work!
-        structure.getAllocator().dirty(mutation.getStash(), leaf);
+        structure.getTierWriter().dirty(mutation.getStash(), leaf);
 
         return true;
     }

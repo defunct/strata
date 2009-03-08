@@ -39,22 +39,22 @@ implements Allocator<T, Ilk.Pair>
     }
 
     // TODO Document.
-    public void dirty(Stash stash, InnerTier<T, Ilk.Pair> inner)
+    public void write(Stash stash, InnerTier<T, Ilk.Pair> inner)
     {
     }
 
     // TODO Document.
-    public void dirty(Stash stash, LeafTier<T, Ilk.Pair> leaf)
+    public void write(Stash stash, LeafTier<T, Ilk.Pair> leaf)
     {
     }
 
     // TODO Document.
-    public void remove(Stash stash, InnerTier<T, Ilk.Pair> inner)
+    public void free(Stash stash, InnerTier<T, Ilk.Pair> inner)
     {
     }
 
     // TODO Document.
-    public void remove(Stash stash, LeafTier<T, Ilk.Pair> leaf)
+    public void free(Stash stash, LeafTier<T, Ilk.Pair> leaf)
     {
     }
 

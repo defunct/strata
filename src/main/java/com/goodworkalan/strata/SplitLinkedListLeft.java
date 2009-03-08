@@ -35,7 +35,7 @@ implements LeafOperation<T, A>
         }
         inner.add(index + 1, new Branch<T, A>(right.get(0), right.getAddress()));
 
-        Allocator<T, A> allocator = structure.getAllocator();
+        TierWriter<T, A> allocator = structure.getTierWriter();
         allocator.dirty(mutation.getStash(), inner);
         allocator.dirty(mutation.getStash(), leaf);
         allocator.dirty(mutation.getStash(), right);
