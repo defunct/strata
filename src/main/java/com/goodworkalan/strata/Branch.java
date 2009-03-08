@@ -16,15 +16,17 @@ public final class Branch<T, A>
     /** The child tier address. */
     private final A address;
 
-    /** The bucket containing index fields of this branch. */
+    /** The branch value. */
     private T pivot;
 
     /**
      * Create a branch that maps the pivot value in the given bucket to the
      * given child tier address.
      * 
-     * @param pivot The bucket containing index fields of this branch.
-     * @param address The child tier address.
+     * @param pivot
+     *            The branch value.
+     * @param address
+     *            The child tier address.
      */
     public Branch(T pivot, A address)
     {
@@ -43,9 +45,9 @@ public final class Branch<T, A>
     }
 
     /**
-     * Get the bucket containing index fields of this branch.
+     * Get the branch value.
      * 
-     * @return The bucket.
+     * @return The branch value.
      */
     public T getPivot()
     {
@@ -53,10 +55,10 @@ public final class Branch<T, A>
     }
 
     /**
-     * Set the bucket containing index fields of this branch.
+     * Set the branch value.
      * 
      * @param pivot
-     *            The bucket.
+     *            The branch value.
      */
     public void setPivot(T pivot)
     {

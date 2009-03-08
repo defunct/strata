@@ -25,10 +25,10 @@ class Structure<T, A>
     private final Allocator<T, A> allocator;
     
     /** A pool of tiers currently in memory. */
-    private final Pool<T, A> tierPool;
+    private final Pool<T, A> pool;
 
     /** The writer used to stage dirty pages for writing. */
-    private final Stage<T, A> tierWriter;
+    private final Stage<T, A> stage;
     
     /**
      * The factory to use to create comparables for objects in the b+tree to
@@ -59,8 +59,8 @@ class Structure<T, A>
         this.innerCapacity = innerCapacity;
         this.leafCapacity = leafCapacity;
         this.allocator = allocator;
-        this.tierPool = tierPool;
-        this.tierWriter = tierWriter;
+        this.pool = tierPool;
+        this.stage = tierWriter;
         this.comparableFactory = comparableFactory;
     }
 
@@ -104,7 +104,7 @@ class Structure<T, A>
      */
     public Pool<T, A> getPool()
     {
-        return tierPool;
+        return pool;
     }
 
     /**
@@ -112,9 +112,9 @@ class Structure<T, A>
      * 
      * @return The writer used to stage dirty pages for writing.
      */
-    public Stage<T, A> getTierWriter()
+    public Stage<T, A> getStage()
     {
-        return tierWriter;
+        return stage;
     }
 
     /**

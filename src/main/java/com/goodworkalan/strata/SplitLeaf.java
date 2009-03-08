@@ -53,7 +53,7 @@ implements Operation<T, A>
         int index = inner.getIndex(leaf.getAddress());
         inner.add(index + 1, new Branch<T, A>(right.get(0), right.getAddress()));
 
-        Stage<T, A> writer = structure.getTierWriter();
+        Stage<T, A> writer = structure.getStage();
         writer.dirty(mutation.getStash(), inner);
         writer.dirty(mutation.getStash(), leaf);
         writer.dirty(mutation.getStash(), right);

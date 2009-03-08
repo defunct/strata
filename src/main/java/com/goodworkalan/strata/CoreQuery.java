@@ -43,7 +43,7 @@ implements Query<T>
      */
     public Lock getInsertDeleteLock()
     {
-        return structure.getTierWriter().getInsertDeleteLock();
+        return structure.getStage().getInsertDeleteLock();
     }
 
     // TODO Document.
@@ -119,7 +119,7 @@ implements Query<T>
             RootDecision<T, A> initial, Decision<T, A> subsequent,
             Decision<T, A> swap, Decision<T, A> penultimate)
     {
-        structure.getTierWriter().begin();
+        structure.getStage().begin();
 
         mutation.listOfLevels.add(new Level<T, A>(false));
 
@@ -186,8 +186,8 @@ implements Query<T>
             level.releaseAndClear();
         }
         
-        structure.getTierWriter().flush(stash, lockCount, false);
-        structure.getTierWriter().end(lockCount);
+        structure.getStage().flush(stash, lockCount, false);
+        structure.getStage().end(lockCount);
 
         return mutation.getResult();
     }

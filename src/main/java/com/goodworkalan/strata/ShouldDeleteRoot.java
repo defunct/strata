@@ -55,7 +55,7 @@ implements RootDecision<T, A>
 
             root.setChildType(child.getChildType());
 
-            Stage<B, A> allocator = structure.getTierWriter();
+            Stage<B, A> allocator = structure.getStage();
             allocator.free(mutation.getStash(), child);
             allocator.dirty(mutation.getStash(), root);
         }
