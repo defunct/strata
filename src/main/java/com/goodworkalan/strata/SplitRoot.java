@@ -36,7 +36,7 @@ implements Operation<T, A>
 
         root.setChildType(ChildType.INNER);
 
-        TierWriter<T, A> writer = mutation.getStructure().getTierWriter();
+        Stage<T, A> writer = mutation.getStructure().getTierWriter();
         writer.dirty(mutation.getStash(), root);
         writer.dirty(mutation.getStash(), left);
         writer.dirty(mutation.getStash(), right);

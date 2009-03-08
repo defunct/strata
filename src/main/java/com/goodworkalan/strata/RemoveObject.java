@@ -18,7 +18,7 @@ implements LeafOperation<T, A>
     public boolean operate(Mutation<T, A> mutation, Level<T, A> levelOfLeaf)
     {
         Structure<T, A> structure = mutation.getStructure();
-        TierWriter<T, A> writer = structure.getTierWriter();
+        Stage<T, A> writer = structure.getTierWriter();
         
         // TODO Remove single anywhere but far left.
         // TODO Remove single very left most.

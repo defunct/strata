@@ -33,7 +33,7 @@ implements Operation<T, A>
             left.add(right.remove(0));
         }
 
-        TierWriter<T, A> writer = mutation.getStructure().getTierWriter();
+        Stage<T, A> writer = mutation.getStructure().getTierWriter();
         writer.free(mutation.getStash(), right);
         writer.dirty(mutation.getStash(), parent);
         writer.dirty(mutation.getStash(), left);

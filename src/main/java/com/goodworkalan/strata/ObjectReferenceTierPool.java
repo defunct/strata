@@ -5,7 +5,7 @@ import com.goodworkalan.stash.Stash;
 
 // TODO Document.
 final class ObjectReferenceTierPool<T>
-implements TierPool<T, Ilk.Pair>
+implements Pool<T, Ilk.Pair>
 {
     // TODO Document.
     private final Ilk.Key key;

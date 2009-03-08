@@ -158,7 +158,7 @@ implements Decision<T, A>
                         InnerTier<T, A> parent)
     {
         Structure<T, A> structure = mutation.getStructure();
-        TierPool<T, A> pool = structure.getPool();
+        Pool<T, A> pool = structure.getPool();
         
         // Find the child tier.
 

@@ -18,6 +18,13 @@ implements Query<T>
 
     // TODO Document.
     private final Structure<T, A> structure;
+    
+    /**
+     * The count of times that the exclusive insert or delete lock was locked
+     * by begin and then not unlocked by end because there were dirty pages
+     * outstanding.
+     */
+    private int[] lockCount;
 
     // TODO Document.
     public CoreQuery(Stash stash, CoreStrata<T, A> strata, Structure<T, A> structure)
@@ -25,6 +32,18 @@ implements Query<T>
         this.stash = stash;
         this.strata = strata;
         this.structure = structure;
+        this.lockCount = new int[1];
+    }
+
+    
+    /**
+     * Get the lock that locks the b+tree exclusively for insert and update.
+     * 
+     * @return The insert delete lock.
+     */
+    public Lock getInsertDeleteLock()
+    {
+        return structure.getTierWriter().getInsertDeleteLock();
     }
 
     // TODO Document.
@@ -100,6 +119,8 @@ implements Query<T>
             RootDecision<T, A> initial, Decision<T, A> subsequent,
             Decision<T, A> swap, Decision<T, A> penultimate)
     {
+        structure.getTierWriter().begin();
+
         mutation.listOfLevels.add(new Level<T, A>(false));
 
         InnerTier<T, A> parent = getRoot();
@@ -164,6 +185,9 @@ implements Query<T>
             Level<T, A> level = levels.previous();
             level.releaseAndClear();
         }
+        
+        structure.getTierWriter().flush(stash, lockCount, false);
+        structure.getTierWriter().end(lockCount);
 
         return mutation.getResult();
     }

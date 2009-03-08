@@ -27,7 +27,7 @@ implements Operation<T, A>
             parent.get(0).setPivot(null);
         }
 
-        TierWriter<T, A> writer = mutation.getStructure().getTierWriter();
+        Stage<T, A> writer = mutation.getStructure().getTierWriter();
         writer.free(mutation.getStash(), child);
         writer.dirty(mutation.getStash(), parent);
     }

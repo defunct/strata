@@ -161,7 +161,7 @@ public final class Schema<T>
         NullAllocator<T> allocator = new NullAllocator<T>(ilk.key);
         ObjectReferenceTierPool<T> pool = new ObjectReferenceTierPool<T>(ilk.key);
         Ilk.Pair rootAddress = create(stash, allocator);
-        TierWriter<T, Ilk.Pair> writer = new TierWriter<T, Ilk.Pair>(allocator, 0);
+        Stage<T, Ilk.Pair> writer = new Stage<T, Ilk.Pair>(allocator, 0);
         return open(stash, rootAddress, pool, writer, allocator);
     }
     
@@ -181,8 +181,8 @@ public final class Schema<T>
      */
     public <A> Strata<T> open(Stash stash, A rootAddress, Allocator<T, A> allocator)
     {
-        TierPool<T, A> pool = new BasicTierPool<T, A>(allocator);
-        TierWriter<T, A> writer = new TierWriter<T, A>(allocator, maxDirtyTiers);
+        Pool<T, A> pool = new BasicPool<T, A>(allocator);
+        Stage<T, A> writer = new Stage<T, A>(allocator, maxDirtyTiers);
         return open(stash, rootAddress, pool, writer, allocator);
     }
 
@@ -204,7 +204,7 @@ public final class Schema<T>
      *            The persistent storage strategy.
      * @return The opened b+tree.
      */
-    private <A> Strata<T> open(Stash stash, A rootAddress, TierPool<T, A> pool, TierWriter<T, A> writer, Allocator<T, A> allocator)
+    private <A> Strata<T> open(Stash stash, A rootAddress, Pool<T, A> pool, Stage<T, A> writer, Allocator<T, A> allocator)
     {
         Structure<T, A> structure = new Structure<T, A>(innerCapacity, leafCapacity, allocator, pool, writer, comparableFactory);
         return new CoreStrata<T, A>(rootAddress, structure);

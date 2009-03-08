@@ -18,8 +18,8 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public final class BasicTierPool<T, A>
-implements TierPool<T, A>
+final class BasicPool<T, A>
+implements Pool<T, A>
 {
     /** A queue of references to inner tiers. */
     private final ReferenceQueue<InnerTier<T, A>> innerQueue = new ReferenceQueue<InnerTier<T,A>>();
@@ -42,7 +42,7 @@ implements TierPool<T, A>
      * @param allocator
      *            The allocator to use to load pages from disk.
      */
-    public BasicTierPool(Allocator<T, A> allocator)
+    public BasicPool(Allocator<T, A> allocator)
     {
         this.allocator = allocator;
     }

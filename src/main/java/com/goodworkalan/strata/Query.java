@@ -1,10 +1,20 @@
 package com.goodworkalan.strata;
 
+import java.util.concurrent.locks.Lock;
+
 import com.goodworkalan.stash.Stash;
 
 // TODO Document.
 public interface Query<T>
 {
+    /**
+     * Get the lock that locks the b+tree exclusively for insert and update.
+     * 
+     * @return The insert delete lock.
+     */
+    public Lock getInsertDeleteLock();
+    
+    
     /**
      * Get type-safe container of out of band data.
      * 

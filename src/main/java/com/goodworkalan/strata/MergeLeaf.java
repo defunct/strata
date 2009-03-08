@@ -32,7 +32,7 @@ implements Operation<T, A>
         // FIXME Get last leaf. 
         left.setNext(right.getNext());
 
-        TierWriter<T, A> writer = mutation.getStructure().getTierWriter();
+        Stage<T, A> writer = mutation.getStructure().getTierWriter();
         writer.free(mutation.getStash(), right);
         writer.dirty(mutation.getStash(), parent);
         writer.dirty(mutation.getStash(), left);

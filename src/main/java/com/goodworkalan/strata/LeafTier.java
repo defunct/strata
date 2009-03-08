@@ -43,7 +43,7 @@ extends Tier<T, A>
     public void link(Mutation<T, A> mutation, LeafTier<T, A> nextLeaf)
     {
         Structure<T, A> structure = mutation.getStructure();
-        TierWriter<T, A> writer = structure.getTierWriter();
+        Stage<T, A> writer = structure.getTierWriter();
         writer.dirty(mutation.getStash(), this);
         writer.dirty(mutation.getStash(), nextLeaf);
         nextLeaf.setNext(getNext());

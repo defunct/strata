@@ -19,7 +19,7 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public class TierWriter<T, A>
+public class Stage<T, A>
 {
     /** A read/write lock on insert and delete operations. */
     private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -41,7 +41,7 @@ public class TierWriter<T, A>
     
     /** The maximum number of dirty tiers to hold in memory. */
     private final int maxDirtyTiers;
-    
+        
     /**
      * Create a new tier writer.
      * 
@@ -50,26 +50,25 @@ public class TierWriter<T, A>
      * @param maxDirtyTiers
      *            The maximum number of dirty tiers to hold in memory.
      */
-    public TierWriter(Allocator<T, A> allocator, int maxDirtyTiers)
+    public Stage(Allocator<T, A> allocator, int maxDirtyTiers)
     {
         this.allocator = allocator;
         this.maxDirtyTiers = maxDirtyTiers;
     }
     
-    /**
-     * Allow the user to lock the b+tree exclusively for insert and delete.
-     */
-    public void lock()
+    private int getDirtyTierCount()
     {
-        readWriteLock.writeLock().lock();
+        return dirtyInnerTiers.size() + dirtyLeafTiers.size() + freeInnerTiers.size() + freeLeafTiers.size();
     }
-    
+
     /**
-     * Allow the user to unlock the b+tree exclusively for insert and delete.
+     * Get the lock that locks the b+tree exclusively for insert and update.
+     * 
+     * @return The insert delete lock.
      */
-    public void unlock()
+    public Lock getInsertDeleteLock()
     {
-        readWriteLock.writeLock().unlock();
+        return readWriteLock.writeLock();
     }
     
     /**
@@ -80,21 +79,41 @@ public class TierWriter<T, A>
         Lock lock = maxDirtyTiers == 0 ? readWriteLock.readLock() : readWriteLock.writeLock();
         lock.lock();
     }
-    
+
     /**
-     * Lock the b+tree after an insert and delete operation. 
+     * Lock the b+tree after an insert and delete operation.
+     * 
+     * @param count
+     *            A reference to the count of time that begin locked that end did
+     *            not unlock.
      */
-    public void end()
+    public void end(int[] count)
     {
-        Lock lock = maxDirtyTiers == 0 ? readWriteLock.readLock() : readWriteLock.writeLock();
-        lock.unlock();
+        if (maxDirtyTiers == 0)
+        {
+            readWriteLock.readLock().unlock();
+        }
+        else
+        {
+            count[0]++;
+            if (getDirtyTierCount() == 0)
+            {
+                while (count[0]-- != 0)
+                {
+                    readWriteLock.writeLock().unlock();
+                }
+            }
+        }
     }
 
     /**
      * Mark a inner tier as dirty. If the writer has a max dirty tiers of zero,
      * then the inner tier is written immediately. Otherwise, the inner tier
-     * will be written by the next call to {@link #flush(Stash, boolean) flush}.
+     * will be written by the next call to {@link #flush(Stash, int[], boolean)
+     * flush}.
      * 
+     * @param stash
+     *            A type-safe container of out of band data.
      * @param leaf
      *            The leaf to free.
      */
@@ -113,8 +132,11 @@ public class TierWriter<T, A>
     /**
      * Mark a leaf tier as dirty. If the writer has a max dirty tiers of zero,
      * then the leaf tier is written immediately. Otherwise, the leaf tier will
-     * be written by the next call to {@link #flush(Stash, boolean) flush}.
+     * be written by the next call to {@link #flush(Stash, int[], boolean)
+     * flush}.
      * 
+     * @param stash
+     *            A type-safe container of out of band data.
      * @param leaf
      *            The leaf to free.
      */
@@ -133,8 +155,10 @@ public class TierWriter<T, A>
     /**
      * Free an inner tier. If the writer has a max dirty tiers of zero, then the
      * inner tier is freed immediately. Otherwise, the inner tier will be freed
-     * by the next call to {@link #flush(Stash, boolean) flush}.
+     * by the next call to {@link #flush(Stash, int[], boolean) flush}.
      * 
+     * @param stash
+     *            A type-safe container of out of band data.
      * @param leaf
      *            The leaf to free.
      */
@@ -154,8 +178,10 @@ public class TierWriter<T, A>
     /**
      * Free an leaf tier. If the writer has a max dirty tiers of zero, then the
      * leaf tier is freed immediately. Otherwise, the leaf tier will be freed by
-     * the next call to {@link #flush(Stash, boolean) flush}.
+     * the next call to {@link #flush(Stash, int[], boolean) flush}.
      * 
+     * @param stash
+     *            A type-safe container of out of band data.
      * @param leaf
      *            The leaf to free.
      */
@@ -177,11 +203,17 @@ public class TierWriter<T, A>
      * tiers than the maximum dirty tiers or if the given force flag is true.
      * 
      * @param stash
-     * @param force Flush the tier writer regardless of its max dirty tiers property.
+     *            A type-safe container of out of band data.
+     * @param count
+     *            A reference to the count of time that begin locked that end
+     *            did not unlock.
+     * @param force
+     *            Flush the tier writer regardless of its max dirty tiers
+     *            property.
      */
-    public void flush(Stash stash, boolean force)
+    public void flush(Stash stash, int[] count, boolean force)
     {
-        if (force || maxDirtyTiers < dirtyInnerTiers.size() + dirtyLeafTiers.size() + freeInnerTiers.size() + freeLeafTiers.size())
+        if (force || maxDirtyTiers < getDirtyTierCount())
         {
             for (InnerTier<T, A> inner : dirtyInnerTiers)
             {
@@ -198,6 +230,10 @@ public class TierWriter<T, A>
             for (LeafTier<T, A> leaf : freeLeafTiers)
             {
                 allocator.free(stash, leaf);
+            }
+            while (count[0]-- != 0)
+            {
+                readWriteLock.writeLock().unlock();
             }
         }
     }

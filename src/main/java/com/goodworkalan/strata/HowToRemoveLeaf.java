@@ -14,7 +14,7 @@ implements Decision<T, A>
                         InnerTier<T, A> parent)
     {
         Structure<T, A> structure = mutation.getStructure();
-        TierPool<T, A> pool = structure.getPool();
+        Pool<T, A> pool = structure.getPool();
         
         levelOfChild.getSync = new WriteLockExtractor();
         Branch<T, A> branch = parent.find(mutation.getComparable());

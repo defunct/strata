@@ -27,7 +27,7 @@ implements Operation<T, A>
 
         left.setNext(leaf.getNext());
 
-        TierWriter<T, A> writer = mutation.getStructure().getTierWriter();
+        Stage<T, A> writer = mutation.getStructure().getTierWriter();
         writer.free(mutation.getStash(), leaf);
         writer.dirty(mutation.getStash(), parent);
         writer.dirty(mutation.getStash(), left);
