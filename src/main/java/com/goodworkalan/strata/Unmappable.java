@@ -1,8 +1,15 @@
 package com.goodworkalan.strata;
 
-// TODO Document.
+/**
+ * An interface implemented by keyed references to that will remove the soft
+ * reference form a map.
+ * 
+ * @author Alan Gutierrez
+ */
 interface Unmappable
 {
-    // TODO Document.
+    /**
+     * Removes this object from a map.
+     */
     public void unmap();
 }

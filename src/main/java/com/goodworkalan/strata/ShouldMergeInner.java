@@ -4,117 +4,114 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A decision that determines whether to merge two inner tiers into one
- * tier or else to delete an inner tier that has only one child tier but
- * is either the only child tier or its siblings are already full.
- * <h3>Only Children</h3>
+ * A decision that determines whether to merge two inner tiers into one tier or
+ * else to delete an inner tier that has only one child tier but is either the
+ * only child tier or its siblings are already full. <h3>Only Children</h3>
  * <p>
- * It is possible that an inner tier may have only one child leaf or inner
- * tier. This occurs in the case where the siblings of of inner tier are
- * at capacity. A merge occurs when two children are combined. The nodes
- * from the child to the right are combined with the nodes from the child
- * to the left. The parent branch that referenced the right child is
- * deleted. 
+ * It is possible that an inner tier may have only one child leaf or inner tier.
+ * This occurs in the case where the siblings of of inner tier are at capacity.
+ * A merge occurs when two children are combined. The nodes from the child to
+ * the right are combined with the nodes from the child to the left. The parent
+ * branch that referenced the right child is deleted.
  * <p>
- * If it is the case that a tier is next to full siblings, as leaves are
- * deleted from that tier, it will not be a candidate to merge with a
- * sibling until it reaches a size of one. At that point, it could merge
- * with a sibling if a deletion were to cause its size to reach zero.
+ * If it is the case that a tier is next to full siblings, as leaves are deleted
+ * from that tier, it will not be a candidate to merge with a sibling until it
+ * reaches a size of one. At that point, it could merge with a sibling if a
+ * deletion were to cause its size to reach zero.
  * <p>
- * However, the single child of that tier has no siblings with which it
- * can merge. A tier with a single child cannot reach a size of zero by
- * merging.
+ * However, the single child of that tier has no siblings with which it can
+ * merge. A tier with a single child cannot reach a size of zero by merging.
  * <p>
- * If were where to drain the subtree of an inner tier with a single child
- * of every leaf, we would merge its leaf tiers and merge its inner tiers
- * until we had subtree that consisted solely of inner tiers with one
- * child and a leaf with one item. At that point, when we delete the last
- * item, we need to delete the chain of tiers with only children.
+ * If were where to drain the subtree of an inner tier with a single child of
+ * every leaf, we would merge its leaf tiers and merge its inner tiers until we
+ * had subtree that consisted solely of inner tiers with one child and a leaf
+ * with one item. At that point, when we delete the last item, we need to delete
+ * the chain of tiers with only children.
  * <p>
- * We deleting any child that is size of one that cannot merge with a
- * sibling. Deletion means freeing the child and removing the branch that
- * references it.
+ * We deleting any child that is size of one that cannot merge with a sibling.
+ * Deletion means freeing the child and removing the branch that references it.
  * <p>
- * The only leaf child will not have a sibling with which it can merge,
- * however. We won't be able to copy leaf items from a right leaf to a
- * left leaf. This means we won't be able to update the linked list of
- * leaves, unless we go to the left of the only child. But, going to the
- * left of the only child requires knowing that we must go to the left.
+ * The only leaf child will not have a sibling with which it can merge, however.
+ * We won't be able to copy leaf items from a right leaf to a left leaf. This
+ * means we won't be able to update the linked list of leaves, unless we go to
+ * the left of the only child. But, going to the left of the only child requires
+ * knowing that we must go to the left.
  * <p>
- * We are not going to know which left to take the first time down,
- * though. The actual pivot is not based on the number of children. It
- * might be above the point where the list of only children begins. As
- * always, it is a pivot whose value matches the first item in the
- * leaf, in this case the only item in the leaf.
+ * We are not going to know which left to take the first time down, though. The
+ * actual pivot is not based on the number of children. It might be above the
+ * point where the list of only children begins. As always, it is a pivot whose
+ * value matches the first item in the leaf, in this case the only item in the
+ * leaf.
  * <p>
  * Here's how it works.
  * <p>
- * On the way down, we look for a branch that has an inner tier that is
- * size of one. If so, we set a flag in the mutator to note that we are
- * now deleting.
+ * On the way down, we look for a branch that has an inner tier that is size of
+ * one. If so, we set a flag in the mutator to note that we are now deleting.
  * <p>
- * If we encounter an inner tier has more than one child on the way down we
- * are not longer in the deleting state.
+ * If we encounter an inner tier has more than one child on the way down we are
+ * not longer in the deleting state.
  * <p>
- * When we reach the leaf, if it has a size of one and we are in the
- * deleting state, then we look in the mutator for a left leaf variable
- * and an is left most flag. More on those later as neither are set.
+ * When we reach the leaf, if it has a size of one and we are in the deleting
+ * state, then we look in the mutator for a left leaf variable and an is left
+ * most flag. More on those later as neither are set.
  * <p>
- * We tell the mutator that we have a last item and that the action has
- * failed, by setting the fail action. Failure means we try again.
+ * We tell the mutator that we have a last item and that the action has failed,
+ * by setting the fail action. Failure means we try again.
  * <p>
- * On the retry, as we descend the tree, we have the last item variable
- * set in the mutator. 
+ * On the retry, as we descend the tree, we have the last item variable set in
+ * the mutator.
  * <p>
- * Note that we are descending the tree again. Because we are a concurrent
- * data structure, the structure of the tree may change. I'll get to that.
- * For now, let's assume that it has not changed.
+ * Note that we are descending the tree again. Because we are a concurrent data
+ * structure, the structure of the tree may change. I'll get to that. For now,
+ * let's assume that it has not changed.
  * <p>
- * If it has not changed, then we are going to encounter a pivot that has
- * our last item. When we encounter this pivot, we are going to go left.
- * Going left means that we descend to the child of the branch before the
- * branch of the pivot. We then follow each rightmost branch of each inner
- * tier until we reach the right most leaf. That leaf is the leaf before
- * the leaf that is about to be removed. We store this in the mutator.
+ * If it has not changed, then we are going to encounter a pivot that has our
+ * last item. When we encounter this pivot, we are going to go left. Going left
+ * means that we descend to the child of the branch before the branch of the
+ * pivot. We then follow each rightmost branch of each inner tier until we reach
+ * the right most leaf. That leaf is the leaf before the leaf that is about to
+ * be removed. We store this in the mutator.
  * <p>
- * Of course, the leaf to be removed may be the left most leaf in the
- * entire data structure. In that case, we set a variable named left most
- * in the mutator.
+ * Of course, the leaf to be removed may be the left most leaf in the entire
+ * data structure. In that case, we set a variable named left most in the
+ * mutator.
  * <p>
- * When we go left, we lock every inner tier and the leaf tier exclusive,
- * to prevent it from being changed by another query in another thread.
- * We always lock from left to right.
+ * When we go left, we lock every inner tier and the leaf tier exclusive, to
+ * prevent it from being changed by another query in another thread. We always
+ * lock from left to right.
  * <p>
- * Now we continue our descent. Eventually, we reach out chain of inner
- * tiers with only one child. That chain may only be one level deep, but
- * there will be such a chain.
+ * Now we continue our descent. Eventually, we reach out chain of inner tiers
+ * with only one child. That chain may only be one level deep, but there will be
+ * such a chain.
  * <p>
  * Now we can add a remove leaf operation to the list of operations in the
- * parent level. This operation will link the next leaf of the left leaf
- * to the next leaf of the remove leaf, reserving our linked list of
- * leaves. It will take place after the normal remove operation, so that
- * if the remove operation fails (because the item to remove does not
- * actually exist) then the leave removal does not occur.
+ * parent level. This operation will link the next leaf of the left leaf to the
+ * next leaf of the remove leaf, reserving our linked list of leaves. It will
+ * take place after the normal remove operation, so that if the remove operation
+ * fails (because the item to remove does not actually exist) then the leave
+ * removal does not occur.
  * <p>
- * I revisited this logic after a year and it took me a while to convince
- * myself that it was not a misunderstanding on my earlier self's part,
- * that these linked lists of otherwise empty tiers are a natural
- * occurrence.
+ * I revisited this logic after a year and it took me a while to convince myself
+ * that it was not a misunderstanding on my earlier self's part, that these
+ * linked lists of otherwise empty tiers are a natural occurrence.
  * <p>
- * The could be addressed by linking the inner tiers and thinking harder,
- * but that would increase the size of the project.
+ * The could be addressed by linking the inner tiers and thinking harder, but
+ * that would increase the size of the project.
  */
 final class ShouldMergeInner<T, A>
 implements Decision<T, A>
 {
     /**
-     * Determine if we are deleting a final leaf in a child and therefore
-     * need to lock exclusive and retreive the leaf to the left.
-     *
-     * @param mutation The state of the current mutation.
-     * @param branch The current branch.
-     * @param onlyChild The value of the last item that is about to be
-     * removed from a leaf tier.
+     * Determine if we are deleting a final leaf in a child and therefore need
+     * to lock exclusive and retreive the leaf to the left.
+     * 
+     * @param mutation
+     *            The state of the current mutation.
+     * @param branch
+     *            The current branch.
+     * @param onlyChild
+     *            The value of the last item that is about to be removed from a
+     *            leaf tier.
      */
     private boolean lockLeft(Mutation<T, A> mutation, Branch<T, A> branch)
     {
@@ -129,28 +126,31 @@ implements Decision<T, A>
      * Determine if we need to merge or delete this inner tier.
      * <p>
      * We merge two branches if the child at the branch we descend can be
-     * combined with either sibling. If the child can merge this method
-     * returns true and a merge action is added to the parent operations.
+     * combined with either sibling. If the child can merge this method returns
+     * true and a merge action is added to the parent operations.
      * <p>
-     * We delete if the branch we descend has only one child. We begin to
-     * mark a deletion chain. Deletion is canceled if we encounter any
-     * child inner tier that has more than one child itself. We cannot
-     * delete an inner tier as the result of a merge of it's children.
+     * We delete if the branch we descend has only one child. We begin to mark a
+     * deletion chain. Deletion is canceled if we encounter any child inner tier
+     * that has more than one child itself. We cannot delete an inner tier as
+     * the result of a merge of it's children.
      * <p>
-     * Additionally, if we are on a second pass after having determined
-     * that we deleting the last item in a leaf tier that is an only
-     * child, then we will also find and lock the leaf tier to the left of
-     * the only child leaf tier. When we encounter the branch that uses
-     * the item as a pivot, we'll travel to the right most leaf tier of
-     * the branch to the left of the branch that uses the item as a pivot,
-     * locking every level exclusively and locking the right most leaf
-     * tier exclusively and noting it as the left leaf in the mutator. The
-     * locks recorded in the level of the parent.
-     *
-     * @param mutation The state of the mutation.
-     * @param levelOfParent The locks and operations of the parent.
-     * @param levelOfChidl the locks and operations of child.
-     * @param parent The parent tier.
+     * Additionally, if we are on a second pass after having determined that we
+     * deleting the last item in a leaf tier that is an only child, then we will
+     * also find and lock the leaf tier to the left of the only child leaf tier.
+     * When we encounter the branch that uses the item as a pivot, we'll travel
+     * to the right most leaf tier of the branch to the left of the branch that
+     * uses the item as a pivot, locking every level exclusively and locking the
+     * right most leaf tier exclusively and noting it as the left leaf in the
+     * mutator. The locks recorded in the level of the parent.
+     * 
+     * @param mutation
+     *            The state of the mutation.
+     * @param levelOfParent
+     *            The locks and operations of the parent.
+     * @param levelOfChidl
+     *            the locks and operations of child.
+     * @param parent
+     *            The parent tier.
      */
     public boolean test(Mutation<T, A> mutation,
                         Level<T, A> levelOfParent,

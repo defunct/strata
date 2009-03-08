@@ -5,10 +5,10 @@ import java.util.LinkedList;
 
 import com.goodworkalan.stash.Stash;
 
-// TODO Document.
+// FIXME Document.
 final class Mutation<T, A>
 {
-    // TODO Document.
+    /** The type-safe container of out of band data. */
     private final Stash stash;
 
     // TODO Document.
@@ -44,11 +44,7 @@ final class Mutation<T, A>
     public LeafOperation<T, A> leafOperation;
 
     // TODO Document.
-    public Mutation(Stash stash,
-                    Structure<T, A> structure,
-                    Comparable<? super T> comparable,
-                    T object,
-                    Deletable<T> deletable)
+    public Mutation(Stash stash, Structure<T, A> structure, Comparable<? super T> comparable, T object, Deletable<T> deletable)
     {
         this.stash = stash;
         this.comparable = comparable;

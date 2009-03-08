@@ -99,7 +99,7 @@ implements Pool<T, A>
             {
                 inner = new InnerTier<T, A>();
                 allocator.load(stash, address, inner);
-                innerTiers.put(inner.getAddress(), new KeyedReference<InnerTier<T,A>, A>(address, inner, innerTiers, innerQueue));
+                innerTiers.put(inner.getAddress(), new KeyedReference<A, InnerTier<T,A>>(address, inner, innerTiers, innerQueue));
             }
         }
 
@@ -135,7 +135,7 @@ implements Pool<T, A>
             {
                 leaf = new LeafTier<T, A>();
                 allocator.load(stash, address, leaf);
-                leafTiers.put(leaf.getAddress(), new KeyedReference<LeafTier<T, A>, A>(address, leaf, leafTiers, leafQueue));
+                leafTiers.put(leaf.getAddress(), new KeyedReference<A, LeafTier<T, A>>(address, leaf, leafTiers, leafQueue));
             }
         }
 

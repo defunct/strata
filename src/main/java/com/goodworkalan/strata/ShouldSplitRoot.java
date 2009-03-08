@@ -5,9 +5,7 @@ public final class ShouldSplitRoot<T, A>
 implements RootDecision<T, A>
 {
     // TODO Document.
-    public boolean test(Mutation<T, A> mutation,
-                        Level<T, A> levelOfRoot,
-                        InnerTier<T, A> root)
+    public boolean test(Mutation<T, A> mutation, Level<T, A> levelOfRoot, InnerTier<T, A> root)
     {
         return mutation.getStructure().getInnerSize() == root.size();
     }

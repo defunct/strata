@@ -124,6 +124,10 @@ implements Cursor<T>
      */
     public void remove()
     {
+        // FIXME You could attempt to remove, but someone else might remove 
+        // it if you let go of the lock. You could try to pick up where
+        // you left off, but you'd need to create a set of previous values
+        // to exclude. See how concurrent map handles remove in its iterator.
         throw new UnsupportedOperationException();
     }
 

@@ -23,14 +23,14 @@ public interface Query<T>
     public Stash getStash();
     
     /**
-     * Get the <code>Strata</code> that this query searches and edits.
+     * Get the b+tree.
      * 
-     * @return The <code>Strata</code>.
+     * @return The b+tree.
      */
     public Strata<T> getStrata();
 
     /**
-     * Add the given object to the <code>Strata</code> B+Tree.
+     * Add the given object to the b+tree.
      * 
      * @param object
      *            The object to add.
@@ -57,17 +57,6 @@ public interface Query<T>
      *         comparable.
      */
     public T remove(Comparable<? super T> comparable);
-
-    /**
-     * Constructs an instance of <code>Deletable</code> whose
-     * {@link Deletable#deletable(Object) deletable} method will always return
-     * true. This deletable is used to remove the first stored value whose
-     * fields match the comparable passed to <code>remove</code>.
-     * 
-     * @return An instance of <code>Deletable</code> whose
-     *         <code>deletable</code> method always returns true.
-     */
-    public Deletable<T> deleteAny();
 
     /**
      * Returns a cursor that references the first object in the B-Tree.

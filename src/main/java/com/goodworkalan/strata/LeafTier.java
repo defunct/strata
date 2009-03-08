@@ -1,6 +1,6 @@
 package com.goodworkalan.strata;
 
-// TODO Document.
+// FIXME Document.
 public final class LeafTier<T, A>
 extends Tier<T, A>
 {

@@ -2,17 +2,21 @@ package com.goodworkalan.strata;
 
 import java.util.Iterator;
 
-// TODO Document.
+// FIXME Document.
 public class InnerTier<T, A>
 extends Tier<Branch<T, A>, A>
 {
     // TODO Document.
     private static final long serialVersionUID = 1L;
 
-    // TODO Document.
+    /** The flag indicating whether child tiers are inner or leaf tiers. */
     private ChildType childType;
 
-    // TODO Document.
+    /**
+     * Get the flag indicating whether child tiers are inner or leaf tiers.
+     * 
+     * @return The flag indicating whether child tiers are inner or leaf tiers.
+     */
     public ChildType getChildType()
     {
         return childType;

@@ -9,10 +9,14 @@ import com.goodworkalan.stash.Stash;
 /**
  * The core implementation of the query interface.
  * <p>
- * FIXME Why is this an interface?
+ * This is an interface/implementation because the address type parameter does
+ * not need to be exposed through the query interface.
+ * <p>
+ * TODO Consider an API change where you have separate interfaces for seraching
+ * by value or by comparable. Would you use it? Where do you use newComparable?
  * 
  * @author Alan Gutierrez
- *
+ * 
  * @param <T>
  *            The value type of the b+tree objects.
  * @param <A>
@@ -21,13 +25,13 @@ import com.goodworkalan.stash.Stash;
 public final class CoreQuery<T, A>
 implements Query<T>
 {
-    /**  The type-safe container of out of band data. */
+    /** The type-safe container of out of band data. */
     private final Stash stash;
     
-    // TODO Document.
+    /** The b+tree. */
     private final CoreStrata<T, A> strata;
 
-    // TODO Document.
+    /** The collection of the core services of the b+tree. */
     private final Structure<T, A> structure;
     
     /**
@@ -37,7 +41,16 @@ implements Query<T>
      */
     private int[] lockCount;
 
-    // TODO Document.
+    /**
+     * Create a new query implementation.
+     * 
+     * @param stash
+     *            The type-safe container of out of band data.
+     * @param strata
+     *            The b+tree.
+     * @param structure
+     *            The collection of the core services of the b+tree
+     */
     public CoreQuery(Stash stash, CoreStrata<T, A> strata, Structure<T, A> structure)
     {
         this.stash = stash;
@@ -57,29 +70,38 @@ implements Query<T>
         return structure.getStage().getInsertDeleteLock();
     }
 
-    // TODO Document.
+    /**
+     * Get the type-safe container of out of band data.
+     * 
+     * @return The type-safe container of out of band data.
+     */
     public Stash getStash()
     {
         return stash;
     }
     
-    // TODO Document.
+    /**
+     * Get the b+tree.
+     * 
+     * @return The b+tree.
+     */
     public Strata<T> getStrata()
     {
         return strata;
     }
 
-    // TODO Document.
+    /**
+     * Get the root inner tier of the b+tree.
+     * 
+     * @return The root inner tier of the b+tree.
+     */
     private InnerTier<T, A> getRoot()
     {
         return structure.getPool().getInnerTier(stash, strata.getRootAddress());
     }
 
     // TODO Document.
-    private void testInnerTier(Mutation<T, A> mutation,
-            Decision<T, A> subsequent, Decision<T, A> swap,
-            Level<T, A> levelOfParent, Level<T, A> levelOfChild,
-            InnerTier<T, A> parent, int rewind)
+    private void testInnerTier(Mutation<T, A> mutation, Decision<T, A> subsequent, Decision<T, A> swap, Level<T, A> levelOfParent, Level<T, A> levelOfChild, InnerTier<T, A> parent, int rewind)
     {
         boolean tiers = subsequent.test(mutation, levelOfParent, levelOfChild, parent);
         boolean keys = swap.test(mutation, levelOfParent, levelOfChild, parent);
@@ -126,9 +148,7 @@ implements Query<T>
      *            delete the leaf, the insert or delete action to take on the
      *            leaf, or whether to restart the descent.
      */
-    private T generalized(Mutation<T, A> mutation,
-            RootDecision<T, A> initial, Decision<T, A> subsequent,
-            Decision<T, A> swap, Decision<T, A> penultimate)
+    private T generalized(Mutation<T, A> mutation, RootDecision<T, A> initial, Decision<T, A> subsequent, Decision<T, A> swap, Decision<T, A> penultimate)
     {
         structure.getStage().begin();
 
@@ -203,7 +223,12 @@ implements Query<T>
         return mutation.getResult();
     }
 
-    // TODO Document.
+    /**
+     * Add the given object to the b+tree.
+     * 
+     * @param object
+     *            The object to add.
+     */
     public void add(T object)
     {
         Comparable<? super T> fields = structure.getComparableFactory().newComparable(stash, object);
@@ -211,13 +236,13 @@ implements Query<T>
         generalized(mutation, new ShouldSplitRoot<T, A>(), new ShouldSplitInner<T, A>(), new InnerNever<T, A>(), new HowToInertLeaf<T, A>());
     }
     
+    // TODO Document.
     public Comparable<? super T> newComparable(T object)
     {
         return structure.getComparableFactory().newComparable(stash, object);
     }
 
     // TODO Document.
-    // Here is where I get the power of not using comparator.
     public Cursor<T> find(Comparable<? super T> fields)
     {
         Lock previous = new ReentrantLock();
@@ -241,8 +266,14 @@ implements Query<T>
         }
     }
 
-    // TODO Document.
-    public Deletable<T> deleteAny()
+    /**
+     * Constructs an instance of deletable that will always return true. This
+     * deletable is used to remove the first stored value whose fields match the
+     * comparable passed to remove.
+     * 
+     * @return An instance of deletable that will always return true.
+     */
+    private Deletable<T> deleteAny()
     {
         return new Deletable<T>()
         {
@@ -253,20 +284,15 @@ implements Query<T>
         };
     }
 
-    // TODO Where do I actually use deletable? Makes sense, though. A
-    // condition to choose which to delete.
+    // TODO Document.
     public T remove(Deletable<T> deletable, Comparable<? super T> comparable)
     {
         Mutation<T, A> mutation = new Mutation<T, A>(stash, structure, comparable, null, deletable);
         do
         {
             mutation.listOfLevels.clear();
-
             mutation.clear();
-
-            generalized(mutation, new ShouldDeleteRoot<T, A>(),
-                    new ShouldMergeInner<T, A>(), new ShouldSwapKey<T, A>(),
-                    new HowToRemoveLeaf<T, A>());
+            generalized(mutation, new ShouldDeleteRoot<T, A>(), new ShouldMergeInner<T, A>(), new ShouldSwapKey<T, A>(), new HowToRemoveLeaf<T, A>());
         }
         while (mutation.isOnlyChild());
 
@@ -285,7 +311,7 @@ implements Query<T>
         return null;
     }
     
-    
+    // TODO Document.
     public void flush()
     {
         structure.getStage().flush(stash, lockCount, true);

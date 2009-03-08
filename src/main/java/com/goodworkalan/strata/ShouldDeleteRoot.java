@@ -5,6 +5,7 @@ package com.goodworkalan.strata;
 final class ShouldDeleteRoot<T, A>
 implements RootDecision<T, A>
 {
+    // TODO Document.
     public boolean test(Mutation<T, A> mutation, Level<T, A> levelOfRoot, InnerTier<T, A> root)
     {
         if (root.getChildType() == ChildType.INNER && root.size() == 2)
