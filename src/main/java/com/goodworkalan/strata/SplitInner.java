@@ -1,5 +1,6 @@
 package com.goodworkalan.strata;
 
+// TODO Document.
 public final class SplitInner<T, A>
 implements Operation<T, A>
 {

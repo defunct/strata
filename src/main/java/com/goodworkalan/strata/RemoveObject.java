@@ -2,6 +2,7 @@ package com.goodworkalan.strata;
 
 import java.util.Iterator;
 
+// TODO Document.
 public final class RemoveObject<T, A>
 implements LeafOperation<T, A>
 {

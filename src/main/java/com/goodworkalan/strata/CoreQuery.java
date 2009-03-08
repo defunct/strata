@@ -274,6 +274,12 @@ implements Query<T>
         return null;
     }
     
+    
+    public void flush()
+    {
+        structure.getStage().flush(stash, lockCount, true);
+    }
+
     // TODO Document.
     public void destroy()
     {

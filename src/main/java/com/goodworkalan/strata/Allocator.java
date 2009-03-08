@@ -84,8 +84,6 @@ public interface Allocator<T, A>
 
     /**
      * Write a leaf tier to the persistent storage at the given address.
-     * <p>
-     * FIXME Rename write.
      * 
      * @param stash
      *            A type-safe container of out of band data.
@@ -107,8 +105,6 @@ public interface Allocator<T, A>
 
     /**
      * Free a leaf tier from the persistent storage at the given address.
-     * <p>
-     * FIXME Rename free.
      * 
      * @param stash
      *            A type-safe container of out of band data.

@@ -1,5 +1,6 @@
 package com.goodworkalan.strata;
 
+// TODO Document.
 public final class FailedLeafOperation<T, A>
 implements LeafOperation<T, A>
 {

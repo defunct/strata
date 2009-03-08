@@ -1,5 +1,6 @@
 package com.goodworkalan.strata;
 
+// TODO Document.
 final class InsertLinkedList<T, A>
 implements LeafOperation<T, A>
 {

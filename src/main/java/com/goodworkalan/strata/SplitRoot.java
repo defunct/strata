@@ -1,5 +1,6 @@
 package com.goodworkalan.strata;
 
+// TODO Document.
 final class SplitRoot<T, A>
 implements Operation<T, A>
 {

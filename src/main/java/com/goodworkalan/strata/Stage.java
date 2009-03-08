@@ -21,6 +21,7 @@ import com.goodworkalan.stash.Stash;
  */
 public class Stage<T, A>
 {
+    // FIXME What does it mean when you do not try/catch?
     /** A read/write lock on insert and delete operations. */
     private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     
@@ -55,7 +56,12 @@ public class Stage<T, A>
         this.allocator = allocator;
         this.maxDirtyTiers = maxDirtyTiers;
     }
-    
+
+    /**
+     * Get the count of staged dirty and freed tiers.
+     * 
+     * @return The count of staged dirty and free tiers.
+     */
     private int getDirtyTierCount()
     {
         return dirtyInnerTiers.size() + dirtyLeafTiers.size() + freeInnerTiers.size() + freeLeafTiers.size();
@@ -213,28 +219,33 @@ public class Stage<T, A>
      */
     public void flush(Stash stash, int[] count, boolean force)
     {
-        if (force || maxDirtyTiers < getDirtyTierCount())
+        if (maxDirtyTiers != 0)
         {
-            for (InnerTier<T, A> inner : dirtyInnerTiers)
+            readWriteLock.writeLock().lock();
+            if (force || maxDirtyTiers < getDirtyTierCount())
             {
-                allocator.write(stash, inner);
+                for (InnerTier<T, A> inner : dirtyInnerTiers)
+                {
+                    allocator.write(stash, inner);
+                }
+                for (InnerTier<T, A> inner : freeInnerTiers)
+                {
+                    allocator.free(stash, inner);
+                }
+                for (LeafTier<T, A> leaf : dirtyLeafTiers)
+                {
+                    allocator.write(stash, leaf);
+                }
+                for (LeafTier<T, A> leaf : freeLeafTiers)
+                {
+                    allocator.free(stash, leaf);
+                }
+                while (count[0]-- != 0)
+                {
+                    readWriteLock.writeLock().unlock();
+                }
             }
-            for (InnerTier<T, A> inner : freeInnerTiers)
-            {
-                allocator.free(stash, inner);
-            }
-            for (LeafTier<T, A> leaf : dirtyLeafTiers)
-            {
-                allocator.write(stash, leaf);
-            }
-            for (LeafTier<T, A> leaf : freeLeafTiers)
-            {
-                allocator.free(stash, leaf);
-            }
-            while (count[0]-- != 0)
-            {
-                readWriteLock.writeLock().unlock();
-            }
+            readWriteLock.writeLock().unlock();
         }
     }
 }

@@ -2,6 +2,7 @@ package com.goodworkalan.strata;
 
 import java.util.ListIterator;
 
+// TODO Document.
 final class InsertSorted<T, A>
 implements LeafOperation<T, A>
 {

@@ -2,6 +2,7 @@ package com.goodworkalan.strata;
 
 import java.util.List;
 
+// TODO Document.
 public final class MergeInner<T, A>
 implements Operation<T, A>
 {

@@ -37,11 +37,14 @@ public interface Query<T>
      */
     public void add(T object);
     
+    // TODO Document.
     public Comparable<? super T> newComparable(T object);
 
     // TODO Rename find fields? (Erasure)
+    // TODO Document.
     public Cursor<T> find(Comparable<? super T> comparable);
     
+    // TODO Document.
     public T remove(Deletable<T> deletable, Comparable<? super T> comparable);
     
     /**
@@ -72,6 +75,9 @@ public interface Query<T>
      * @return A cursor that references the first object in the B-Tree.
      */
     public Cursor<T> first();
+    
+    // TODO Document.
+    public void flush();
 
     /**
      * Destroy the <code>Strata</code> B-Tree by deallocating all of its pages

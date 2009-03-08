@@ -1,5 +1,6 @@
 package com.goodworkalan.strata;
 
+// TODO Document.
 public final class RemoveInner<T, A>
 implements Operation<T, A>
 {
