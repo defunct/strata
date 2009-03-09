@@ -13,8 +13,8 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-final class NullAllocator<T>
-implements Allocator<T, Ilk.Pair>
+final class NullStorage<T>
+implements Storage<T, Ilk.Pair>
 {
     /** The super type token of the b-tree value type. */
     private final Ilk.Key key;
@@ -26,7 +26,7 @@ implements Allocator<T, Ilk.Pair>
      * @param key
      *            The super type token of the b-tree value type.
      */
-    public NullAllocator(Ilk.Key key)
+    public NullStorage(Ilk.Key key)
     {
         this.key = key;
     }

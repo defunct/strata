@@ -4,10 +4,6 @@ import com.goodworkalan.stash.Stash;
 
 /**
  * A strategy for allocating persistent storage for inner and leaf tiers.
- * <p>
- * FIXME Reintroduce storage. Allocator becomes the interface to short circuit
- * persistent storage with in memory strategies. Storage can allocate and free
- * with addresses only. It can load to a collection. It can write a collection.
  * 
  * @author Alan Gutierrez
  * 
@@ -16,7 +12,7 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public interface Allocator<T, A>
+public interface Storage<T, A>
 {
     /**
      * Allocate persistent storage for the given inner tier that can hold the

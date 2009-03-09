@@ -37,7 +37,7 @@ implements LeafOperation<T, A>
     private boolean endOfList(Mutation<T, A> mutation, LeafTier<T, A> leaf)
     {
         Structure<T, A> structure = mutation.getStructure();
-        Allocator<T, A> alloator = mutation.getStructure().getAllocator();
+        Storage<T, A> alloator = mutation.getStructure().getStorage();
         if (alloator.isNull(leaf.getNext()))
         {
             return true;

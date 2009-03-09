@@ -28,7 +28,7 @@ public class Leaves
     public static <T, A> LeafTier<T, A> getNextAndLock(Mutation<T, A> mutation, LeafTier<T, A> leaf, Level<T, A> leafLevel)
     {
         Structure<T, A> structure = mutation.getStructure();
-        if (!structure.getAllocator().isNull(leaf.getNext()))
+        if (!structure.getStorage().isNull(leaf.getNext()))
         {
             LeafTier<T, A> next = structure.getPool().getLeafTier(mutation.getStash(), leaf.getNext());
             leafLevel.lockAndAdd(next);

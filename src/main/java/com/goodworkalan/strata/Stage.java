@@ -26,7 +26,7 @@ public class Stage<T, A>
     private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     
     /** The allocator to use to load pages from disk. */
-    private final Allocator<T, A> allocator;
+    private final Storage<T, A> allocator;
 
     /** A set of dirty inner tiers. */
     private final Set<InnerTier<T, A>> dirtyInnerTiers = new HashSet<InnerTier<T,A>>();
@@ -51,7 +51,7 @@ public class Stage<T, A>
      * @param maxDirtyTiers
      *            The maximum number of dirty tiers to hold in memory.
      */
-    public Stage(Allocator<T, A> allocator, int maxDirtyTiers)
+    public Stage(Storage<T, A> allocator, int maxDirtyTiers)
     {
         this.allocator = allocator;
         this.maxDirtyTiers = maxDirtyTiers;

@@ -81,7 +81,7 @@ implements Cursor<T>
      */
     public boolean hasNext()
     {
-        return index < leaf.size() || !structure.getAllocator().isNull(leaf.getNext());
+        return index < leaf.size() || !structure.getStorage().isNull(leaf.getNext());
     }
 
     /**
@@ -97,7 +97,7 @@ implements Cursor<T>
         }
         if (index == leaf.size())
         {
-            if (structure.getAllocator().isNull(leaf.getNext()))
+            if (structure.getStorage().isNull(leaf.getNext()))
             {
                 throw new IllegalStateException();
             }

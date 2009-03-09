@@ -34,7 +34,7 @@ implements Pool<T, A>
     private final Map<A, Reference<LeafTier<T, A>>> leafTiers = new HashMap<A, Reference<LeafTier<T,A>>>();
     
     /** The allocator to use to load pages from disk. */
-    private final Allocator<T, A> allocator;
+    private final Storage<T, A> allocator;
 
     /**
      * Create a new basic tier pool.
@@ -42,7 +42,7 @@ implements Pool<T, A>
      * @param allocator
      *            The allocator to use to load pages from disk.
      */
-    public BasicPool(Allocator<T, A> allocator)
+    public BasicPool(Storage<T, A> allocator)
     {
         this.allocator = allocator;
     }
