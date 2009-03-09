@@ -14,7 +14,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public abstract class Tier<T, A>
+abstract class Tier<T, A>
 extends ArrayList<T>
 {
     /** The serial version id. */

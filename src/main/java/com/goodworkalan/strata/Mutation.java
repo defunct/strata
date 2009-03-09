@@ -197,7 +197,7 @@ final class Mutation<T, A>
     public InnerTier<T, A> newInnerTier(ChildType childType)
     {
         InnerTier<T, A> inner = new InnerTier<T, A>();
-        inner.setAddress(getStructure().getStorage().allocate(getStash(), inner, getStructure().getInnerSize()));
+        inner.setAddress(getStructure().getAllocator().allocate(getStash(), inner, getStructure().getInnerSize()));
         inner.setChildType(childType);
         return inner;
     }
@@ -210,7 +210,7 @@ final class Mutation<T, A>
     public LeafTier<T, A> newLeafTier()
     {
         LeafTier<T, A> leaf = new LeafTier<T, A>();
-        leaf.setAddress(getStructure().getStorage().allocate(getStash(), leaf, getStructure().getInnerSize()));
+        leaf.setAddress(getStructure().getAllocator().allocate(getStash(), leaf, getStructure().getInnerSize()));
         return leaf;
     }
     

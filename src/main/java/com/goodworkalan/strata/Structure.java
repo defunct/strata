@@ -22,7 +22,13 @@ class Structure<T, A>
     /** The capacity of object values of a leaf tier. */
     private final int leafCapacity;
 
-    /**   The persistent storage strategy. */
+    /**
+     * The allocator to use to allocate persistent storage of inner and leaf
+     * tiers.
+     */
+    private final Allocator<T, A> allocator;
+    
+    /** The persistent storage strategy. */
     private final Storage<T, A> storage;
     
     /** A pool of tiers currently in memory. */
@@ -47,6 +53,8 @@ class Structure<T, A>
      * @param allocator
      *            The allocator to use to allocate persistent storage of inner
      *            and leaf tiers.
+     * @param storage
+     *            The persistent storage strategy.
      * @param tierPool
      *            A pool of tiers currently in memory.
      * @param tierWriter
@@ -55,11 +63,12 @@ class Structure<T, A>
      *            The factory to use to create comparables for objects in the
      *            b+tree to compare against other object in the b+tree.
      */
-    public Structure(int innerCapacity, int leafCapacity, Storage<T, A> allocator, Pool<T, A> tierPool, Stage<T, A> tierWriter, ComparableFactory<T> comparableFactory)
+    public Structure(int innerCapacity, int leafCapacity, Allocator<T, A> allocator, Storage<T, A> storage, Pool<T, A> tierPool, Stage<T, A> tierWriter, ComparableFactory<T> comparableFactory)
     {
         this.innerCapacity = innerCapacity;
         this.leafCapacity = leafCapacity;
-        this.storage = allocator;
+        this.allocator = allocator;
+        this.storage = storage;
         this.pool = tierPool;
         this.stage = tierWriter;
         this.comparableFactory = comparableFactory;
@@ -86,6 +95,18 @@ class Structure<T, A>
         return leafCapacity;
     }
 
+    /**
+     * Get the allocator to use to allocate persistent storage of inner and leaf
+     * tiers.
+     * 
+     * @return The allocator to use to allocate persistent storage of inner and
+     *         leaf tiers.
+     */
+    public Allocator<T, A> getAllocator()
+    {
+        return allocator;
+    }
+    
     /**
      * Get the persistent storage strategy.
      * 

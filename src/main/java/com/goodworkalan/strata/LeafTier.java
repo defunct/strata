@@ -10,7 +10,7 @@ package com.goodworkalan.strata;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public final class LeafTier<T, A>
+final class LeafTier<T, A>
 extends Tier<T, A>
 {
     /** The serial version id. */

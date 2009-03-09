@@ -127,7 +127,7 @@ public class Stage<T, A>
     {
         if (maxDirtyTiers == 0)
         {
-            allocator.write(stash, inner);
+            allocator.getInnerStore().write(stash, inner.getAddress(), inner, inner.getChildType());
         }
         else
         {
@@ -150,7 +150,7 @@ public class Stage<T, A>
     {
         if (maxDirtyTiers == 0)
         {
-            allocator.write(stash, leaf);
+            allocator.getLeafStore().write(stash, leaf.getAddress(), leaf, leaf.getNext());
         }
         else
         {
@@ -172,7 +172,7 @@ public class Stage<T, A>
     {
         if (maxDirtyTiers == 0)
         {
-            allocator.free(stash, inner);
+            allocator.getInnerStore().free(stash, inner.getAddress());
         }
         else
         {
@@ -195,7 +195,7 @@ public class Stage<T, A>
     {
         if (maxDirtyTiers == 0)
         {
-            allocator.free(stash, leaf);
+            allocator.getLeafStore().free(stash, leaf.getAddress());
         }
         else
         {
@@ -226,19 +226,19 @@ public class Stage<T, A>
             {
                 for (InnerTier<T, A> inner : dirtyInnerTiers)
                 {
-                    allocator.write(stash, inner);
+                    allocator.getInnerStore().write(stash, inner.getAddress(), inner, inner.getChildType());
                 }
                 for (InnerTier<T, A> inner : freeInnerTiers)
                 {
-                    allocator.free(stash, inner);
+                    allocator.getInnerStore().free(stash, inner.getAddress());
                 }
                 for (LeafTier<T, A> leaf : dirtyLeafTiers)
                 {
-                    allocator.write(stash, leaf);
+                    allocator.getLeafStore().write(stash, leaf.getAddress(), leaf, leaf.getNext());
                 }
                 for (LeafTier<T, A> leaf : freeLeafTiers)
                 {
-                    allocator.free(stash, leaf);
+                    allocator.getLeafStore().free(stash, leaf.getAddress());
                 }
                 while (count[0]-- != 0)
                 {

@@ -13,12 +13,11 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-final class NullStorage<T>
-implements Storage<T, Ilk.Pair>
+public class InMemoryAllocator<T> implements Allocator<T, Ilk.Pair>
 {
     /** The super type token of the b-tree value type. */
     private final Ilk.Key key;
-
+    
     /**
      * Create a null allocator with the given super type token of b-tree value
      * type.
@@ -26,7 +25,7 @@ implements Storage<T, Ilk.Pair>
      * @param key
      *            The super type token of the b-tree value type.
      */
-    public NullStorage(Ilk.Key key)
+    public InMemoryAllocator(Ilk.Key key)
     {
         this.key = key;
     }
@@ -63,67 +62,5 @@ implements Storage<T, Ilk.Pair>
     public Ilk.Pair allocate(Stash stash, LeafTier<T, Ilk.Pair> leaf, int capacity)
     {
         return new Ilk<LeafTier<T, Ilk.Pair>>(key) { }.pair(leaf);
-    }
-    
-    // TODO Document.
-    public void load(Stash stash, Ilk.Pair address, InnerTier<T, Ilk.Pair> inner)
-    {
-    }
-    
-    // TODO Document.
-    public void load(Stash stash, Ilk.Pair address, LeafTier<T, Ilk.Pair> leaf)
-    {
-    }
-
-    // TODO Document.
-    public void write(Stash stash, InnerTier<T, Ilk.Pair> inner)
-    {
-    }
-
-    // TODO Document.
-    public void write(Stash stash, LeafTier<T, Ilk.Pair> leaf)
-    {
-    }
-
-    // TODO Document.
-    public void free(Stash stash, InnerTier<T, Ilk.Pair> inner)
-    {
-    }
-
-    /**
-     * A noop implementation since the in memory leaf tier is simply garbage
-     * collected.
-     * 
-     * @param stash
-     *            A type-safe container of out of band data.
-     * @param leaf
-     *            The leaf tier.
-     */
-    public void free(Stash stash, LeafTier<T, Ilk.Pair> leaf)
-    {
-    }
-
-    /**
-     * Return a null super type token reference as the null address value for
-     * this allocation strategy.
-     * 
-     * @return The null address value.
-     */
-    public Ilk.Pair getNull()
-    {
-        return null;
-    }
-
-    /**
-     * Return true if the given address is null indicating that it is the null
-     * value for this allocation strategy.
-     * 
-     * @param address
-     *            A storage address.
-     * @return True if the address is null.
-     */
-    public boolean isNull(Ilk.Pair address)
-    {
-        return address == null;
     }
 }

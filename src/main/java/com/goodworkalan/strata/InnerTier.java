@@ -13,7 +13,7 @@ import java.util.Iterator;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public class InnerTier<T, A>
+class InnerTier<T, A>
 extends Tier<Branch<T, A>, A>
 {
     /** The serial version id. */
