@@ -4,11 +4,15 @@ import com.goodworkalan.stash.Stash;
 
 /**
  * A strategy for allocating persistent storage for inner and leaf tiers.
+ * <p>
+ * FIXME Reintroduce storage. Allocator becomes the interface to short circuit
+ * persistent storage with in memory strategies. Storage can allocate and free
+ * with addresses only. It can load to a collection. It can write a collection.
  * 
  * @author Alan Gutierrez
  * 
  * @param <T>
- *            The value type of the indexed objects.
+ *            The value type of the b+tree objects.
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
@@ -36,14 +40,14 @@ public interface Allocator<T, A>
      * 
      * @param stash
      *            A type-safe container of out of band data.
-     * @param inner
-     *            The inner tier.
+     * @param leaf
+     *            The leaf tier.
      * @param capacity
      *            The number of values in the leaf tier.
      * @return The address of the persistent storage.
      */
     public A allocate(Stash stash, LeafTier<T, A> leaf, int capacity);
-    
+
     /**
      * Load an inner tier from the persistent storage at the given address. Use
      * the given cooper to create a bucket to store the indexed fields. Use the
@@ -53,7 +57,7 @@ public interface Allocator<T, A>
      *            A type-safe container of out of band data.
      * @param address
      *            The address of the inner tier storage.
-     *@param inner
+     * @param inner
      *            The leaf inner to load from storage.
      */
     public void load(Stash stash, A address, InnerTier<T, A> inner);
@@ -108,8 +112,8 @@ public interface Allocator<T, A>
      * 
      * @param stash
      *            A type-safe container of out of band data.
-     * @param address
-     *            The address of the leaf tier storage.
+     * @param leaf
+     *            The leaf tier.
      */
     public void free(Stash stash, LeafTier<T, A> leaf);
 

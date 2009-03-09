@@ -1,5 +1,7 @@
 package com.goodworkalan.strata;
 
+import static com.goodworkalan.strata.Leaves.getNextAndLock;
+
 import java.util.Iterator;
 
 // TODO Document.
@@ -53,7 +55,7 @@ implements LeafOperation<T, A>
                             }
                             else
                             {
-                                LeafTier<T, A> following = current.getNextAndLock(mutation, levelOfLeaf);
+                                LeafTier<T, A> following = getNextAndLock(mutation, current, levelOfLeaf);
                                 if (following != null)
                                 {
                                     mutation.setReplacement(following.get(0));
@@ -66,7 +68,7 @@ implements LeafOperation<T, A>
                     break SEARCH;
                 }
             }
-            current = current.getNextAndLock(mutation, levelOfLeaf);
+            current = getNextAndLock(mutation, current, levelOfLeaf);
         }
         while (current != null && mutation.getComparable().compareTo(current.get(0)) == 0);
 
@@ -77,7 +79,7 @@ implements LeafOperation<T, A>
         {
             for (;;)
             {
-                LeafTier<T, A> subsequent = current.getNextAndLock(mutation, levelOfLeaf);
+                LeafTier<T, A> subsequent = getNextAndLock(mutation, current, levelOfLeaf);
                 if (subsequent == null || mutation.getComparable().compareTo(subsequent.get(0)) != 0)
                 {
                     break;

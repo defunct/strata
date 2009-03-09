@@ -1,5 +1,10 @@
 package com.goodworkalan.strata;
 
+import static com.goodworkalan.strata.Leaves.getNextAndLock;
+import static com.goodworkalan.strata.Leaves.link;
+
+import com.goodworkalan.stash.Stash;
+
 // TODO Document.
 final class SplitLinkedListRight<T, A>
 implements LeafOperation<T, A>
@@ -8,7 +13,7 @@ implements LeafOperation<T, A>
     private final InnerTier<T, A> inner;
 
     /**
-     * Create a split linked list right operaiton.
+     * Create a split linked list right operation.
      * 
      * @param inner
      *            The inner tier parent that references the leaf to split.
@@ -18,10 +23,28 @@ implements LeafOperation<T, A>
         this.inner = inner;
     }
 
-    // TODO Document.
-    private boolean endOfList(Mutation<T, A> mutation, LeafTier<T, A> last)
+    /**
+     * Return true if the given leaf is the last leaf in a linked list of leaves
+     * containing object with identical index values.
+     * 
+     * @param mutation
+     *            The mutation state container.
+     * @param leaf
+     *            The leaf.
+     * @return True if the given leaf is the last leaf in a linked list of
+     *         leaves.
+     */
+    private boolean endOfList(Mutation<T, A> mutation, LeafTier<T, A> leaf)
     {
-        return mutation.getStructure().getAllocator().isNull(last.getNext()) || mutation.getStructure().getComparableFactory().newComparable(mutation.getStash(), last.getNext(mutation).get(0)).compareTo(last.get(0)) != 0;
+        Structure<T, A> structure = mutation.getStructure();
+        Allocator<T, A> alloator = mutation.getStructure().getAllocator();
+        if (alloator.isNull(leaf.getNext()))
+        {
+            return true;
+        }
+        Stash stash = mutation.getStash();
+        LeafTier<T, A> next = structure.getPool().getLeafTier(stash, leaf.getNext());
+        return structure.getComparableFactory().newComparable(stash, leaf.get(0)).compareTo(next.get(0)) != 0;
     }
 
     // TODO Document.
@@ -35,11 +58,11 @@ implements LeafOperation<T, A>
         LeafTier<T, A> last = leaf;
         while (!endOfList(mutation, last))
         {
-            last = last.getNextAndLock(mutation, levelOfLeaf);
+            last = getNextAndLock(mutation, last, levelOfLeaf);
         }
 
         LeafTier<T, A> right = mutation.newLeafTier();
-        last.link(mutation, right);
+        link(mutation, last, right);
 
         inner.add(inner.getIndex(leaf.getAddress()) + 1, new Branch<T, A>(mutation.getObject(), right.getAddress()));
 

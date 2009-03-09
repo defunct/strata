@@ -15,6 +15,6 @@ implements RootDecision<T, A>
                           Level<T, A> levelOfRoot,
                           InnerTier<T, A> root)
     {
-        levelOfRoot.listOfOperations.add(new SplitRoot<T, A>(root));
+        levelOfRoot.operations.add(new SplitRoot<T, A>(root));
     }
 }

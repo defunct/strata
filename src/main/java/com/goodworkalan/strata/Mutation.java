@@ -11,36 +11,48 @@ final class Mutation<T, A>
     /** The type-safe container of out of band data. */
     private final Stash stash;
 
-    // TODO Document.
+    /** The collection of the core services of the b+tree. */
     private final Structure<T, A> structure;
     
-    // TODO Document.
+    /** The comparable representing the value to find. */
     private final Comparable<? super T> comparable;
     
+    /** The object being inserted. */
     private final T object;
     
-    // TODO Document.
+    /**
+     * A condition to test to determine if an object that matches the deletable
+     * comparable should in fact be deleted.
+     */
     final Deletable<T> deletable;
     
-    // TODO Document.
-    final LinkedList<Level<T, A>> listOfLevels = new LinkedList<Level<T, A>>();
+    /**
+     * A linked list of the per level mutation state.
+     */
+    final LinkedList<Level<T, A>> levels = new LinkedList<Level<T, A>>();
     
     // TODO Document.
     private boolean onlyChild;
     
     // TODO Document.
     private boolean deleting;
-    
-    /** The mutation result. */
+
+    /**
+     * The result of a delete operation, the object deleted from the tree if
+     * any.
+     */
     private T result;
     
-    // TODO Document.
+    /**
+     * The value to use to replace an inner tier pivot whose is being deleted
+     * from b-tree.
+     */
     private T replacement;
     
     // TODO Document.
     private LeafTier<T, A> leftLeaf;
     
-    // TODO Document.
+    /** The leaf operation to perform. */
     public LeafOperation<T, A> leafOperation;
 
     // TODO Document.
@@ -52,25 +64,42 @@ final class Mutation<T, A>
         this.object = object;
         this.structure = structure;
     }
-    
-    // TODO Document.
+
+    /**
+     * Get the comparable representing the value to find.
+     * 
+     * @return The comparable representing the value to find.
+     */
     public Comparable<? super T> getComparable()
     {
         return comparable;
     }
-    
-    // TODO Document.
+
+    /**
+     * Get the type-safe container of out of band data.
+     * 
+     * @return The type-safe container of out of band data.
+     */
     public Stash getStash()
     {
         return stash;
     }
-    
+
+    /**
+     * Get the object being inserted.
+     * 
+     * @return The object being inserted.
+     */
     public T getObject()
     {
         return object;
     }
-    
-    // TODO Document.
+
+    /**
+     * Get the collection of the core services of the b+tree.
+     * 
+     * @return The collection of the core services of the b+tree.
+     */
     public Structure<T, A> getStructure()
     {
         return structure;
@@ -80,7 +109,7 @@ final class Mutation<T, A>
      * Get the result of a delete operation, the object deleted from the tree if
      * any.
      * 
-     * @return The mutation result.
+     * @return The delete result.
      */
     public T getResult()
     {
@@ -92,7 +121,7 @@ final class Mutation<T, A>
      * any.
      * 
      * @param result
-     *            The mutation result.
+     *            The delete result.
      */
     public void setResult(T result)
     {
@@ -156,8 +185,15 @@ final class Mutation<T, A>
     {
         this.deleting = deleting;
     }
-    
-    // TODO Document.
+
+    /**
+     * Create a new inner tier that references child tiers of the given child
+     * type.
+     * 
+     * @param childType
+     *            The child tier type.
+     * @return A new inner tier.
+     */
     public InnerTier<T, A> newInnerTier(ChildType childType)
     {
         InnerTier<T, A> inner = new InnerTier<T, A>();
@@ -165,8 +201,12 @@ final class Mutation<T, A>
         inner.setChildType(childType);
         return inner;
     }
-    
-    // TODO Document.
+
+    /**
+     * Create a new leaf tier.
+     * 
+     * @return A new leaf tier.
+     */
     public LeafTier<T, A> newLeafTier()
     {
         LeafTier<T, A> leaf = new LeafTier<T, A>();
@@ -177,14 +217,14 @@ final class Mutation<T, A>
     // TODO Document.
     public void rewind(int leaveExclusive)
     {
-        Iterator<Level<T, A>>levels = listOfLevels.iterator();
-        int size = listOfLevels.size();
+        Iterator<Level<T, A>> eachLevel = levels.iterator();
+        int size = levels.size();
         boolean unlock = true;
 
         for (int i = 0; i < size - leaveExclusive; i++)
         {
-            Level<T, A> level = levels.next();
-            Iterator<Operation<T, A>> operations = level.listOfOperations.iterator();
+            Level<T, A> level = eachLevel.next();
+            Iterator<Operation<T, A>> operations = level.operations.iterator();
             while (operations.hasNext())
             {
                 Operation<T, A> operation = operations.next();
@@ -199,14 +239,14 @@ final class Mutation<T, A>
             }
             if (unlock)
             {
-                if (listOfLevels.size() == 3)
+                if (levels.size() == 3)
                 {
                     level.downgrade();
                 }
                 else
                 {
                     level.releaseAndClear();
-                    levels.remove();
+                    eachLevel.remove();
                 }
             }
         }
@@ -215,29 +255,22 @@ final class Mutation<T, A>
     // TODO Document.
     public void shift()
     {
-        Iterator<Level<T, A>> levels = listOfLevels.iterator();
-        while (listOfLevels.size() > 3 && levels.hasNext())
+        Iterator<Level<T, A>> eachLevel = levels.iterator();
+        while (levels.size() > 3 && eachLevel.hasNext())
         {
-            Level<T, A> level = levels.next();
-            if (level.listOfOperations.size() != 0)
+            Level<T, A> level = eachLevel.next();
+            if (level.operations.size() != 0)
             {
                 break;
             }
 
             level.releaseAndClear();
-            levels.remove();
+            eachLevel.remove();
         }
-    }
-    
-    // TODO Document.
-    public Comparable<T> _newComparable(T object)
-    {
-        return null;
     }
     
     // TODO Document.
     public void clear()
     {
-        
     }
 }

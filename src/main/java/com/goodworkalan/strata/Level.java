@@ -1,117 +1,171 @@
 package com.goodworkalan.strata;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 
-// TODO Document.
+/**
+ * The per level mutation state container.
+ * 
+ * @author Alan Gutierrez
+ *
+ * @param <T>
+ *            The value type of the b+tree objects.
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ */
 final class Level<T, A>
 {
-    // TODO Document.
-    public LockExtractor getSync;
+    /**
+     * A swappable strategy that extracts either the read or write lock from a
+     * read/write lock.
+     */
+    public LockExtractor locker;
 
-    // TODO Document.
-    public final Map<Object, Tier<?, A>> mapOfLockedTiers = new HashMap<Object, Tier<?, A>>();
+    /**
+     * A map of addresses to locked tiers that keeps track of the tiers that
+     * need to be unlocked as well as holds onto a hard reference to the tiers
+     * so that they are not garbage collected.
+     */
+    public final Map<Object, Tier<?, A>> lockedTiers = new HashMap<Object, Tier<?, A>>();
 
-    // TODO Document.
-    public final LinkedList<Operation<T, A>> listOfOperations = new LinkedList<Operation<T, A>>();
+    /** The list of operations to perform on the tier at this level. */
+    public final LinkedList<Operation<T, A>> operations = new LinkedList<Operation<T, A>>();
 
-    // TODO Document.
+    /**
+     * Create a new level that will lock tiers exclusively if the given
+     * exclusive value it true.
+     * 
+     * @param exclusive
+     *            If true, this level will lock tiers exclusively.
+     */
     public Level(boolean exclusive)
     {
-        this.getSync = exclusive ? (LockExtractor) new WriteLockExtractor() : (LockExtractor) new ReadLockExtractor();
+        this.locker = exclusive ? (LockExtractor) new WriteLockExtractor() : (LockExtractor) new ReadLockExtractor();
     }
 
-    // TODO Document.
+    /**
+     * Lock the given tier according to the locker property and add it to the
+     * set of locked tiers. The set of locked tiers keeps track of the tiers that
+     * need to be unlocked as well as holds onto a hard reference to the tiers
+     * so that they are not garbage collected.
+     * 
+     * @param tier
+     *            The tier to lock.
+     */
     public void lockAndAdd(Tier<?, A> tier)
     {
         lock_(tier);
         add_(tier);
     }
-    
-    // TODO Document.
+
+    /**
+     * Unlock the given tier according to the locker property and remove it from
+     * the set of locked tiers. The set of locked tiers keeps track of the tiers that
+     * need to be unlocked as well as holds onto a hard reference to the tiers
+     * so that they are not garbage collected.
+     * 
+     * @param tier
+     *            The tier to lock.
+     */
     public void unlockAndRemove(Tier<?, A> tier)
     {
-        assert mapOfLockedTiers.containsKey(tier.getAddress());
+        assert lockedTiers.containsKey(tier.getAddress());
         
-        mapOfLockedTiers.remove(tier.getAddress());
+        lockedTiers.remove(tier.getAddress());
         unlock_(tier);
     }
 
-    // TODO Document.
+    /**
+     * Add the tier to the set of locked tiers. The set of locked tiers keeps
+     * track of the tiers that need to be unlocked as well as holds onto a hard
+     * reference to the tiers so that they are not garbage collected.
+     * 
+     * @param tier
+     *            The tier to add to the set of locked tiers.
+     */
     public void add_(Tier<?, A> tier)
     {
-        mapOfLockedTiers.put(tier.getAddress(), tier);
+        lockedTiers.put(tier.getAddress(), tier);
     }
 
-    // TODO Document.
+    /**
+     * Lock the given tier according to the locker property
+     * 
+     * @param tier
+     *            The tier to lock.
+     */
     public void lock_(Tier<?, A> tier)
     {
-        getSync.getSync(tier.getReadWriteLock()).lock();
+        locker.getLock(tier.getReadWriteLock()).lock();
     }
 
-    // TODO Document.
+    /**
+     * Unlock the given tier according to the locker property
+     * 
+     * @param tier
+     *            The tier to unlock.
+     */
     public void unlock_(Tier<?, A> tier)
     {
-        getSync.getSync(tier.getReadWriteLock()).unlock();
+        locker.getLock(tier.getReadWriteLock()).unlock();
     }
 
-    // TODO Document.
+    /**
+     * Unlock all the tiers in the set of tiers according to the locker
+     * property.
+     */
     public void release()
     {
-        Iterator<Tier<?, A>> lockedTiers = mapOfLockedTiers.values().iterator();
-        while (lockedTiers.hasNext())
+        for (Tier<?, A> tier : lockedTiers.values())
         {
-            Tier<?, A> tier = lockedTiers.next();
-            getSync.getSync(tier.getReadWriteLock()).unlock();
+            locker.getLock(tier.getReadWriteLock()).unlock();
         }
     }
 
-    // TODO Document.
+    /**
+     * Unlock all the tiers in the set of tiers according to the locker property
+     * and remove them from the set of locked tiers. The set of locked tiers
+     * keeps track of the tiers that need to be unlocked as well as holds onto a
+     * hard reference to the tiers so that they are not garbage collected.
+     */
     public void releaseAndClear()
     {
-        Iterator<Tier<?, A>> lockedTiers = mapOfLockedTiers.values().iterator();
-        while (lockedTiers.hasNext())
+        for (Tier<?, A> tier : lockedTiers.values())
         {
-            Tier<?, A> tier = lockedTiers.next();
-            getSync.getSync(tier.getReadWriteLock()).unlock();
+            locker.getLock(tier.getReadWriteLock()).unlock();
         }
-        mapOfLockedTiers.clear();
+        lockedTiers.clear();
     }
 
     // TODO Document.
     private void exclusive()
     {
-        Iterator<Tier<?, A>> lockedTiers = mapOfLockedTiers.values().iterator();
-        while (lockedTiers.hasNext())
+        for (Tier<?, A> tier : lockedTiers.values())
         {
-            Tier<?, A> tier = lockedTiers.next();
             tier.getReadWriteLock().writeLock().lock();
         }
-        getSync = new WriteLockExtractor();
+        locker = new WriteLockExtractor();
     }
 
     // TODO Document.
     public void downgrade()
     {
-        if (getSync.isExeclusive())
+        if (locker.isWrite())
         {
-            Iterator<Tier<?, A>> lockedTiers = mapOfLockedTiers.values().iterator();
-            while (lockedTiers.hasNext())
+            for (Tier<?, A> tier : lockedTiers.values())
             {
-                Tier<?, A> tier = lockedTiers.next();
                 tier.getReadWriteLock().readLock().lock();
                 tier.getReadWriteLock().writeLock().unlock();
             }
-            getSync = new ReadLockExtractor();
+            locker = new ReadLockExtractor();
         }
     }
 
     // TODO Document.
     public void upgrade()
     {
-        if (getSync.isExeclusive())
+        if (locker.isWrite())
         {
             throw new IllegalStateException();
         }
@@ -122,20 +176,20 @@ final class Level<T, A>
     // TODO Document.
     public boolean upgrade(Level<T, A> levelOfChild)
     {
-        if (!getSync.isExeclusive())
+        if (!locker.isWrite())
         {
             release();
             // TODO Use Release and Clear.
             levelOfChild.release();
-            levelOfChild.mapOfLockedTiers.clear();
+            levelOfChild.lockedTiers.clear();
             exclusive();
             levelOfChild.exclusive();
             return true;
         }
-        else if (!levelOfChild.getSync.isExeclusive())
+        else if (!levelOfChild.locker.isWrite())
         {
             levelOfChild.release();
-            levelOfChild.mapOfLockedTiers.clear();
+            levelOfChild.lockedTiers.clear();
             levelOfChild.exclusive();
             return true;
         }

@@ -10,7 +10,7 @@ implements Decision<T, A>
         Branch<T, A> branch = parent.find(mutation.getComparable());
         if (branch.getPivot() != null && mutation.getComparable().compareTo(branch.getPivot()) == 0)
         {
-            levelOfParent.listOfOperations.add(new SwapKey<T, A>(parent));
+            levelOfParent.operations.add(new SwapKey<T, A>(parent));
             return true;
         }
         return false;

@@ -16,7 +16,7 @@ implements Decision<T, A>
         Structure<T, A> structure = mutation.getStructure();
         Pool<T, A> pool = structure.getPool();
         
-        levelOfChild.getSync = new WriteLockExtractor();
+        levelOfChild.locker = new WriteLockExtractor();
         Branch<T, A> branch = parent.find(mutation.getComparable());
         int index = parent.getIndex(branch.getAddress());
         LeafTier<T, A> previous = null;
@@ -57,7 +57,7 @@ implements Decision<T, A>
                 return false;
             }
 
-            levelOfParent.listOfOperations.add(new RemoveLeaf<T, A>(parent, leaf, left));
+            levelOfParent.operations.add(new RemoveLeaf<T, A>(parent, leaf, left));
             mutation.leafOperation = new RemoveObject<T, A>(leaf);
             return true;
         }
@@ -91,7 +91,7 @@ implements Decision<T, A>
             }
             LeafTier<T, A> left = listToMerge.get(0);
             LeafTier<T, A> right = listToMerge.get(1);
-            levelOfParent.listOfOperations.add(new MergeLeaf<T, A>(parent, left, right));
+            levelOfParent.operations.add(new MergeLeaf<T, A>(parent, left, right));
             mutation.leafOperation = new RemoveObject<T, A>(leaf);
         }
         return !listToMerge.isEmpty();

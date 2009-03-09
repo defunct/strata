@@ -1,7 +1,7 @@
 package com.goodworkalan.strata;
 
 /**
- * A bouquet of services.
+ * The collection of the core services of the b+tree.
  * <p>
  * TODO This can become <code>Storage</code> again, or such an interface can
  * expose the address type, for code that wants to navigate the tree itself,

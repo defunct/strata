@@ -22,7 +22,7 @@ implements RootDecision<T, A>
     // TODO Document.
     public void operation(Mutation<T, A> mutation, Level<T, A> levelOfRoot, InnerTier<T, A> root)
     {
-        levelOfRoot.listOfOperations.add(new ShouldDeleteRoot.MergeRoot<T, A>(root));
+        levelOfRoot.operations.add(new ShouldDeleteRoot.MergeRoot<T, A>(root));
     }
 
     // TODO Document.

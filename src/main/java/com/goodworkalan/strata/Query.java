@@ -4,7 +4,29 @@ import java.util.concurrent.locks.Lock;
 
 import com.goodworkalan.stash.Stash;
 
-// TODO Document.
+/**
+ * A query on the b-tree. A query represents group of related search, insert or
+ * delete operations. When working with a persistent storage solution, a query
+ * would be associated with a persistent storage transaction, so that all of the
+ * operations could be recorded by a single transaction. A query is associated
+ * with a specific {@link Stash} and therefore, with a specific set of
+ * persistent storage transaction data.
+ * <p>
+ * Additionally, a thread can lock a b-tree for insert and delete exclusively,
+ * either explicitly, by calling the lock method of the
+ * {@link #getInsertDeleteLock()}, or implicitly, by creating the b+tree with a
+ * non-zero value for {@link Schema#setMaxDirtyTiers(int)}.
+ * <p>
+ * NOTE: Caching dirty tiers requires an exclusive lock, so that no other thread
+ * attempts to flush the dirty tiers, but I can see how the cache could be
+ * common among threads, that the dirty tiers could build up, be shared among
+ * threads, using to the tier level locking to control concurrency.
+ * 
+ * @author Alan Gutierrez
+ * 
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ */
 public interface Query<T>
 {
     /**
@@ -37,40 +59,63 @@ public interface Query<T>
      */
     public void add(T object);
     
-    // TODO Document.
+    /**
+     * Build a comparable from the given value object using the comparable
+     * factory property that provides the comparables used to order the b+tree.
+     * 
+     * @return A comparable built from the given object according to the order
+     *         of the b+tree.
+     */
     public Comparable<? super T> comparable(T object);
 
-    // TODO Rename find fields? (Erasure)
-    // TODO Document.
-    public Cursor<T> find(Comparable<? super T> comparable);
-    
-    // TODO Document.
-    public T remove(Deletable<T> deletable, Comparable<? super T> comparable);
-    
     /**
-     * Remove the first object whose index fields are equal to the given
-     * comparable.
+     * Return a forward cursor that references if the first object value in the
+     * b+tree that is less than or equal to the given comparable.
      * 
      * @param comparable
-     *            The fields to match.
+     *            The comparable representing the value to find.
+     * @return A forward cursor that references the first object value in the
+     *         b+tree that is less than or equal to the given comparable.
+     */
+    public Cursor<T> find(Comparable<? super T> comparable);
+
+    /**
+     * Remove the first object that is equal to the given comparable that is
+     * deletable according to the the given deletable if any.
+     * 
+     * @param comparable
+     *            The comparable representing the value to find.
+     * @return The removed object or null if no object is both equal to the
+     *         given comparable and deletable according to the given deletable.
+     */
+    public T remove(Deletable<T> deletable, Comparable<? super T> comparable);
+
+    /**
+     * Remove the first object that is equal to the given comparable if any.
+     * 
+     * @param comparable
+     *            The comparable representing the value to find.
      * @return The removed object or null if no object is equal to the given
      *         comparable.
      */
     public T remove(Comparable<? super T> comparable);
 
     /**
-     * Returns a cursor that references the first object in the B-Tree.
+     * Returns a cursor that references the first object in the b-tree.
      * 
-     * @return A cursor that references the first object in the B-Tree.
+     * @return A cursor that references the first object in the b-tree.
      */
     public Cursor<T> first();
-    
-    // TODO Document.
+
+    /**
+     * Flush any dirty tiers held by in memory and guarded by the insert and
+     * delete lock.
+     */
     public void flush();
 
     /**
-     * Destroy the <code>Strata</code> B-Tree by deallocating all of its pages
-     * including the root page.
+     * Destroy the b+tree by deallocating all of its pages from the persistent
+     * storage including the root page.
      */
     public void destroy();
 }

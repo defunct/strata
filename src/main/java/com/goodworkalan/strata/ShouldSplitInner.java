@@ -13,7 +13,7 @@ implements Decision<T, A>
         levelOfChild.lockAndAdd(child);
         if (child.size() == structure.getInnerSize())
         {
-            levelOfParent.listOfOperations.add(new SplitInner<T, A>(parent, child));
+            levelOfParent.operations.add(new SplitInner<T, A>(parent, child));
             return true;
         }
         return false;

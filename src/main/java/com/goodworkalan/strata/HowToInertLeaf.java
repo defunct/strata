@@ -10,10 +10,10 @@ implements Decision<T, A>
     {
         Structure<T, A> structure = mutation.getStructure();
         boolean split = true;
-        levelOfChild.getSync = new WriteLockExtractor();
+        levelOfChild.locker = new WriteLockExtractor();
         Branch<T, A> branch = parent.find(mutation.getComparable());
         LeafTier<T, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), branch.getAddress());
-        levelOfChild.getSync = new WriteLockExtractor();
+        levelOfChild.locker = new WriteLockExtractor();
         levelOfChild.lockAndAdd(leaf);
         if (leaf.size() == structure.getLeafSize())
         {
@@ -37,7 +37,7 @@ implements Decision<T, A>
             }
             else
             {
-                levelOfParent.listOfOperations.add(new SplitLeaf<T, A>(parent));
+                levelOfParent.operations.add(new SplitLeaf<T, A>(parent));
                 mutation.leafOperation = new InsertSorted<T, A>(parent);
             }
         }

@@ -8,13 +8,13 @@ final class ReadLockExtractor
 implements LockExtractor
 {
     // TODO Document.
-    public Lock getSync(ReadWriteLock readWriteLock)
+    public Lock getLock(ReadWriteLock readWriteLock)
     {
         return readWriteLock.readLock();
     }
 
     // TODO Document.
-    public boolean isExeclusive()
+    public boolean isWrite()
     {
         return false;
     }

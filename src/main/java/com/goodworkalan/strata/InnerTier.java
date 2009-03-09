@@ -2,11 +2,21 @@ package com.goodworkalan.strata;
 
 import java.util.Iterator;
 
-// FIXME Document.
+/**
+ * An inner level of the b-tree that references either inner levels or leaf
+ * levels.
+ * 
+ * @author Alan Gutierrez
+ * 
+ * @param <T>
+ *            The value type of the b+tree objects.
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ */
 public class InnerTier<T, A>
 extends Tier<Branch<T, A>, A>
 {
-    // TODO Document.
+    /** The serial version id. */
     private static final long serialVersionUID = 1L;
 
     /** The flag indicating whether child tiers are inner or leaf tiers. */
@@ -21,8 +31,15 @@ extends Tier<Branch<T, A>, A>
     {
         return childType;
     }
-    
-    // TODO Document.
+
+    /**
+     * Get the index of the branch with the given child tier address.
+     * 
+     * @param address
+     *            The child tier address.
+     * @return The index of the branch with the given child tier address or
+     *         <code>-1</code> if not found.
+     */
     public int getIndex(A address)
     {
         int index = 0;
@@ -38,14 +55,27 @@ extends Tier<Branch<T, A>, A>
         }
         return -1;
     }
-    
-    // TODO Document.
+
+    /**
+     * Set the type of child tier to one of inner or child.
+     * 
+     * @param childType
+     *            The child tier type.
+     */
     public void setChildType(ChildType childType)
     {
         this.childType = childType;
     }
 
-    // TODO Document.
+    /**
+     * Find the branch whose child tier is the path to objects that are equal to
+     * or greater than the comparable.
+     * 
+     * @param comparable
+     *            The comparable representing the value to find.
+     * @return The branch whose child tier is the path to objects that are equal
+     *         to or greater than the comparable.
+     */
     public Branch<T, A> find(Comparable<? super T> comparable)
     {
         int low = 1;

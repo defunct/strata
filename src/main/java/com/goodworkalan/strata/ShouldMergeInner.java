@@ -152,10 +152,7 @@ implements Decision<T, A>
      * @param parent
      *            The parent tier.
      */
-    public boolean test(Mutation<T, A> mutation,
-                        Level<T, A> levelOfParent,
-                        Level<T, A> levelOfChild,
-                        InnerTier<T, A> parent)
+    public boolean test(Mutation<T, A> mutation, Level<T, A> levelOfParent, Level<T, A> levelOfChild, InnerTier<T, A> parent)
     {
         Structure<T, A> structure = mutation.getStructure();
         Pool<T, A> pool = structure.getPool();
@@ -165,20 +162,19 @@ implements Decision<T, A>
         Branch<T, A> branch = parent.find(mutation.getComparable());
         InnerTier<T, A> child = pool.getInnerTier(mutation.getStash(), branch.getAddress());
 
-        // If we are on our way down to remove the last item of a leaf
-        // tier that is an only child, then we need to find the leaf to
-        // the left of the only child leaf tier. This means that we need
-        // to detect the branch that uses the the value of the last item in
-        // the only child leaf as a pivot. When we detect it we then
-        // navigate each right most branch of the tier referenced by the
-        // branch before it to find the leaf to the left of the only child
-        // leaf. We then make note of it so we can link it around the only
-        // child that is go be removed.
+        // If we are on our way down to remove the last item of a leaf tier that
+        // is an only child, then we need to find the leaf to the left of the
+        // only child leaf tier. This means that we need to detect the branch
+        // that uses the the value of the last item in the only child leaf as a
+        // pivot. When we detect it we then navigate each right most branch of
+        // the tier referenced by the branch before it to find the leaf to the
+        // left of the only child leaf. We then make note of it so we can link
+        // it around the only child that is go be removed.
 
         if (lockLeft(mutation, branch))
         {
-            // FIXME You need to hold these exclusive locks, so add an
-            // operation that is uncancelable, but does nothing.
+            // FIXME You need to hold these exclusive locks, so add an operation
+            // that is uncancelable, but does nothing.
 
             int index = parent.getIndex(child.getAddress()) - 1;
             InnerTier<T, A> inner = parent;
@@ -194,11 +190,10 @@ implements Decision<T, A>
         }
 
 
-        // When we detect an inner tier with an only child, we note that
-        // we have begun to descend a list of tiers with only one child.
-        // Tiers with only one child are deleted rather than merged. If we
-        // encounter a tier with children with siblings, we are no longer
-        // deleting.
+        // When we detect an inner tier with an only child, we note that we have
+        // begun to descend a list of tiers with only one child.  Tiers with
+        // only one child are deleted rather than merged. If we encounter a tier
+        // with children with siblings, we are no longer deleting.
 
         if (child.size() == 1)
         {
@@ -206,7 +201,7 @@ implements Decision<T, A>
             {
                 mutation.setDeleting(true);
             }
-            levelOfParent.listOfOperations.add(new RemoveInner<T, A>(parent, child));
+            levelOfParent.operations.add(new RemoveInner<T, A>(parent, child));
             return true;
         }
 
@@ -247,17 +242,17 @@ implements Decision<T, A>
 
         if (listToMerge.size() != 0)
         {
-            // If the parent or ancestors have only children and we are
-            // creating a chain of delete operations, we have to cancel
-            // those delete operations. We cannot delete an inner tier as
-            // the result of a merge, we have to allow this subtree of
-            // nearly empty tiers to exist. We rewind all the operations
-            // above us, but we leave the top two tiers locked exclusively.
+            // If the parent or ancestors have only children and we are creating
+            // a chain of delete operations, we have to cancel those delete
+            // operations. We cannot delete an inner tier as the result of a
+            // merge, we have to allow this subtree of nearly empty tiers to
+            // exist. We rewind all the operations above us, but we leave the
+            // top two tiers locked exclusively.
 
             // FIXME I'm not sure that rewind is going to remove all the
             // operations. The number here indicates that two levels are
-            // supposed to be left locked exclusive, but I don't see in
-            // rewind, how the operations are removed.
+            // supposed to be left locked exclusive, but I don't see in rewind,
+            // how the operations are removed.
 
             if (mutation.isDeleting())
             {
@@ -265,15 +260,15 @@ implements Decision<T, A>
                 mutation.setDeleting(false);
             }
 
-            levelOfParent.listOfOperations.add(new MergeInner<T, A>(parent, listToMerge));
+            levelOfParent.operations.add(new MergeInner<T, A>(parent, listToMerge));
 
             return true;
         }
 
-        // When we encounter an inner tier without an only child, then we
-        // are no longer deleting. Returning false will cause the Query to
-        // rewind the exclusive locks and cancel the delete operations, so
-        // the delete action is reset.
+        // When we encounter an inner tier without an only child, then we are no
+        // longer deleting. Returning false will cause the Query to rewind the
+        // exclusive locks and cancel the delete operations, so the delete
+        // action is reset.
 
         mutation.setDeleting(false);
 

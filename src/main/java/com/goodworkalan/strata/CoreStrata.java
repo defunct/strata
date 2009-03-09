@@ -2,14 +2,25 @@ package com.goodworkalan.strata;
 
 import com.goodworkalan.stash.Stash;
 
-// FIXME Document.
+/**
+ * The core implementation of the b+tree. The b+tree is is split into
+ * interface/implementation since the b+tree itself does not need to expose the
+ * address type of the persistent storage strategy.
+ * 
+ * @author Alan Gutierrez
+ * 
+ * @param <T>
+ *            The value type of the b+tree objects.
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ */
 public final class CoreStrata<T, A>
 implements Strata<T>
 {
-    // TODO Document.
+    /** The address of the root inner tier. */ 
     private final A rootAddress;
     
-    // TODO Document.
+    /** The collection of the core services of the b+tree. */
     private final Structure<T, A> structure;
 
     /**
@@ -26,26 +37,45 @@ implements Strata<T>
         this.rootAddress = rootAddress;
         this.structure = structure;
     }
-    
-    // TODO Document.
+
+    /**
+     * Get the address of the root inner tier.
+     * 
+     * @return The address of the root inner tier.
+     */
     public A getRootAddress()
     {
         return rootAddress;
     }
     
-    // TODO Document.
+    /**
+     * Get the address of the root inner tier.
+     * 
+     * @return The address of the root inner tier.
+     */
     public Schema<T> getSchema()
     {
         return structure.newSchema();
     }
     
-    // TODO Document.
+    /**
+     * Create a query of the b+tree.
+     * 
+     * @return A new query of the b+tree.
+     */
     public Query<T> query()
     {
         return query(new Stash());
     }
 
-    // TODO Document.
+    /**
+     * Create a query of the b+tree using the given stash to communicate any
+     * additional participants in the storage strategy.
+     * 
+     * @param stash
+     *            A type-safe container of out of band data.
+     * @return A new query of the b+tree.
+     */
     public Query<T> query(Stash stash)
     {
         return new CoreQuery<T, A>(stash, this, structure);

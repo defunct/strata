@@ -2,20 +2,30 @@ package com.goodworkalan.strata;
 
 import com.goodworkalan.stash.Stash;
 
-// FIXME Add field to strata.
-// TODO Document.
+/**
+ * A b+tree.
+ * 
+ * @author Alan Gutierrez
+ *
+ * @param <T>
+ *            The value type of the indexed objects.
+ */
 public interface Strata<T>
 {
     /**
-     * Create a query of the strata using the given <code>stash</code> to
-     * communicate any additional participants in the storage strategy.
+     * Create a query of the b+tree using the given stash to communicate any
+     * additional participants in the storage strategy.
      * 
      * @param stash
-     *            Additional participants in the storage strategy.
-     * @return A new query of the strata.
+     *            A type-safe container of out of band data.
+     * @return A new query of the b+tree.
      */
     public Query<T> query(Stash stash);
 
-    // TODO Document.
+    /**
+     * Create a query of the b+tree.
+     * 
+     * @return A new query of the b+tree.
+     */
     public Query<T> query();
 }

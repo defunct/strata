@@ -1,5 +1,7 @@
 package com.goodworkalan.strata;
 
+import static com.goodworkalan.strata.Leaves.link;
+
 // TODO Document.
 final class SplitLinkedListLeft<T, A>
 implements LeafOperation<T, A>
@@ -27,7 +29,7 @@ implements LeafOperation<T, A>
             right.add(leaf.remove(0));
         }
 
-        leaf.link(mutation, right);
+        link(mutation, leaf, right);
 
         int index = inner.getIndex(leaf.getAddress());
         if (index != 0)

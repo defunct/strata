@@ -1,16 +1,34 @@
 package com.goodworkalan.strata;
 
-// FIXME Document.
+/**
+ * An leaf level of the b-tree that contains object values.
+ * 
+ * @author Alan Gutierrez
+ * 
+ * @param <T>
+ *            The value type of the b+tree objects.
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ */
 public final class LeafTier<T, A>
 extends Tier<T, A>
 {
-    // TODO Document.
+    /** The serial version id. */
     private static final long serialVersionUID = 1L;
 
-    // TODO Document.
+    /** The address of the next leaf in the b-tree. */
     private A next;
-    
-    // TODO Document.
+
+    /**
+     * Get the index of the first value object for the given comparable
+     * representing the value according to the b-tree order. If there is no such
+     * object in the leaf, return the index of the insert location.
+     * 
+     * @param comparable
+     *            The comparable representing the value to find.
+     * @return The index of the first value object or the insert location of the
+     *         value object.
+     */
     public int find(Comparable<? super T> comparable)
     {
         int low = 1;
@@ -38,65 +56,25 @@ extends Tier<T, A>
         }
         return low - 1;
     }
-    
-    // TODO Document.
-    public void link(Mutation<T, A> mutation, LeafTier<T, A> nextLeaf)
-    {
-        Structure<T, A> structure = mutation.getStructure();
-        Stage<T, A> writer = structure.getStage();
-        writer.dirty(mutation.getStash(), this);
-        writer.dirty(mutation.getStash(), nextLeaf);
-        nextLeaf.setNext(getNext());
-        setNext(nextLeaf.getAddress());
-    }
-    
-    // TODO Document.
-    public LeafTier<T, A> getNextAndLock(Mutation<T, A> mutation, Level<T, A> leafLevel)
-    {
-        Structure<T, A> structure = mutation.getStructure();
-        if (!structure.getAllocator().isNull(getNext()))
-        {
-            LeafTier<T, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), getNext());
-            leafLevel.lockAndAdd(leaf);
-            return leaf;
-        }
-        return null;
-    }
-    
-    // TODO Document.
-    public void append(Mutation<T, A> mutation, Level<T, A> leafLevel)
-    {
-        Structure<T, A> structure = mutation.getStructure();
-        if (size() == structure.getLeafSize())
-        {
-            LeafTier<T, A> nextLeaf = getNextAndLock(mutation, leafLevel);
-            if (null == nextLeaf || structure.getComparableFactory().newComparable(mutation.getStash(), mutation.getObject()).compareTo(nextLeaf.get(0)) != 0)
-            {
-                nextLeaf = mutation.newLeafTier();
-                link(mutation, nextLeaf);
-            }
-            nextLeaf.append(mutation, leafLevel);
-        }
-        else
-        {
-            add(mutation.getObject());
-            structure.getStage().dirty(mutation.getStash(), this);
-        }
-    }
 
-    // TODO Document.
-    public LeafTier<T, A> getNext(Mutation<T, A> mutation)
-    {
-        return mutation.getStructure().getPool().getLeafTier(mutation.getStash(), getNext());
-    }
-    
-    // TODO Document.
+    /**
+     * Get address of the next leaf in the b-tree or null if this is the last
+     * leaf in the b-tree.
+     * 
+     * @return The address of the next leaf or null.
+     */
     public A getNext()
     {
         return next;
     }
-    
-    // TODO Document.
+
+    /**
+     * Set the address the next leaf in the b-tree.
+     * 
+     * @param next
+     *            The address of the next leaf or null if this is the last leaf
+     *            in the b-tree.
+     */
     public void setNext(A next)
     {
         this.next = next;
