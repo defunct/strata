@@ -3,7 +3,7 @@ package com.goodworkalan.strata;
 import com.goodworkalan.ilk.Ilk;
 import com.goodworkalan.stash.Stash;
 
-// TODO Document.
+// FIXME Document.
 final class NullAllocator<T>
 implements Allocator<T, Ilk.Pair>
 {

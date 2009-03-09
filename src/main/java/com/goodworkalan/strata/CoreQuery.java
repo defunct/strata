@@ -14,6 +14,13 @@ import com.goodworkalan.stash.Stash;
  * <p>
  * TODO Consider an API change where you have separate interfaces for seraching
  * by value or by comparable. Would you use it? Where do you use newComparable?
+ * <p>
+ * Note that you considered creating byValue() and withComparable() interfaces
+ * but decided that it was better to expose comparable() since when you define a
+ * comparable factory, you are going to use only field values, when you don't,
+ * you're using a comparable anyway. When you only use field values, you
+ * need to build a comparable around those values, so withComparable() will
+ * become extremely verbose.
  * 
  * @author Alan Gutierrez
  * 

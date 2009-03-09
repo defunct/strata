@@ -159,7 +159,7 @@ public final class Schema<T>
     public <A> Strata<T> inMemory(Stash stash, Ilk<T> ilk)
     {
         NullAllocator<T> allocator = new NullAllocator<T>(ilk.key);
-        ObjectReferenceTierPool<T> pool = new ObjectReferenceTierPool<T>(ilk.key);
+        ObjectReferencePool<T> pool = new ObjectReferencePool<T>(ilk.key);
         Ilk.Pair rootAddress = create(stash, allocator);
         Stage<T, Ilk.Pair> writer = new Stage<T, Ilk.Pair>(allocator, 0);
         return open(stash, rootAddress, pool, writer, allocator);

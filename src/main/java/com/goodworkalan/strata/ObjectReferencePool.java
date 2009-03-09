@@ -3,15 +3,15 @@ package com.goodworkalan.strata;
 import com.goodworkalan.ilk.Ilk;
 import com.goodworkalan.stash.Stash;
 
-// TODO Document.
-final class ObjectReferenceTierPool<T>
+// FIXME Document.
+final class ObjectReferencePool<T>
 implements Pool<T, Ilk.Pair>
 {
     // TODO Document.
     private final Ilk.Key key;
     
     // TODO Document.
-    public ObjectReferenceTierPool(Ilk.Key key)
+    public ObjectReferencePool(Ilk.Key key)
     {
         this.key = key;
     }

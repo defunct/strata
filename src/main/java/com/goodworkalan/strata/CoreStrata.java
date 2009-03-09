@@ -2,7 +2,7 @@ package com.goodworkalan.strata;
 
 import com.goodworkalan.stash.Stash;
 
-// TODO Document.
+// FIXME Document.
 public final class CoreStrata<T, A>
 implements Strata<T>
 {
@@ -24,7 +24,6 @@ implements Strata<T>
     public CoreStrata(A rootAddress, Structure<T, A> structure)
     {
         this.rootAddress = rootAddress;
-        // FIXME This is null.
         this.structure = structure;
     }
     
