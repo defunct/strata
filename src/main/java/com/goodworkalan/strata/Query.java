@@ -38,7 +38,7 @@ public interface Query<T>
     public void add(T object);
     
     // TODO Document.
-    public Comparable<? super T> newComparable(T object);
+    public Comparable<? super T> comparable(T object);
 
     // TODO Rename find fields? (Erasure)
     // TODO Document.

@@ -244,7 +244,7 @@ implements Query<T>
     }
     
     // TODO Document.
-    public Comparable<? super T> newComparable(T object)
+    public Comparable<? super T> comparable(T object)
     {
         return structure.getComparableFactory().newComparable(stash, object);
     }
