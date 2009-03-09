@@ -24,7 +24,7 @@ interface Decision<T, A>
      *            The mutation state container.
      * @param parentLevel
      *            The operations to perform on the parent tier.
-     * @param parentLevel
+     * @param childLevel
      *            The operations to perform on the child tier.
      * @param parent
      *            The parent tier.

@@ -3,17 +3,30 @@ package com.goodworkalan.strata;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
-// TODO Document.
+/**
+ * An implementation of lock extractor that extracts the write lock from a
+ * read/write lock.
+ * 
+ * @author Alan Gutierrez
+ */
 final class WriteLockExtractor
 implements LockExtractor
 {
-    // TODO Document.
+    /**
+     * Get the write lock from the read/write lock.
+     * 
+     * @return The write lock.
+     */
     public Lock getLock(ReadWriteLock readWriteLock)
     {
         return readWriteLock.writeLock();
     }
 
-    // TODO Document.
+    /**
+     * Return true since this lock extractor returns the write lock.
+     * 
+     *  @return True since this is a write lock extractor.
+     */
     public boolean isWrite()
     {
         return true;
