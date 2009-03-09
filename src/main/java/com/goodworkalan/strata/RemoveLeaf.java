@@ -36,8 +36,12 @@ implements Operation<T, A>
         mutation.setOnlyChild(false);
     }
 
-    // TODO Document.
-    public boolean canCancel()
+    /**
+     * Return true indicating that this is a merge operation.
+     * 
+     * @return True indicating that this is a merge operation.
+     */
+    public boolean isSplitOrMerge()
     {
         return true;
     }

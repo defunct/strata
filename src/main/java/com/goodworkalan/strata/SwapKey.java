@@ -25,7 +25,7 @@ implements Operation<T, A>
     }
 
     // TODO Document.
-    public boolean canCancel()
+    public boolean isSplitOrMerge()
     {
         return false;
     }

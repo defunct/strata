@@ -21,7 +21,7 @@ final class Mutation<T, A>
     private final T object;
     
     /**
-     * A condition to test to determine if an object that matches the deletable
+     * The condition to test to determine if an object that matches the deletable
      * comparable should in fact be deleted.
      */
     final Deletable<T> deletable;
@@ -55,7 +55,21 @@ final class Mutation<T, A>
     /** The leaf operation to perform. */
     public LeafOperation<T, A> leafOperation;
 
-    // TODO Document.
+    /**
+     * Create a new mutation.
+     * 
+     * @param stash
+     *            The type-safe container of out of band data.
+     * @param structure
+     *            The collection of the core services of the b+tree.
+     * @param comparable
+     *            The comparable representing the value to find.
+     * @param object
+     *            The object being inserted.
+     * @param deletable
+     *            The condition to test to determine if an object that matches
+     *            the deletable comparable should in fact be deleted.
+     */
     public Mutation(Stash stash, Structure<T, A> structure, Comparable<? super T> comparable, T object, Deletable<T> deletable)
     {
         this.stash = stash;
@@ -228,7 +242,7 @@ final class Mutation<T, A>
             while (operations.hasNext())
             {
                 Operation<T, A> operation = operations.next();
-                if (operation.canCancel())
+                if (operation.isSplitOrMerge())
                 {
                     operations.remove();
                 }

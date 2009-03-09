@@ -1,9 +1,9 @@
 package com.goodworkalan.strata;
 
 /**
- * Makes a decision to lock the parent tier exclusively and adds the operations
- * necessary to perform a mutative operation on the parent or child tiers to the
- * parent and child levels.
+ * Makes a decision to lock the parent inner tier exclusively and adds the
+ * operations necessary to perform a mutative operation on the parent or child
+ * tiers to the parent and child levels.
  * 
  * @author Alan Gutierrez
  * 

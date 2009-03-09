@@ -354,7 +354,7 @@ implements Query<T>
         {
             mutation.levels.clear();
             mutation.clear();
-            generalized(mutation, new ShouldDeleteRoot<T, A>(), new ShouldMergeInner<T, A>(), new ShouldSwapKey<T, A>(), new HowToRemoveLeaf<T, A>());
+            generalized(mutation, new ShouldFillRoot<T, A>(), new ShouldMergeInner<T, A>(), new ShouldSwapKey<T, A>(), new HowToRemoveLeaf<T, A>());
         }
         while (mutation.isOnlyChild());
 

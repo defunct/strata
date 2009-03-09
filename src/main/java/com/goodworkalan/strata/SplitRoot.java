@@ -4,10 +4,15 @@ package com.goodworkalan.strata;
 final class SplitRoot<T, A>
 implements Operation<T, A>
 {
-    // TODO Document.
+    /** The root tier. */
     private final InnerTier<T, A> root;
 
-    // TODO Document.
+    /**
+     * Create a empty root operation with the given root inner tier.
+     * 
+     * @param root
+     *            The root inner tier.
+     */
     public SplitRoot(InnerTier<T, A> root)
     {
         this.root = root;
@@ -43,8 +48,12 @@ implements Operation<T, A>
         writer.dirty(mutation.getStash(), right);
     }
 
-    // TODO Document.
-    public boolean canCancel()
+    /**
+     * Return true indicating that this is a merge operation.
+     * 
+     * @return True indicating that this is a merge operation.
+     */
+    public boolean isSplitOrMerge()
     {
         return true;
     }
