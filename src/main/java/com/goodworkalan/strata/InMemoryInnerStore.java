@@ -5,9 +5,20 @@ import java.util.Collection;
 import com.goodworkalan.ilk.Ilk;
 import com.goodworkalan.stash.Stash;
 
-public class InMemoryInnerStore<T>
+/**
+ * A null persistent storage strategy to read and write inner tiers for an in
+ * memory implementation of the b+tree.
+ * 
+ * @author Alan Gutierrez
+ * 
+ * @param <T>
+ *            The value type of the b+tree objects.
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ */
+class InMemoryInnerStore<T>
 extends InMemoryStore
-implements InnerStore<T, Ilk.Pair>
+implements InnerStore<T, Ilk.Box>
 {
     /**
      * Throws an exception because the object reference pool will never call the
@@ -25,7 +36,7 @@ implements InnerStore<T, Ilk.Pair>
      *              @exception UnsupportedOperationException
      *                Since this method should never be called.
      */
-    public ChildType load(Stash stash, Ilk.Pair address, Collection<Branch<T, Ilk.Pair>> objects)
+    public ChildType load(Stash stash, Ilk.Box address, Collection<Branch<T, Ilk.Box>> objects)
     {
         throw new UnsupportedOperationException();
     }
@@ -44,7 +55,7 @@ implements InnerStore<T, Ilk.Pair>
      * @param childType
      *            The child type.
      */
-    public void write(Stash stash, Ilk.Pair address, Collection<Branch<T, Ilk.Pair>> objects, ChildType childType)
+    public void write(Stash stash, Ilk.Box address, Collection<Branch<T, Ilk.Box>> objects, ChildType childType)
     {
     }
 }

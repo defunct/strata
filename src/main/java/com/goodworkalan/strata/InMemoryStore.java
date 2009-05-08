@@ -5,14 +5,14 @@ import com.goodworkalan.stash.Stash;
 
 /**
  * A null persistent storage strategy for inner and leaf tiers for an in memory
- * implementation of the b-tree.
+ * implementation of the b+tree.
  * 
  * @author Alan Gutierrez
  * 
  * @param <T>
  *            The value type of the b+tree objects.
  */
-public class InMemoryStore implements Store<Ilk.Pair>
+public class InMemoryStore implements Store<Ilk.Box>
 {
     /**
      * Throws an exception because the object reference pool will never call the
@@ -26,7 +26,7 @@ public class InMemoryStore implements Store<Ilk.Pair>
      * @exception UnsupportedOperationException
      *                Since this method should never be called.
      */
-    public Ilk.Pair allocate(Stash stash, int capacity)
+    public Ilk.Box allocate(Stash stash, int capacity)
     {
         throw new UnsupportedOperationException();
     }
@@ -39,7 +39,7 @@ public class InMemoryStore implements Store<Ilk.Pair>
      * @param address
      *            The address to free.
      */
-    public void free(Stash stash, Ilk.Pair address)
+    public void free(Stash stash, Ilk.Box address)
     {
     }
 }

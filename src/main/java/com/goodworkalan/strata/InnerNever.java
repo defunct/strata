@@ -6,7 +6,9 @@ package com.goodworkalan.strata;
  * @author Alan Gutierrez
  *
  * @param <T>
+ *            The value type of the b+tree objects.
  * @param <A>
+ *            The address type used to identify an inner or leaf tier.
  */
 final class InnerNever<T, A>
 implements Decision<T, A>

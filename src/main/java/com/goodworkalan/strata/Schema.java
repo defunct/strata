@@ -181,8 +181,8 @@ public final class Schema<T>
         InMemoryAllocator<T> allocator = new InMemoryAllocator<T>(ilk.key);
         InMemoryStorage<T> storage = new InMemoryStorage<T>();
         ObjectReferencePool<T> pool = new ObjectReferencePool<T>(ilk.key);
-        Ilk.Pair rootAddress = create(stash, allocator, storage);
-        Stage<T, Ilk.Pair> writer = new Stage<T, Ilk.Pair>(storage, 0);
+        Ilk.Box rootAddress = create(stash, allocator, storage);
+        Stage<T, Ilk.Box> writer = new Stage<T, Ilk.Box>(storage, 0);
         return open(stash, rootAddress, allocator, storage, pool, writer);
     }
     

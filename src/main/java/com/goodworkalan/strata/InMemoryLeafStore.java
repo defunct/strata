@@ -5,9 +5,20 @@ import java.util.Collection;
 import com.goodworkalan.ilk.Ilk;
 import com.goodworkalan.stash.Stash;
 
-public class InMemoryLeafStore<T>
+/**
+ * A null persistent storage strategy to read and write leaf tiers for an in
+ * memory implementation of the b+tree.
+ * 
+ * @author Alan Gutierrez
+ * 
+ * @param <T>
+ *            The value type of the b+tree objects.
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ */
+class InMemoryLeafStore<T>
 extends InMemoryStore
-implements LeafStore<T, Ilk.Pair>
+implements LeafStore<T, Ilk.Box>
 {
     /**
      * Throws an exception because the object reference pool will never call the
@@ -23,7 +34,7 @@ implements LeafStore<T, Ilk.Pair>
      * @exception UnsupportedOperationException
      *                Since this method should never be called.
      */
-    public Ilk.Pair load(Stash stash, Ilk.Pair address, Collection<T> objects)
+    public Ilk.Box load(Stash stash, Ilk.Box address, Collection<T> objects)
     {
         throw new UnsupportedOperationException();
     }
@@ -41,7 +52,7 @@ implements LeafStore<T, Ilk.Pair>
      * @param next
      *            The address of the next leaf in the b-tree.
      */
-    public void write(Stash stash, Ilk.Pair address, Collection<T> objects, Ilk.Pair next)
+    public void write(Stash stash, Ilk.Box address, Collection<T> objects, Ilk.Box next)
     {
     }
 }

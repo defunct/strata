@@ -3,20 +3,21 @@ package com.goodworkalan.strata;
 import com.goodworkalan.ilk.Ilk;
 
 /**
- * A null persistent storage strategy for an in memory implementation of the b-tree.
+ * A null persistent storage strategy for an in memory implementation of the
+ * b+tree.
  * 
  * @author Alan Gutierrez
  * 
  * @param <T>
  *            The value type of the b+tree objects.
  */
-final class InMemoryStorage<T> implements Storage<T, Ilk.Pair>
+final class InMemoryStorage<T> implements Storage<T, Ilk.Box>
 {
     /** The noop inner tier storage strategy. */
-    private final InnerStore<T, Ilk.Pair> innerStore;
+    private final InnerStore<T, Ilk.Box> innerStore;
 
     /** The noop leaf tier storage strategy. */
-    private final LeafStore<T, Ilk.Pair> leafStore;
+    private final LeafStore<T, Ilk.Box> leafStore;
 
     /**
      * Create a null persistent storage strategy.
@@ -36,7 +37,7 @@ final class InMemoryStorage<T> implements Storage<T, Ilk.Pair>
      * 
      * @return The no-op inner tier storage strategy.
      */
-    public InnerStore<T, Ilk.Pair> getInnerStore()
+    public InnerStore<T, Ilk.Box> getInnerStore()
     {
         return innerStore;
     }
@@ -46,7 +47,7 @@ final class InMemoryStorage<T> implements Storage<T, Ilk.Pair>
      * 
      * @return The no-op leaf tier storage strategy.
      */
-    public LeafStore<T, Ilk.Pair> getLeafStore()
+    public LeafStore<T, Ilk.Box> getLeafStore()
     {
         return leafStore;
     }
@@ -57,7 +58,7 @@ final class InMemoryStorage<T> implements Storage<T, Ilk.Pair>
      * 
      * @return The null address value.
      */
-    public Ilk.Pair getNull()
+    public Ilk.Box getNull()
     {
         return null;
     }
@@ -70,7 +71,7 @@ final class InMemoryStorage<T> implements Storage<T, Ilk.Pair>
      *            A storage address.
      * @return True if the address is null.
      */
-    public boolean isNull(Ilk.Pair address)
+    public boolean isNull(Ilk.Box address)
     {
         return address == null;
     }

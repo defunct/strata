@@ -13,7 +13,7 @@ import com.goodworkalan.stash.Stash;
  *            The value type of the b+tree objects.
  */
 final class ObjectReferencePool<T>
-implements Pool<T, Ilk.Pair>
+implements Pool<T, Ilk.Box>
 {
     /** The super type token of the b-tree value type. */
     private final Ilk.Key key;
@@ -38,9 +38,9 @@ implements Pool<T, Ilk.Pair>
      * @param address
      *            The address of the inner tier.
      */
-    public InnerTier<T, Ilk.Pair> getInnerTier(Stash stash, Ilk.Pair address)
+    public InnerTier<T, Ilk.Box> getInnerTier(Stash stash, Ilk.Box address)
     {
-        return address.cast(new Ilk<InnerTier<T, Ilk.Pair>>(key) { });
+        return address.cast(new Ilk<InnerTier<T, Ilk.Box>>(key) { });
     }
     
     /**
@@ -51,8 +51,8 @@ implements Pool<T, Ilk.Pair>
      * @param address
      *            The address of the leaf tier.
      */
-    public LeafTier<T, Ilk.Pair> getLeafTier(Stash stash, Ilk.Pair address)
+    public LeafTier<T, Ilk.Box> getLeafTier(Stash stash, Ilk.Box address)
     {
-        return address.cast(new Ilk<LeafTier<T, Ilk.Pair>>(key) { });
+        return address.cast(new Ilk<LeafTier<T, Ilk.Box>>(key) { });
     }
 }

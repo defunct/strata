@@ -190,7 +190,7 @@ implements Query<T>
      */
     private T generalized(Mutation<T, A> mutation, RootDecision<T, A> initial, Decision<T, A> subsequent, Decision<T, A> swap, Decision<T, A> penultimate)
     {
-        structure.getStage().begin();
+        Stage<T, A> stage = structure.getStage();
 
         mutation.levels.add(new Level<T, A>(false));
 
@@ -257,8 +257,8 @@ implements Query<T>
             level.releaseAndClear();
         }
         
-        structure.getStage().flush(stash, lockCount, false);
-        structure.getStage().end(lockCount);
+        stage.flush(stash, lockCount, false);
+        stage.end(lockCount);
 
         return mutation.getResult();
     }

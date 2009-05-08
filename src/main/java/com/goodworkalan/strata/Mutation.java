@@ -5,7 +5,17 @@ import java.util.LinkedList;
 
 import com.goodworkalan.stash.Stash;
 
-// FIXME Document.
+/**
+ * The mutation state container. Contains the properties of a generalized
+ * mutation.
+ * 
+ * @author Alan Gutierrez
+ * 
+ * @param <T>
+ *            The value type of the b+tree objects.
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ */
 final class Mutation<T, A>
 {
     /** The type-safe container of out of band data. */

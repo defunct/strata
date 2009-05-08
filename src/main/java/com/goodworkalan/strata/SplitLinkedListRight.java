@@ -5,7 +5,18 @@ import static com.goodworkalan.strata.Leaves.link;
 
 import com.goodworkalan.stash.Stash;
 
-// TODO Document.
+/**
+ * Split a leaf by creating a new empty leaf to the right of a linked list of
+ * b+tree leaves of duplicate index values and adding the leaf value to the new
+ * leaf.
+ * 
+ * @author Alan Gutierrez
+ * 
+ * @param <T>
+ *            The value type of the b+tree objects.
+ * @param <A>
+ *            The address type used to identify an inner or leaf tier.
+ */
 final class SplitLinkedListRight<T, A>
 implements LeafOperation<T, A>
 {
@@ -47,30 +58,46 @@ implements LeafOperation<T, A>
         return structure.getComparableFactory().newComparable(stash, leaf.get(0)).compareTo(next.get(0)) != 0;
     }
 
-    // TODO Document.
-    public boolean operate(Mutation<T, A> mutation, Level<T, A> levelOfLeaf)
+    /**
+     * Perform the right leaf split and insert the value object.
+     * 
+     * @param mutation
+     *            The mutation state container.
+     * @param leafLevel
+     *            The per level mutation state for the leaf level.
+     * @return True of the operation succeeded.
+     */
+    public boolean operate(Mutation<T, A> mutation, Level<T, A> leafLevel)
     {
+        // Get the collection of the core services of the b+tree.
         Structure<T, A> structure = mutation.getStructure();
 
+        // Find the branch that navigates to the leaf child.
         Branch<T, A> branch = inner.find(mutation.getComparable());
         LeafTier<T, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), branch.getAddress());
 
+        // Navigate to the end of the linked list of a linked list of b+tree
+        // leaves of duplicate index values.
         LeafTier<T, A> last = leaf;
         while (!endOfList(mutation, last))
         {
-            last = getNextAndLock(mutation, last, levelOfLeaf);
+            last = getNextAndLock(mutation, last, leafLevel);
         }
 
+        // Create a new leaf and link it to the right of the leaf.
         LeafTier<T, A> right = mutation.newLeafTier();
         link(mutation, last, right);
 
+        // Add a branch for the the new leaf in the parent inner tier. 
         inner.add(inner.getIndex(leaf.getAddress()) + 1, new Branch<T, A>(mutation.getObject(), right.getAddress()));
 
+        // Stage the dirty tiers for write.
         Stage<T, A> writer = structure.getStage();
         writer.dirty(mutation.getStash(), inner);
         writer.dirty(mutation.getStash(), leaf);
         writer.dirty(mutation.getStash(), right);
 
-        return new InsertSorted<T, A>(inner).operate(mutation, levelOfLeaf);
+        // Insert the object value.
+        return new InsertSorted<T, A>(inner).operate(mutation, leafLevel);
     }
 }

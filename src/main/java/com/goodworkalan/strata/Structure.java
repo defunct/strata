@@ -2,10 +2,6 @@ package com.goodworkalan.strata;
 
 /**
  * The collection of the core services of the b+tree.
- * <p>
- * TODO This can become <code>Storage</code> again, or such an interface can
- * expose the address type, for code that wants to navigate the tree itself,
- * like for visualization tools.
  * 
  * @author Alan Gutierrez
  * 

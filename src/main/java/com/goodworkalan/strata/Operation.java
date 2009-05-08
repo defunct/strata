@@ -15,7 +15,8 @@ interface Operation<T, A>
     /**
      * Perform the operation.
      * 
-     * @param mutation The mutation state container.
+     * @param mutation
+     *            The mutation state container.
      */
     public void operate(Mutation<T, A> mutation);
 

@@ -82,41 +82,42 @@ public class Stage<T, A>
      */
     public void begin()
     {
-        Lock lock = maxDirtyTiers == 0 ? readWriteLock.readLock() : readWriteLock.writeLock();
-        lock.lock();
+        getLock().lock();
     }
 
     /**
      * Lock the b+tree after an insert and delete operation.
      * 
      * @param count
-     *            A reference to the count of time that begin locked that end did
-     *            not unlock.
+     *            A reference to the count of times that begin locked that end
+     *            did not unlock.
      */
     public void end(int[] count)
     {
-        if (maxDirtyTiers == 0)
+        count[0]++;
+        if (getDirtyTierCount() == 0)
         {
-            readWriteLock.readLock().unlock();
-        }
-        else
-        {
-            count[0]++;
-            if (getDirtyTierCount() == 0)
+            Lock lock = getLock();
+            while (count[0]-- != 0)
             {
-                while (count[0]-- != 0)
-                {
-                    readWriteLock.writeLock().unlock();
-                }
+                lock.unlock();
             }
         }
     }
 
     /**
-     * Mark a inner tier as dirty. If the writer has a max dirty tiers of zero,
-     * then the inner tier is written immediately. Otherwise, the inner tier
-     * will be written by the next call to {@link #flush(Stash, int[], boolean)
-     * flush}.
+     * Return the lock used to guard the writes during an insert or delete.
+     * 
+     * @return The lock used to guard the writes.
+     */
+    private Lock getLock()
+    {
+        return maxDirtyTiers == 0 ? readWriteLock.readLock() : readWriteLock.writeLock();
+    }
+
+    /**
+     * Mark a inner tier as dirty. The inner tier will be written by the next
+     * call to {@link #flush(Stash, int[], boolean) flush}.
      * 
      * @param stash
      *            A type-safe container of out of band data.
@@ -125,21 +126,12 @@ public class Stage<T, A>
      */
     public void dirty(Stash stash, InnerTier<T, A> inner) 
     {
-        if (maxDirtyTiers == 0)
-        {
-            allocator.getInnerStore().write(stash, inner.getAddress(), inner, inner.getChildType());
-        }
-        else
-        {
-            dirtyInnerTiers.add(inner);
-        }
+        dirtyInnerTiers.add(inner);
     }
 
     /**
-     * Mark a leaf tier as dirty. If the writer has a max dirty tiers of zero,
-     * then the leaf tier is written immediately. Otherwise, the leaf tier will
-     * be written by the next call to {@link #flush(Stash, int[], boolean)
-     * flush}.
+     * Mark a leaf tier as dirty. The leaf tier will be written by the next call
+     * to {@link #flush(Stash, int[], boolean) flush}.
      * 
      * @param stash
      *            A type-safe container of out of band data.
@@ -148,20 +140,12 @@ public class Stage<T, A>
      */
     public void dirty(Stash stash, LeafTier<T, A> leaf)
     {
-        if (maxDirtyTiers == 0)
-        {
-            allocator.getLeafStore().write(stash, leaf.getAddress(), leaf, leaf.getNext());
-        }
-        else
-        {
-            dirtyLeafTiers.add(leaf);
-        }
+        dirtyLeafTiers.add(leaf);
     }
 
     /**
-     * Free an inner tier. If the writer has a max dirty tiers of zero, then the
-     * inner tier is freed immediately. Otherwise, the inner tier will be freed
-     * by the next call to {@link #flush(Stash, int[], boolean) flush}.
+     * Free an inner tier. The inner tier will be freed by the next call to
+     * {@link #flush(Stash, int[], boolean) flush}.
      * 
      * @param stash
      *            A type-safe container of out of band data.
@@ -170,21 +154,13 @@ public class Stage<T, A>
      */
     public void free(Stash stash, InnerTier<T, A> inner)
     {
-        if (maxDirtyTiers == 0)
-        {
-            allocator.getInnerStore().free(stash, inner.getAddress());
-        }
-        else
-        {
-            dirtyInnerTiers.remove(inner);
-            freeInnerTiers.add(inner);
-        }
+        dirtyInnerTiers.remove(inner);
+        freeInnerTiers.add(inner);
     }
 
     /**
-     * Free an leaf tier. If the writer has a max dirty tiers of zero, then the
-     * leaf tier is freed immediately. Otherwise, the leaf tier will be freed by
-     * the next call to {@link #flush(Stash, int[], boolean) flush}.
+     * Free an leaf tier. The leaf tier will be freed by the next call to
+     * {@link #flush(Stash, int[], boolean) flush}.
      * 
      * @param stash
      *            A type-safe container of out of band data.
@@ -193,15 +169,8 @@ public class Stage<T, A>
      */
     public void free(Stash stash, LeafTier<T, A> leaf)
     {
-        if (maxDirtyTiers == 0)
-        {
-            allocator.getLeafStore().free(stash, leaf.getAddress());
-        }
-        else
-        {
-            dirtyLeafTiers.remove(leaf);
-            freeLeafTiers.add(leaf);
-        }
+        dirtyLeafTiers.remove(leaf);
+        freeLeafTiers.add(leaf);
     }
 
     /**

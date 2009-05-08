@@ -4,6 +4,11 @@ import com.goodworkalan.stash.Stash;
 
 /**
  * A strategy for allocating persistent storage for inner and leaf tiers.
+ * <p>
+ * This interface is used to chose between the default in-memory storage
+ * strategy, which simply returns an object reference to the tier object as the
+ * object address, and an actual persistent storage strategy implementation of
+ * the {@link Storage} interface.
  * 
  * @author Alan Gutierrez
  * 
@@ -12,7 +17,7 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public interface Allocator<T, A>
+interface Allocator<T, A>
 {
     /**
      * Allocate persistent storage for the given inner tier that can hold the

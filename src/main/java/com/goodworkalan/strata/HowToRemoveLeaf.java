@@ -8,15 +8,12 @@ final class HowToRemoveLeaf<T, A>
 implements Decision<T, A>
 {
     // TODO Document.
-    public boolean test(Mutation<T, A> mutation,
-                        Level<T, A> levelOfParent,
-                        Level<T, A> levelOfChild,
-                        InnerTier<T, A> parent)
+    public boolean test(Mutation<T, A> mutation, Level<T, A> parentLevel, Level<T, A> childLevel, InnerTier<T, A> parent)
     {
         Structure<T, A> structure = mutation.getStructure();
         Pool<T, A> pool = structure.getPool();
         
-        levelOfChild.locker = new WriteLockExtractor();
+        childLevel.locker = new WriteLockExtractor();
         Branch<T, A> branch = parent.find(mutation.getComparable());
         int index = parent.getIndex(branch.getAddress());
         LeafTier<T, A> previous = null;
@@ -25,9 +22,9 @@ implements Decision<T, A>
         if (index != 0)
         {
             previous = pool.getLeafTier(mutation.getStash(), parent.get(index - 1).getAddress());
-            levelOfChild.lockAndAdd(previous);
+            childLevel.lockAndAdd(previous);
             leaf = pool.getLeafTier(mutation.getStash(), branch.getAddress());
-            levelOfChild.lockAndAdd(leaf);
+            childLevel.lockAndAdd(leaf);
             int capacity = previous.size() + leaf.size();
             if (capacity <= structure.getLeafSize() + 1)
             {
@@ -36,14 +33,14 @@ implements Decision<T, A>
             }
             else
             {
-                levelOfChild.unlockAndRemove(previous);
+                childLevel.unlockAndRemove(previous);
             }
         }
 
         if (leaf == null)
         {
             leaf = pool.getLeafTier(mutation.getStash(), branch.getAddress());
-            levelOfChild.lockAndAdd(leaf);
+            childLevel.lockAndAdd(leaf);
         }
 
         // TODO Do not need the parent size test, just need deleting.
@@ -57,14 +54,14 @@ implements Decision<T, A>
                 return false;
             }
 
-            levelOfParent.operations.add(new RemoveLeaf<T, A>(parent, leaf, left));
+            parentLevel.operations.add(new RemoveLeaf<T, A>(parent, leaf, left));
             mutation.leafOperation = new RemoveObject<T, A>(leaf);
             return true;
         }
         else if (listToMerge.isEmpty() && index != parent.size() - 1)
         {
             LeafTier<T, A> next = pool.getLeafTier(mutation.getStash(), parent.get(index + 1).getAddress());
-            levelOfChild.lockAndAdd(next);
+            childLevel.lockAndAdd(next);
             int capacity = next.size() + leaf.size();
             if (capacity <= structure.getLeafSize() + 1)
             {
@@ -73,7 +70,7 @@ implements Decision<T, A>
             }
             else
             {
-                levelOfChild.unlockAndRemove(next);
+                childLevel.unlockAndRemove(next);
             }
         }
 
@@ -91,7 +88,7 @@ implements Decision<T, A>
             }
             LeafTier<T, A> left = listToMerge.get(0);
             LeafTier<T, A> right = listToMerge.get(1);
-            levelOfParent.operations.add(new MergeLeaf<T, A>(parent, left, right));
+            parentLevel.operations.add(new MergeLeaf<T, A>(parent, left, right));
             mutation.leafOperation = new RemoveObject<T, A>(leaf);
         }
         return !listToMerge.isEmpty();
