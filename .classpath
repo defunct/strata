@@ -6,12 +6,12 @@
   <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
   <classpathentry combineaccessrules="false" kind="src" path="/ilk"/>
   <classpathentry kind="output" path="target/classes"/>
-  <classpathentry kind="var" path="M2_REPO/org/testng/testng/5.10/testng-5.10-jdk15.jar" sourcepath="M2_REPO/org/testng/testng/5.10/testng-5.10-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/testng/testng-jdk15/5.10/testng-jdk15-5.10.jar"/>
   <classpathentry kind="var" path="M2_REPO/args4j/args4j/2.0.8/args4j-2.0.8.jar" sourcepath="M2_REPO/args4j/args4j/2.0.8/args4j-2.0.8-sources.jar"/>
   <classpathentry kind="var" path="M2_REPO/org/mockito/mockito-core/1.6/mockito-core-1.6.jar"/>
-  <classpathentry kind="var" path="M2_REPO/com/goodworkalan/stash/0.1/stash-0.1.jar" sourcepath="M2_REPO/com/goodworkalan/stash/0.1/stash-0.1-sources.jar">
+  <classpathentry kind="var" path="M2_REPO/com/github/bigeasy/stash/stash/0.1/stash-0.1.jar" sourcepath="M2_REPO/com/github/bigeasy/stash/stash/0.1/stash-0.1-sources.jar">
     <attributes>
-      <attribute name="javadoc_location" value="jar:file:/Users/alan/.m2/repository/com/goodworkalan/stash/0.1/stash-0.1-javadoc.jar!/"/>
+      <attribute name="javadoc_location" value="jar:file:/Users/alan/.m2/repository/com/github/bigeasy/stash/stash/0.1/stash-0.1-javadoc.jar!/"/>
     </attributes>
   </classpathentry>
   <classpathentry kind="var" path="M2_REPO/com/mallardsoft/tuple-partial/0.1.0/tuple-partial-0.1.0.jar" sourcepath="M2_REPO/com/mallardsoft/tuple-partial/0.1.0/tuple-partial-0.1.0-sources.jar">
@@ -26,9 +26,9 @@
       <attribute name="javadoc_location" value="jar:file:/Users/alan/.m2/repository/org/objenesis/objenesis/1.0/objenesis-1.0-javadoc.jar!/"/>
     </attributes>
   </classpathentry>
-  <classpathentry kind="var" path="M2_REPO/com/goodworkalan/ilk/0.1/ilk-0.1.jar" sourcepath="M2_REPO/com/goodworkalan/ilk/0.1/ilk-0.1-sources.jar">
+  <classpathentry kind="var" path="M2_REPO/com/github/bigeasy/ilk/ilk/0.1.0.1/ilk-0.1.0.1.jar" sourcepath="M2_REPO/com/github/bigeasy/ilk/ilk/0.1.0.1/ilk-0.1.0.1-sources.jar">
     <attributes>
-      <attribute name="javadoc_location" value="jar:file:/Users/alan/.m2/repository/com/goodworkalan/ilk/0.1/ilk-0.1-javadoc.jar!/"/>
+      <attribute name="javadoc_location" value="jar:file:/Users/alan/.m2/repository/com/github/bigeasy/ilk/ilk/0.1.0.1/ilk-0.1.0.1-javadoc.jar!/"/>
     </attributes>
   </classpathentry>
   <classpathentry kind="var" path="M2_REPO/com/mallardsoft/tuple/2.0/tuple-2.0.jar" sourcepath="M2_REPO/com/mallardsoft/tuple/2.0/tuple-2.0-sources.jar">
