@@ -48,7 +48,7 @@ class InMemoryAllocator<T> implements Allocator<T, Ilk.Box>
      */
     public Ilk.Box allocate(Stash stash, InnerTier<T, Ilk.Box> inner, int capacity)
     {
-        return new Ilk<InnerTier<T, Ilk.Box>>(key) { }.box(inner);
+        return new Ilk<InnerTier<T, Ilk.Box>>() { }.assign(new Ilk<T>() {}, key.type).box(inner);
     }
 
     /**
@@ -65,6 +65,6 @@ class InMemoryAllocator<T> implements Allocator<T, Ilk.Box>
      */
     public Ilk.Box allocate(Stash stash, LeafTier<T, Ilk.Box> leaf, int capacity)
     {
-        return new Ilk<LeafTier<T, Ilk.Box>>(key) { }.box(leaf);
+        return new Ilk<LeafTier<T, Ilk.Box>>() { }.assign(new Ilk<T>() {}, key.type).box(leaf);
     }
 }

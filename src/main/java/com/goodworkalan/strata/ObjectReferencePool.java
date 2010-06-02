@@ -40,7 +40,7 @@ implements Pool<T, Ilk.Box>
      */
     public InnerTier<T, Ilk.Box> getInnerTier(Stash stash, Ilk.Box address)
     {
-        return address.cast(new Ilk<InnerTier<T, Ilk.Box>>(key) { });
+        return address.cast(new Ilk<InnerTier<T, Ilk.Box>>() { }.assign(new Ilk<T>() {}, key.type));
     }
     
     /**
@@ -53,6 +53,6 @@ implements Pool<T, Ilk.Box>
      */
     public LeafTier<T, Ilk.Box> getLeafTier(Stash stash, Ilk.Box address)
     {
-        return address.cast(new Ilk<LeafTier<T, Ilk.Box>>(key) { });
+        return address.cast(new Ilk<LeafTier<T, Ilk.Box>>() { }.assign(new Ilk<T>() {}, key.type));
     }
 }
