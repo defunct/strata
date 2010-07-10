@@ -7,5 +7,8 @@ package com.goodworkalan.strata;
  */
 public enum ChildType
 {
-    INNER, LEAF
+    // TODO Document.
+    INNER,
+    // TODO Document.
+    LEAF
 }

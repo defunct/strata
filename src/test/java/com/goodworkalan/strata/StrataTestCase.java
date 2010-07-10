@@ -11,8 +11,10 @@ import com.goodworkalan.ilk.Ilk;
 import com.goodworkalan.stash.Stash;
 
 
+// TODO Document.
 public class StrataTestCase
 {
+    // TODO Document.
     private Query<Integer> newTransaction()
     {
         Schema<Integer> schema = new Schema<Integer>();
@@ -22,6 +24,7 @@ public class StrataTestCase
         return strata.query();
     }
 
+    // TODO Document.
     @Test public void create()
     {
         Schema<Integer> schema = new Schema<Integer>();
@@ -35,6 +38,7 @@ public class StrataTestCase
         assertFalse(cursor.hasNext());
     }
     
+    // TODO Document.
     @Test public void removeSingle()
     {
         Query<Integer> transaction = newTransaction();
