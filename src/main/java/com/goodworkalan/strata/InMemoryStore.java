@@ -12,8 +12,7 @@ import com.goodworkalan.stash.Stash;
  * @param <T>
  *            The value type of the b+tree objects.
  */
-public class InMemoryStore implements Store<Ilk.Box>
-{
+public class InMemoryStore implements Store<Ilk.Box> {
     /**
      * Throws an exception because the object reference pool will never call the
      * null store load method.
@@ -26,8 +25,7 @@ public class InMemoryStore implements Store<Ilk.Box>
      * @exception UnsupportedOperationException
      *                Since this method should never be called.
      */
-    public Ilk.Box allocate(Stash stash, int capacity)
-    {
+    public Ilk.Box allocate(Stash stash, int capacity) {
         throw new UnsupportedOperationException();
     }
 
@@ -39,7 +37,6 @@ public class InMemoryStore implements Store<Ilk.Box>
      * @param address
      *            The address to free.
      */
-    public void free(Stash stash, Ilk.Box address)
-    {
+    public void free(Stash stash, Ilk.Box address) {
     }
 }

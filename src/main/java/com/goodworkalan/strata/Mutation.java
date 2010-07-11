@@ -16,14 +16,13 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-final class Mutation<T, A>
-{
+final class Mutation<T, A> {
     /** The type-safe container of out of band data. */
     private final Stash stash;
 
     /** The collection of the core services of the b+tree. */
     private final Structure<T, A> structure;
-    
+
     /** The comparable representing the value to find. */
     private final Comparable<? super T> comparable;
     
@@ -80,8 +79,7 @@ final class Mutation<T, A>
      *            The condition to test to determine if an object that matches
      *            the deletable comparable should in fact be deleted.
      */
-    public Mutation(Stash stash, Structure<T, A> structure, Comparable<? super T> comparable, T object, Deletable<T> deletable)
-    {
+    public Mutation(Stash stash, Structure<T, A> structure, Comparable<? super T> comparable, T object, Deletable<T> deletable) {
         this.stash = stash;
         this.comparable = comparable;
         this.deletable = deletable;
@@ -94,8 +92,7 @@ final class Mutation<T, A>
      * 
      * @return The comparable representing the value to find.
      */
-    public Comparable<? super T> getComparable()
-    {
+    public Comparable<? super T> getComparable() {
         return comparable;
     }
 
@@ -104,8 +101,7 @@ final class Mutation<T, A>
      * 
      * @return The type-safe container of out of band data.
      */
-    public Stash getStash()
-    {
+    public Stash getStash() {
         return stash;
     }
 
@@ -114,8 +110,7 @@ final class Mutation<T, A>
      * 
      * @return The object being inserted.
      */
-    public T getObject()
-    {
+    public T getObject() {
         return object;
     }
 
@@ -124,8 +119,7 @@ final class Mutation<T, A>
      * 
      * @return The collection of the core services of the b+tree.
      */
-    public Structure<T, A> getStructure()
-    {
+    public Structure<T, A> getStructure() {
         return structure;
     }
 
@@ -135,8 +129,7 @@ final class Mutation<T, A>
      * 
      * @return The delete result.
      */
-    public T getResult()
-    {
+    public T getResult() {
         return result;
     }
 
@@ -147,66 +140,58 @@ final class Mutation<T, A>
      * @param result
      *            The delete result.
      */
-    public void setResult(T result)
-    {
+    public void setResult(T result) {
         this.result = result;
     }
-    
+
     /**
-     * Get the value to use to replace an inner tier pivot if the pivot
-     * value is going to be deleted entirely from the leaf.
-     *  
+     * Get the value to use to replace an inner tier pivot if the pivot value is
+     * going to be deleted entirely from the leaf.
+     * 
      * @return The pivot replacement.
      */
-    public T getReplacement()
-    {
+    public T getReplacement() {
         return replacement;
     }
-    
+
     /**
-     * Set the value to use to replace an inner tier pivot if the pivot
-     * value is going to be deleted entirely from the leaf.
-     *  
-     * @param replacement The pivot replacement.
+     * Set the value to use to replace an inner tier pivot if the pivot value is
+     * going to be deleted entirely from the leaf.
+     * 
+     * @param replacement
+     *            The pivot replacement.
      */
-    public void setReplacement(T replacement)
-    {
+    public void setReplacement(T replacement) {
         this.replacement = replacement;
     }
-    
+
     // TODO Document.
-    public LeafTier<T, A> getLeftLeaf()
-    {
+    public LeafTier<T, A> getLeftLeaf() {
         return leftLeaf;
     }
-    
+
     // TODO Document.
-    public void setLeftLeaf(LeafTier<T, A> leftLeaf)
-    {
+    public void setLeftLeaf(LeafTier<T, A> leftLeaf) {
         this.leftLeaf = leftLeaf;
     }
-    
+
     // TODO Document.
-    public boolean isOnlyChild()
-    {
+    public boolean isOnlyChild() {
         return onlyChild;
     }
-    
+
     // TODO Document.
-    public void setOnlyChild(boolean onlyChild)
-    {
+    public void setOnlyChild(boolean onlyChild) {
         this.onlyChild = onlyChild;
     }
-    
+
     // TODO Document.
-    public boolean isDeleting()
-    {
+    public boolean isDeleting() {
         return deleting;
     }
-    
+
     // TODO Document.
-    public void setDeleting(boolean deleting)
-    {
+    public void setDeleting(boolean deleting) {
         this.deleting = deleting;
     }
 
@@ -218,8 +203,7 @@ final class Mutation<T, A>
      *            The child tier type.
      * @return A new inner tier.
      */
-    public InnerTier<T, A> newInnerTier(ChildType childType)
-    {
+    public InnerTier<T, A> newInnerTier(ChildType childType) {
         InnerTier<T, A> inner = new InnerTier<T, A>();
         inner.setAddress(getStructure().getAllocator().allocate(getStash(), inner, getStructure().getInnerSize()));
         inner.setChildType(childType);
@@ -231,44 +215,33 @@ final class Mutation<T, A>
      * 
      * @return A new leaf tier.
      */
-    public LeafTier<T, A> newLeafTier()
-    {
+    public LeafTier<T, A> newLeafTier() {
         LeafTier<T, A> leaf = new LeafTier<T, A>();
         leaf.setAddress(getStructure().getAllocator().allocate(getStash(), leaf, getStructure().getInnerSize()));
         return leaf;
     }
-    
+
     // TODO Document.
-    public void rewind(int leaveExclusive)
-    {
+    public void rewind(int leaveExclusive) {
         Iterator<Level<T, A>> eachLevel = levels.iterator();
         int size = levels.size();
         boolean unlock = true;
 
-        for (int i = 0; i < size - leaveExclusive; i++)
-        {
+        for (int i = 0; i < size - leaveExclusive; i++) {
             Level<T, A> level = eachLevel.next();
             Iterator<Operation<T, A>> operations = level.operations.iterator();
-            while (operations.hasNext())
-            {
+            while (operations.hasNext()) {
                 Operation<T, A> operation = operations.next();
-                if (operation.isSplitOrMerge())
-                {
+                if (operation.isSplitOrMerge()) {
                     operations.remove();
-                }
-                else
-                {
+                } else {
                     unlock = false;
                 }
             }
-            if (unlock)
-            {
-                if (levels.size() == 3)
-                {
+            if (unlock) {
+                if (levels.size() == 3) {
                     level.downgrade();
-                }
-                else
-                {
+                } else {
                     level.releaseAndClear();
                     eachLevel.remove();
                 }
@@ -277,14 +250,11 @@ final class Mutation<T, A>
     }
 
     // TODO Document.
-    public void shift()
-    {
+    public void shift() {
         Iterator<Level<T, A>> eachLevel = levels.iterator();
-        while (levels.size() > 3 && eachLevel.hasNext())
-        {
+        while (levels.size() > 3 && eachLevel.hasNext()) {
             Level<T, A> level = eachLevel.next();
-            if (level.operations.size() != 0)
-            {
+            if (level.operations.size() != 0) {
                 break;
             }
 
@@ -292,9 +262,8 @@ final class Mutation<T, A>
             eachLevel.remove();
         }
     }
-    
+
     // TODO Document.
-    public void clear()
-    {
+    public void clear() {
     }
 }

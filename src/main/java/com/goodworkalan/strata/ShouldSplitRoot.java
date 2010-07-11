@@ -12,8 +12,7 @@ package com.goodworkalan.strata;
  *            The address type used to identify an inner or leaf tier.
  */
 public final class ShouldSplitRoot<T, A>
-implements RootDecision<T, A>
-{
+implements RootDecision<T, A> {
     /**
      * If the root inner tier is currently at the root inner tier capacity then
      * the decision returns true.
@@ -26,8 +25,7 @@ implements RootDecision<T, A>
      *            The root inner tier.
      * @return True if root inner tier is at capacity.
      */
-    public boolean test(Mutation<T, A> mutation, Level<T, A> rootLevel, InnerTier<T, A> root)
-    {
+    public boolean test(Mutation<T, A> mutation, Level<T, A> rootLevel, InnerTier<T, A> root) {
         return mutation.getStructure().getInnerSize() == root.size();
     }
 
@@ -41,8 +39,7 @@ implements RootDecision<T, A>
      * @param root
      *            The root inner tier.
      */
-    public void operation(Mutation<T, A> mutation, Level<T, A> rootLevel, InnerTier<T, A> root)
-    {
+    public void operation(Mutation<T, A> mutation, Level<T, A> rootLevel, InnerTier<T, A> root) {
         rootLevel.operations.add(new SplitRoot<T, A>(root));
     }
 }

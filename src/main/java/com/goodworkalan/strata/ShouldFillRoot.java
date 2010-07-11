@@ -15,8 +15,7 @@ package com.goodworkalan.strata;
  *            The address type used to identify an inner or leaf tier.
  */
 final class ShouldFillRoot<T, A>
-implements RootDecision<T, A>
-{
+implements RootDecision<T, A> {
     /**
      * Determine if the root inner tier has only two remaining children and if
      * those children are going to merge to form a single remaining child.
@@ -30,10 +29,8 @@ implements RootDecision<T, A>
      * @return True if the operations performed by this root decision are
      *         applicable.
      */
-    public boolean test(Mutation<T, A> mutation, Level<T, A> rootLevel, InnerTier<T, A> root)
-    {
-        if (root.getChildType() == ChildType.INNER && root.size() == 2)
-        {
+    public boolean test(Mutation<T, A> mutation, Level<T, A> rootLevel, InnerTier<T, A> root) {
+        if (root.getChildType() == ChildType.INNER && root.size() == 2) {
             Structure<T, A> structure = mutation.getStructure();
             InnerTier<T, A> first = structure.getPool().getInnerTier(mutation.getStash(), root.get(0).getAddress());
             InnerTier<T, A> second = structure.getPool().getInnerTier(mutation.getStash(), root.get(1).getAddress());
@@ -54,8 +51,7 @@ implements RootDecision<T, A>
      * @param root
      *            The root inner tier.
      */
-    public void operation(Mutation<T, A> mutation, Level<T, A> rootLevel, InnerTier<T, A> root)
-    {
+    public void operation(Mutation<T, A> mutation, Level<T, A> rootLevel, InnerTier<T, A> root) {
         rootLevel.operations.add(new FillRoot<T, A>(root));
     }
 }

@@ -15,8 +15,7 @@ import com.goodworkalan.stash.Stash;
  *            A comparable type derived from the b+tree value type.
  */
 public class ExtractorComparableFactory<T, F extends Comparable<? super F>>
-implements ComparableFactory<T>
-{
+implements ComparableFactory<T> {
     /** The extractor to use to obtain a comparable value. */
     private final Extractor<T, F> extractor;
 
@@ -27,8 +26,7 @@ implements ComparableFactory<T>
      * @param extractor
      *            The extractor.
      */
-    public ExtractorComparableFactory(Extractor<T, F> extractor)
-    {
+    public ExtractorComparableFactory(Extractor<T, F> extractor) {
         this.extractor = extractor;
     }
 
@@ -39,13 +37,10 @@ implements ComparableFactory<T>
      * 
      * @return An extracted comparable comparator.
      */
-    public Comparable<T> newComparable(final Stash stash, T object)
-    {
+    public Comparable<T> newComparable(final Stash stash, T object) {
         final F field = extractor.extract(stash, object);
-        return new Comparable<T>()
-        {
-            public int compareTo(T other)
-            {
+        return new Comparable<T>() {
+            public int compareTo(T other) {
                 return field.compareTo(extractor.extract(stash, other));
             }
         };

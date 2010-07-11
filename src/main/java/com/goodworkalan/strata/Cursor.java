@@ -10,9 +10,7 @@ import java.util.Iterator;
  * @param <T>
  *            The value type of the b+tree objects.
  */
-public interface Cursor<T>
-extends Iterator<T>
-{
+public interface Cursor<T> extends Iterator<T> {
     /**
      * Release the cursor by releasing the read lock on the current leaf tier.
      */

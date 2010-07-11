@@ -7,12 +7,12 @@ import java.util.concurrent.locks.ReadWriteLock;
  * A swapable strategy that extracts either the read or write lock from a
  * read/write lock.
  */
-interface LockExtractor
-{
+interface LockExtractor {
     /**
      * Get either the read or the write lock from a read/write lock.
      * 
-     * @param readWriteLock The read/write lock.
+     * @param readWriteLock
+     *            The read/write lock.
      * @return Either the read or the write lock from a read/write lock.
      */
     public Lock getLock(ReadWriteLock readWriteLock);

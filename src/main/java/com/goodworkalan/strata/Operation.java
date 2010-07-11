@@ -10,8 +10,7 @@ package com.goodworkalan.strata;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-interface Operation<T, A>
-{
+interface Operation<T, A> {
     /**
      * Perform the operation.
      * 

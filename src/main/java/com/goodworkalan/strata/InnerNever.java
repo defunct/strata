@@ -11,8 +11,7 @@ package com.goodworkalan.strata;
  *            The address type used to identify an inner or leaf tier.
  */
 final class InnerNever<T, A>
-implements Decision<T, A>
-{
+implements Decision<T, A> {
     /**
      * Add no operations and return false.
      * 
@@ -27,8 +26,7 @@ implements Decision<T, A>
      * @return False indicating that there are no operations at that no
      *         exclusive locks are required.
      */
-    public boolean test(Mutation<T, A> mutation, Level<T, A> parentLevel, Level<T, A> childLevel, InnerTier<T, A> parent)
-    {
+    public boolean test(Mutation<T, A> mutation, Level<T, A> parentLevel, Level<T, A> childLevel, InnerTier<T, A> parent) {
         return false;
     }
 }

@@ -19,8 +19,7 @@ import com.goodworkalan.stash.Stash;
  *            The address type used to identify an inner or leaf tier.
  */
 final class BasicPool<T, A>
-implements Pool<T, A>
-{
+implements Pool<T, A> {
     /** A queue of references to inner tiers. */
     private final ReferenceQueue<InnerTier<T, A>> innerQueue = new ReferenceQueue<InnerTier<T,A>>();
     
@@ -42,29 +41,23 @@ implements Pool<T, A>
      * @param allocator
      *            The allocator to use to load pages from disk.
      */
-    public BasicPool(Storage<T, A> allocator)
-    {
+    public BasicPool(Storage<T, A> allocator) {
         this.allocator = allocator;
     }
 
     /**
      * Remove unreferenced inner and leaf tiers from the address to tier maps.
      */
-    private void collect()
-    {
-        synchronized (innerTiers)
-        {
+    private void collect() {
+        synchronized (innerTiers) {
             Unmappable unmappable = null;
-            while ((unmappable = (Unmappable) innerQueue.poll()) != null)
-            {
+            while ((unmappable = (Unmappable) innerQueue.poll()) != null) {
                 unmappable.unmap();
             }
         }
-        synchronized (leafTiers)
-        {
+        synchronized (leafTiers) {
             Unmappable unmappable = null;
-            while ((unmappable = (Unmappable) leafQueue.poll()) != null)
-            {
+            while ((unmappable = (Unmappable) leafQueue.poll()) != null) {
                 unmappable.unmap();
             }
         }
@@ -82,21 +75,17 @@ implements Pool<T, A>
      *            The address of an inner tier.
      * @return The inner tier for the given address.
      */
-    public InnerTier<T, A> getInnerTier(Stash stash, A address)
-    {
+    public InnerTier<T, A> getInnerTier(Stash stash, A address) {
         collect();
-        
+
         InnerTier<T, A> inner = null;
-        
-        synchronized (innerTiers)
-        {
+
+        synchronized (innerTiers) {
             Reference<InnerTier<T, A>> reference = innerTiers.get(address);
-            if (reference != null)
-            {
+            if (reference != null) {
                 inner = reference.get();
             }
-            if (inner == null)
-            {
+            if (inner == null) {
                 inner = new InnerTier<T, A>();
                 allocator.getInnerStore().load(stash, address, inner);
                 innerTiers.put(inner.getAddress(), new KeyedReference<A, InnerTier<T,A>>(address, inner, innerTiers, innerQueue));
@@ -118,21 +107,17 @@ implements Pool<T, A>
      *            The address of an inner tier.
      * @return The inner tier for the given address.
      */
-    public LeafTier<T, A> getLeafTier(Stash stash, A address)
-    {
+    public LeafTier<T, A> getLeafTier(Stash stash, A address) {
         collect();
 
         LeafTier<T, A> leaf = null;
-        
-        synchronized (leafTiers)
-        {
+
+        synchronized (leafTiers) {
             Reference<LeafTier<T, A>> reference = leafTiers.get(address);
-            if (reference != null)
-            {
+            if (reference != null) {
                 leaf = reference.get();
             }
-            if (leaf == null)
-            {
+            if (leaf == null) {
                 leaf = new LeafTier<T, A>();
                 allocator.getLeafStore().load(stash, address, leaf);
                 leafTiers.put(leaf.getAddress(), new KeyedReference<A, LeafTier<T, A>>(address, leaf, leafTiers, leafQueue));

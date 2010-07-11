@@ -6,12 +6,11 @@ import com.goodworkalan.stash.Stash;
  * A storage strategy for allocation and deallocation of tier storage.
  * 
  * @author Alan Gutierrez
- *
+ * 
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public interface Store<A>
-{
+public interface Store<A> {
     /**
      * Allocate persistent storage that can hold the given number of objects.
      * 
@@ -23,8 +22,6 @@ public interface Store<A>
      */
     public A allocate(Stash stash, int capacity);
 
-
-    
     /**
      * Free the persistent storage at the given address.
      * 

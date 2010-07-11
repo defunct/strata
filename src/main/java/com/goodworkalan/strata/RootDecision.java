@@ -12,8 +12,7 @@ package com.goodworkalan.strata;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-interface RootDecision<T, A>
-{
+interface RootDecision<T, A> {
     /**
      * Determine if the operations performed by this root decision are
      * applicable for the given root inner tier.

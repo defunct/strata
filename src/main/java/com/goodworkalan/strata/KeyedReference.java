@@ -20,8 +20,7 @@ import java.util.Map;
  *            The softly referenced value type.
  */
 final class KeyedReference<A, K>
-extends SoftReference<K> implements Unmappable
-{
+extends SoftReference<K> implements Unmappable {
     /** The key used to map the soft reference. */
     private final A key;
     
@@ -40,8 +39,7 @@ extends SoftReference<K> implements Unmappable
      *            The reference queue used to track when the object is no longer
      *            hard referenced.
      */
-    public KeyedReference(A key, K object, Map<A, Reference<K>> map, ReferenceQueue<K> queue)
-    {
+    public KeyedReference(A key, K object, Map<A, Reference<K>> map, ReferenceQueue<K> queue) {
         super(object, queue);
         this.key = key;
         this.map = map;
@@ -51,8 +49,7 @@ extends SoftReference<K> implements Unmappable
      * Remove the keyed reference value from the by removing the value in the
      * map property keyed by the key property.
      */
-    public void unmap()
-    {
+    public void unmap() {
         map.remove(key);
     }
 }

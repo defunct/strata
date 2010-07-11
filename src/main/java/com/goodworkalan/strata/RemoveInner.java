@@ -2,8 +2,7 @@ package com.goodworkalan.strata;
 
 // TODO Document.
 public final class RemoveInner<T, A>
-implements Operation<T, A>
-{
+implements Operation<T, A> {
     // TODO Document.
     private final InnerTier<T, A> parent;
 
@@ -11,20 +10,17 @@ implements Operation<T, A>
     private final InnerTier<T, A> child;
 
     // TODO Document.
-    public RemoveInner(InnerTier<T, A> parent, InnerTier<T, A> child)
-    {
+    public RemoveInner(InnerTier<T, A> parent, InnerTier<T, A> child) {
         this.parent = parent;
         this.child = child;
     }
 
     // TODO Document.
-    public void operate(Mutation<T, A> mutation)
-    {
+    public void operate(Mutation<T, A> mutation) {
         int index = parent.getIndex(child.getAddress());
 
         parent.remove(index);
-        if (parent.size() != 0)
-        {
+        if (parent.size() != 0) {
             parent.get(0).setPivot(null);
         }
 
@@ -38,8 +34,7 @@ implements Operation<T, A>
      * 
      * @return True indicating that this is a merge operation.
      */
-    public boolean isSplitOrMerge()
-    {
+    public boolean isSplitOrMerge() {
         return true;
     }
 }

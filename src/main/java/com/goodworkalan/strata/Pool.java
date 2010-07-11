@@ -18,8 +18,7 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-interface Pool<T, A>
-{
+interface Pool<T, A> {
     /**
      * Get the inner tier for the given address.
      * 

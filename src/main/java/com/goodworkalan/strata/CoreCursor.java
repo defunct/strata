@@ -13,9 +13,8 @@ import com.goodworkalan.stash.Stash;
  *            The address type used to identify an inner or leaf tier.
  */
 public final class CoreCursor<T, A>
-implements Cursor<T>
-{
-    /**  The type-safe container of out of band data. */
+implements Cursor<T> {
+    /** The type-safe container of out of band data. */
     private final Stash stash;
 
     /** The collection of the core services of the b+tree. */
@@ -45,8 +44,7 @@ implements Cursor<T>
      * @param index
      *            The index of the first value returned by the cursor.
      */
-    public CoreCursor(Stash stash, Structure<T, A> structure, LeafTier<T, A> leaf, int index)
-    {
+    public CoreCursor(Stash stash, Structure<T, A> structure, LeafTier<T, A> leaf, int index) {
         this.stash = stash;
         this.structure = structure;
         this.leaf = leaf;
@@ -59,8 +57,7 @@ implements Cursor<T>
      * 
      * @return True to indicate that this is a forward cursor.
      */
-    public boolean isForward()
-    {
+    public boolean isForward() {
         return true;
     }
 
@@ -69,18 +66,16 @@ implements Cursor<T>
      * 
      * @return A new cursor based on this cursor.
      */
-    public Cursor<T> newCursor()
-    {
+    public Cursor<T> newCursor() {
         return new CoreCursor<T, A>(stash, structure, leaf, index);
     }
 
-    /**
+  /**
      * Return true if the cursor has more values.
      * 
      * @return True if the cursor has more values.
      */
-    public boolean hasNext()
-    {
+    public boolean hasNext() {
         return index < leaf.size() || !structure.getStorage().isNull(leaf.getNext());
     }
 
@@ -89,16 +84,12 @@ implements Cursor<T>
      * 
      * @return the next cursor value.
      */
-    public T next()
-    {
-        if (released)
-        {
+    public T next() {
+        if (released) {
             throw new IllegalStateException();
         }
-        if (index == leaf.size())
-        {
-            if (structure.getStorage().isNull(leaf.getNext()))
-            {
+        if (index == leaf.size()) {
+            if (structure.getStorage().isNull(leaf.getNext())) {
                 throw new IllegalStateException();
             }
             LeafTier<T, A> next = structure.getPool().getLeafTier(stash, leaf.getNext());
@@ -108,8 +99,7 @@ implements Cursor<T>
             index = 0;
         }
         T object = leaf.get(index++);
-        if (!hasNext())
-        {
+        if (!hasNext()) {
             release();
         }
         return object;
@@ -122,8 +112,7 @@ implements Cursor<T>
      *                Thrown to indicate that the remove operation is not
      *                supported.
      */
-    public void remove()
-    {
+    public void remove() {
         // FIXME You could attempt to remove, but someone else might remove 
         // it if you let go of the lock. You could try to pick up where
         // you left off, but you'd need to create a set of previous values
@@ -134,10 +123,8 @@ implements Cursor<T>
     /**
      * Release the cursor by releasing the read lock on the current leaf tier.
      */
-    public void release()
-    {
-        if (!released)
-        {
+    public void release() {
+        if (!released) {
             leaf.getReadWriteLock().readLock().unlock();
             released = true;
         }

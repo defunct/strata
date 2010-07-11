@@ -11,8 +11,7 @@ package com.goodworkalan.strata;
  *            The address type used to identify an inner or leaf tier.
  */
 final class LeafTier<T, A>
-extends Tier<T, A>
-{
+extends Tier<T, A> {
     /** The serial version id. */
     private static final long serialVersionUID = 1L;
 
@@ -29,28 +28,21 @@ extends Tier<T, A>
      * @return The index of the first value object or the insert location of the
      *         value object.
      */
-    public int find(Comparable<? super T> comparable)
-    {
+    public int find(Comparable<? super T> comparable) {
         int low = 1;
         int high = size() - 1;
-        while (low < high)
-        {
+        while (low < high) {
             int mid = (low + high) >>> 1;
             int compare = comparable.compareTo(get(mid));
-            if (compare > 0)
-            {
+            if (compare > 0) {
                 low = mid + 1;
-            }
-            else
-            {
+            } else {
                 high = mid;
             }
         }
-        if (low < size())
-        {
-            while (low != 0 && comparable.compareTo(get(low - 1)) == 0)
-            {
-                low --;
+        if (low < size()) {
+            while (low != 0 && comparable.compareTo(get(low - 1)) == 0) {
+                low--;
             }
             return low;
         }
@@ -63,8 +55,7 @@ extends Tier<T, A>
      * 
      * @return The address of the next leaf or null.
      */
-    public A getNext()
-    {
+    public A getNext() {
         return next;
     }
 
@@ -75,8 +66,7 @@ extends Tier<T, A>
      *            The address of the next leaf or null if this is the last leaf
      *            in the b-tree.
      */
-    public void setNext(A next)
-    {
+    public void setNext(A next) {
         this.next = next;
     }
 }

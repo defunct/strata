@@ -10,25 +10,22 @@ import java.util.concurrent.locks.ReadWriteLock;
  * @author Alan Gutierrez
  */
 final class WriteLockExtractor
-implements LockExtractor
-{
+implements LockExtractor {
     /**
      * Get the write lock from the read/write lock.
      * 
      * @return The write lock.
      */
-    public Lock getLock(ReadWriteLock readWriteLock)
-    {
+    public Lock getLock(ReadWriteLock readWriteLock) {
         return readWriteLock.writeLock();
     }
 
     /**
      * Return true since this lock extractor returns the write lock.
      * 
-     *  @return True since this is a write lock extractor.
+     * @return True since this is a write lock extractor.
      */
-    public boolean isWrite()
-    {
+    public boolean isWrite() {
         return true;
     }
 }

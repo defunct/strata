@@ -5,14 +5,13 @@ package com.goodworkalan.strata;
  * equal to the pivot value are stored.
  * 
  * @author Alan Gutierrez
- *
+ * 
  * @param <T>
  *            The value type of the indexed objects.
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public final class Branch<T, A>
-{
+public final class Branch<T, A> {
     /** The child tier address. */
     private final A address;
 
@@ -28,8 +27,7 @@ public final class Branch<T, A>
      * @param address
      *            The child tier address.
      */
-    public Branch(T pivot, A address)
-    {
+    public Branch(T pivot, A address) {
         this.address = address;
         this.pivot = pivot;
     }
@@ -39,8 +37,7 @@ public final class Branch<T, A>
      * 
      * @return The child tier address.
      */
-    public A getAddress()
-    {
+    public A getAddress() {
         return address;
     }
 
@@ -49,8 +46,7 @@ public final class Branch<T, A>
      * 
      * @return The branch value.
      */
-    public T getPivot()
-    {
+    public T getPivot() {
         return pivot;
     }
 
@@ -60,8 +56,7 @@ public final class Branch<T, A>
      * @param pivot
      *            The branch value.
      */
-    public void setPivot(T pivot)
-    {
+    public void setPivot(T pivot) {
         this.pivot = pivot;
     }
 
@@ -70,8 +65,7 @@ public final class Branch<T, A>
      * 
      * @return A string representation.
      */
-    public String toString()
-    {
+    public String toString() {
         return pivot == null ? "MINIMAL" : pivot.toString();
     }
 }

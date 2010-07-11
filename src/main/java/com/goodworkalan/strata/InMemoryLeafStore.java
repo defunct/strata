@@ -18,8 +18,7 @@ import com.goodworkalan.stash.Stash;
  */
 class InMemoryLeafStore<T>
 extends InMemoryStore
-implements LeafStore<T, Ilk.Box>
-{
+implements LeafStore<T, Ilk.Box> {
     /**
      * Throws an exception because the object reference pool will never call the
      * null store load method.
@@ -34,8 +33,7 @@ implements LeafStore<T, Ilk.Box>
      * @exception UnsupportedOperationException
      *                Since this method should never be called.
      */
-    public Ilk.Box load(Stash stash, Ilk.Box address, Collection<T> objects)
-    {
+    public Ilk.Box load(Stash stash, Ilk.Box address, Collection<T> objects) {
         throw new UnsupportedOperationException();
     }
 
@@ -52,7 +50,6 @@ implements LeafStore<T, Ilk.Box>
      * @param next
      *            The address of the next leaf in the b-tree.
      */
-    public void write(Stash stash, Ilk.Box address, Collection<T> objects, Ilk.Box next)
-    {
+    public void write(Stash stash, Ilk.Box address, Collection<T> objects, Ilk.Box next) {
     }
 }

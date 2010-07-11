@@ -8,14 +8,13 @@ import com.goodworkalan.stash.Stash;
  * A storage strategy to read and write leaf tiers.
  * 
  * @author Alan Gutierrez
- *
+ * 
  * @param <T>
  *            The value type of the b+tree objects.
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public interface LeafStore<T, A> extends Store<A>
-{
+public interface LeafStore<T, A> extends Store<A> {
     /**
      * Load a collection of value objects from the persistent storage at the
      * given address.

@@ -15,8 +15,7 @@ import static com.goodworkalan.strata.Leaves.link;
  *            The address type used to identify an inner or leaf tier.
  */
 final class InsertLinkedList<T, A>
-implements LeafOperation<T, A>
-{
+implements LeafOperation<T, A> {
     /**
      * A leaf that is the head of a linked list of value objects with identical
      * index values.
@@ -30,8 +29,7 @@ implements LeafOperation<T, A>
      *            A leaf that is the head of a linked list of value objects with
      *            identical index values.
      */
-    public InsertLinkedList(LeafTier<T, A> leaf)
-    {
+    public InsertLinkedList(LeafTier<T, A> leaf) {
         this.leaf = leaf;
     }
 
@@ -46,8 +44,7 @@ implements LeafOperation<T, A>
      *            The operations to perform on the leaf tier.
      * @return True indicating that the operation was successful.
      */
-    public boolean operate(Mutation<T, A> mutation, Level<T, A> leafLevel)
-    {
+    public boolean operate(Mutation<T, A> mutation, Level<T, A> leafLevel) {
         append(mutation, leaf, leafLevel);
         return true;
     }
@@ -65,21 +62,16 @@ implements LeafOperation<T, A>
      * @param leafLevel
      *            The operations to perform on the leaf tier.
      */
-    private void append(Mutation<T, A> mutation, LeafTier<T, A> leaf, Level<T, A> leafLevel)
-    {
+    private void append(Mutation<T, A> mutation, LeafTier<T, A> leaf, Level<T, A> leafLevel) {
         Structure<T, A> structure = mutation.getStructure();
-        if (leaf.size() == structure.getLeafSize())
-        {
+        if (leaf.size() == structure.getLeafSize()) {
             LeafTier<T, A> nextLeaf = getNextAndLock(mutation, leaf, leafLevel);
-            if (null == nextLeaf || structure.getComparableFactory().newComparable(mutation.getStash(), mutation.getObject()).compareTo(nextLeaf.get(0)) != 0)
-            {
+            if (null == nextLeaf || structure.getComparableFactory().newComparable(mutation.getStash(), mutation.getObject()).compareTo(nextLeaf.get(0)) != 0) {
                 nextLeaf = mutation.newLeafTier();
                 link(mutation, leaf, nextLeaf);
             }
             append(mutation, nextLeaf, leafLevel);
-        }
-        else
-        {
+        } else {
             leaf.add(mutation.getObject());
             structure.getStage().dirty(mutation.getStash(), leaf);
         }

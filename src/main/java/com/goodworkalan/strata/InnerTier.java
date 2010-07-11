@@ -14,8 +14,7 @@ import java.util.Iterator;
  *            The address type used to identify an inner or leaf tier.
  */
 class InnerTier<T, A>
-extends Tier<Branch<T, A>, A>
-{
+extends Tier<Branch<T, A>, A> {
     /** The serial version id. */
     private static final long serialVersionUID = 1L;
 
@@ -27,8 +26,7 @@ extends Tier<Branch<T, A>, A>
      * 
      * @return The flag indicating whether child tiers are inner or leaf tiers.
      */
-    public ChildType getChildType()
-    {
+    public ChildType getChildType() {
         return childType;
     }
 
@@ -40,15 +38,12 @@ extends Tier<Branch<T, A>, A>
      * @return The index of the branch with the given child tier address or
      *         <code>-1</code> if not found.
      */
-    public int getIndex(A address)
-    {
+    public int getIndex(A address) {
         int index = 0;
         Iterator<Branch<T, A>> branches = iterator();
-        while (branches.hasNext())
-        {
+        while (branches.hasNext()) {
             Branch<T, A> branch = branches.next();
-            if (branch.getAddress().equals(address))
-            {
+            if (branch.getAddress().equals(address)) {
                 return index;
             }
             index++;
@@ -62,8 +57,7 @@ extends Tier<Branch<T, A>, A>
      * @param childType
      *            The child tier type.
      */
-    public void setChildType(ChildType childType)
-    {
+    public void setChildType(ChildType childType) {
         this.childType = childType;
     }
 
@@ -76,28 +70,21 @@ extends Tier<Branch<T, A>, A>
      * @return The branch whose child tier is the path to objects that are equal
      *         to or greater than the comparable.
      */
-    public Branch<T, A> find(Comparable<? super T> comparable)
-    {
+    public Branch<T, A> find(Comparable<? super T> comparable) {
         int low = 1;
         int high = size() - 1;
-        while (low < high)
-        {
+        while (low < high) {
             int mid = (low + high) >>> 1;
             int compare = comparable.compareTo(get(mid).getPivot());
-            if (compare > 0)
-            {
+            if (compare > 0) {
                 low = mid + 1;
-            }
-            else
-            {
+            } else {
                 high = mid;
             }
         }
-        if (low < size())
-        {
+        if (low < size()) {
             Branch<T, A> branch = get(low);
-            if (comparable.compareTo(branch.getPivot()) == 0)
-            {
+            if (comparable.compareTo(branch.getPivot()) == 0) {
                 return branch;
             }
         }

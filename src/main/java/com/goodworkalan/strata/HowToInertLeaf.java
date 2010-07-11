@@ -13,20 +13,18 @@ package com.goodworkalan.strata;
  *            The address type used to identify an inner or leaf tier.
  */
 final class HowToInertLeaf<T, A>
-implements Decision<T, A>
-{
+implements Decision<T, A> {
     /**
      * Create a new decision.
      */
-    public HowToInertLeaf()
-    {
+    public HowToInertLeaf() {
     }
-    
+
     /**
      * Determine if the leaf that will hold the inserted value is full and ready
      * to split, if it is full and part of linked list of b+tree leaves of
      * duplicate index values, or it it can be inserted without splitting.
-     *
+     * 
      * @param mutation
      *            The mutation state container.
      * @param parentLevel
@@ -37,8 +35,7 @@ implements Decision<T, A>
      *            The parent tier.
      * @return True if this decision added an operation to split the leaf.
      */
-    public boolean test(Mutation<T, A> mutation, Level<T, A> parentLevel, Level<T, A> childLevel, InnerTier<T, A> parent)
-    {
+    public boolean test(Mutation<T, A> mutation, Level<T, A> parentLevel, Level<T, A> childLevel, InnerTier<T, A> parent) {
         // Get the collection of the core services of the b+tree.
         Structure<T, A> structure = mutation.getStructure();
 
@@ -58,44 +55,33 @@ implements Decision<T, A>
         // have the same index value. Otherwise, we have a leaf that has a free
         // slot.
 
-        if (leaf.size() == structure.getLeafSize())
-        {
+        if (leaf.size() == structure.getLeafSize()) {
             // If the index value of the first value is equal to the index value
             // of the last value, then we have a linked list of duplicate index
             // values. Otherwise, we have a full page that can split.
 
             Comparable<? super T> first = mutation.getStructure().getComparableFactory().newComparable(mutation.getStash(), leaf.get(0));
-            if (first.compareTo(leaf.get(leaf.size() - 1)) == 0)
-            {
+            if (first.compareTo(leaf.get(leaf.size() - 1)) == 0) {
                 // If the inserted value is less than the current value, create
                 // a new page to the left of the leaf, if it is greater create a
                 // new page to the right of the leaf. If it is equal, append the
                 // leaf to the linked list of duplicate index values.
 
                 int compare = mutation.getComparable().compareTo(leaf.get(0));
-                if (compare < 0)
-                {
+                if (compare < 0) {
                     mutation.leafOperation = new SplitLinkedListLeft<T, A>(parent);
-                }
-                else if (compare > 0)
-                {
+                } else if (compare > 0) {
                     mutation.leafOperation = new SplitLinkedListRight<T, A>(parent);
-                }
-                else
-                {
+                } else {
                     mutation.leafOperation = new InsertLinkedList<T, A>(leaf);
                     split = false;
                 }
-            }
-            else
-            {
+            } else {
                 // Insert the value and then split the leaf.
                 parentLevel.operations.add(new SplitLeaf<T, A>(parent));
                 mutation.leafOperation = new InsertSorted<T, A>(parent);
             }
-        }
-        else
-        {
+        } else {
             // No split and the value is inserted into leaf.
             mutation.leafOperation = new InsertSorted<T, A>(parent);
             split = false;

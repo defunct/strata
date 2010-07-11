@@ -17,11 +17,10 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-class InMemoryAllocator<T> implements Allocator<T, Ilk.Box>
-{
+class InMemoryAllocator<T> implements Allocator<T, Ilk.Box> {
     /** The super type token of the b-tree value type. */
     private final Ilk.Key key;
-    
+
     /**
      * Create a null allocator with the given super type token of b-tree value
      * type.
@@ -29,8 +28,7 @@ class InMemoryAllocator<T> implements Allocator<T, Ilk.Box>
      * @param key
      *            The super type token of the b-tree value type.
      */
-    public InMemoryAllocator(Ilk.Key key)
-    {
+    public InMemoryAllocator(Ilk.Key key) {
         this.key = key;
     }
 
@@ -46,8 +44,7 @@ class InMemoryAllocator<T> implements Allocator<T, Ilk.Box>
      *            The number of branches in the inner tier.
      * @return A super type token reference to the inner tier.
      */
-    public Ilk.Box allocate(Stash stash, InnerTier<T, Ilk.Box> inner, int capacity)
-    {
+    public Ilk.Box allocate(Stash stash, InnerTier<T, Ilk.Box> inner, int capacity) {
         return new Ilk<InnerTier<T, Ilk.Box>>() { }.assign(new Ilk<T>() {}, key.type).box(inner);
     }
 
@@ -63,8 +60,7 @@ class InMemoryAllocator<T> implements Allocator<T, Ilk.Box>
      *            The number of values in the leaf tier.
      * @return A super type token reference to the leaf tier.
      */
-    public Ilk.Box allocate(Stash stash, LeafTier<T, Ilk.Box> leaf, int capacity)
-    {
+    public Ilk.Box allocate(Stash stash, LeafTier<T, Ilk.Box> leaf, int capacity) {
         return new Ilk<LeafTier<T, Ilk.Box>>() { }.assign(new Ilk<T>() {}, key.type).box(leaf);
     }
 }

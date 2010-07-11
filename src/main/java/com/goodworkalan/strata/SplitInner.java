@@ -11,8 +11,7 @@ package com.goodworkalan.strata;
  *            The address type used to identify an inner or leaf tier.
  */
 public final class SplitInner<T, A>
-implements Operation<T, A>
-{
+implements Operation<T, A> {
     /** The parent inner tier of the inner tier to split. */
     private final InnerTier<T, A> parent;
 
@@ -27,8 +26,7 @@ implements Operation<T, A>
      * @param child
      *            The inner tier to split.
      */
-    public SplitInner(InnerTier<T, A> parent, InnerTier<T, A> child)
-    {
+    public SplitInner(InnerTier<T, A> parent, InnerTier<T, A> child) {
         this.parent = parent;
         this.child = child;
     }
@@ -39,8 +37,7 @@ implements Operation<T, A>
      * @param mutation
      *            The mutation state container.
      */
-    public void operate(Mutation<T, A> mutation)
-    {
+    public void operate(Mutation<T, A> mutation) {
         // Create a new right inner tier.
         InnerTier<T, A> right = mutation.newInnerTier(child.getChildType());
 
@@ -49,12 +46,10 @@ implements Operation<T, A>
 
         // Copy the contents of the inner tier at and after the split index to
         // the new right inner tier.
-        while (partition < child.size())
-        {
+        while (partition < child.size()) {
             right.add(child.remove(partition));
         }
 
-        
         // The pivot of the parent inner tier of the branch to this inner tier
         // is the pivot copied to the new right inner tier. The pivot in the
         // parent inner tier of the left-most branch in the new right inner tier
@@ -78,8 +73,7 @@ implements Operation<T, A>
      * 
      * @return True indicating that this is a split operation.
      */
-    public boolean isSplitOrMerge()
-    {
+    public boolean isSplitOrMerge() {
         return true;
     }
 }

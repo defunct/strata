@@ -27,23 +27,21 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public interface Query<T>
-{
+public interface Query<T> {
     /**
      * Get the lock that locks the b+tree exclusively for insert and update.
      * 
      * @return The insert delete lock.
      */
     public Lock getInsertDeleteLock();
-    
-    
+
     /**
      * Get type-safe container of out of band data.
      * 
      * @return The type-safe container of out of band data.
      */
     public Stash getStash();
-    
+
     /**
      * Get the b+tree.
      * 
@@ -58,7 +56,7 @@ public interface Query<T>
      *            The object to add.
      */
     public void add(T object);
-    
+
     /**
      * Build a comparable from the given value object using the comparable
      * factory property that provides the comparables used to order the b+tree.

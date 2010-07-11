@@ -18,9 +18,8 @@ import com.goodworkalan.stash.Stash;
  *            The address type used to identify an inner or leaf tier.
  */
 final class SplitLinkedListRight<T, A>
-implements LeafOperation<T, A>
-{
-    /** The inner tier parent that references the leaf to split. */
+implements LeafOperation<T, A> {
+ /** The inner tier parent that references the leaf to split. */
     private final InnerTier<T, A> inner;
 
     /**
@@ -29,8 +28,7 @@ implements LeafOperation<T, A>
      * @param inner
      *            The inner tier parent that references the leaf to split.
      */
-    public SplitLinkedListRight(InnerTier<T, A> inner)
-    {
+    public SplitLinkedListRight(InnerTier<T, A> inner) {
         this.inner = inner;
     }
 
@@ -45,12 +43,10 @@ implements LeafOperation<T, A>
      * @return True if the given leaf is the last leaf in a linked list of
      *         leaves.
      */
-    private boolean endOfList(Mutation<T, A> mutation, LeafTier<T, A> leaf)
-    {
+    private boolean endOfList(Mutation<T, A> mutation, LeafTier<T, A> leaf) {
         Structure<T, A> structure = mutation.getStructure();
         Storage<T, A> alloator = mutation.getStructure().getStorage();
-        if (alloator.isNull(leaf.getNext()))
-        {
+        if (alloator.isNull(leaf.getNext())) {
             return true;
         }
         Stash stash = mutation.getStash();
@@ -67,8 +63,7 @@ implements LeafOperation<T, A>
      *            The per level mutation state for the leaf level.
      * @return True of the operation succeeded.
      */
-    public boolean operate(Mutation<T, A> mutation, Level<T, A> leafLevel)
-    {
+    public boolean operate(Mutation<T, A> mutation, Level<T, A> leafLevel) {
         // Get the collection of the core services of the b+tree.
         Structure<T, A> structure = mutation.getStructure();
 
@@ -79,8 +74,7 @@ implements LeafOperation<T, A>
         // Navigate to the end of the linked list of a linked list of b+tree
         // leaves of duplicate index values.
         LeafTier<T, A> last = leaf;
-        while (!endOfList(mutation, last))
-        {
+        while (!endOfList(mutation, last)) {
             last = getNextAndLock(mutation, last, leafLevel);
         }
 

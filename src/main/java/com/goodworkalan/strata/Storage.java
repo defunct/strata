@@ -10,8 +10,7 @@ package com.goodworkalan.strata;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public interface Storage<T, A>
-{
+public interface Storage<T, A> {
     /**
      * Get the storage strategy for inner tiers.
      * 

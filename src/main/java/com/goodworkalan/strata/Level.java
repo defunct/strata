@@ -8,14 +8,13 @@ import java.util.Map;
  * The per level mutation state container.
  * 
  * @author Alan Gutierrez
- *
+ * 
  * @param <T>
  *            The value type of the b+tree objects.
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-final class Level<T, A>
-{
+final class Level<T, A> {
     /**
      * A swappable strategy that extracts either the read or write lock from a
      * read/write lock.
@@ -39,37 +38,34 @@ final class Level<T, A>
      * @param exclusive
      *            If true, this level will lock tiers exclusively.
      */
-    public Level(boolean exclusive)
-    {
+    public Level(boolean exclusive) {
         this.locker = exclusive ? (LockExtractor) new WriteLockExtractor() : (LockExtractor) new ReadLockExtractor();
     }
 
     /**
      * Lock the given tier according to the locker property and add it to the
-     * set of locked tiers. The set of locked tiers keeps track of the tiers that
-     * need to be unlocked as well as holds onto a hard reference to the tiers
-     * so that they are not garbage collected.
+     * set of locked tiers. The set of locked tiers keeps track of the tiers
+     * that need to be unlocked as well as holds onto a hard reference to the
+     * tiers so that they are not garbage collected.
      * 
      * @param tier
      *            The tier to lock.
      */
-    public void lockAndAdd(Tier<?, A> tier)
-    {
+    public void lockAndAdd(Tier<?, A> tier) {
         lock_(tier);
         add_(tier);
     }
 
     /**
      * Unlock the given tier according to the locker property and remove it from
-     * the set of locked tiers. The set of locked tiers keeps track of the tiers that
-     * need to be unlocked as well as holds onto a hard reference to the tiers
-     * so that they are not garbage collected.
+     * the set of locked tiers. The set of locked tiers keeps track of the tiers
+     * that need to be unlocked as well as holds onto a hard reference to the
+     * tiers so that they are not garbage collected.
      * 
      * @param tier
      *            The tier to lock.
      */
-    public void unlockAndRemove(Tier<?, A> tier)
-    {
+    public void unlockAndRemove(Tier<?, A> tier) {
         assert lockedTiers.containsKey(tier.getAddress());
         
         lockedTiers.remove(tier.getAddress());
@@ -84,8 +80,7 @@ final class Level<T, A>
      * @param tier
      *            The tier to add to the set of locked tiers.
      */
-    public void add_(Tier<?, A> tier)
-    {
+    public void add_(Tier<?, A> tier) {
         lockedTiers.put(tier.getAddress(), tier);
     }
 
@@ -95,8 +90,7 @@ final class Level<T, A>
      * @param tier
      *            The tier to lock.
      */
-    public void lock_(Tier<?, A> tier)
-    {
+    public void lock_(Tier<?, A> tier) {
         locker.getLock(tier.getReadWriteLock()).lock();
     }
 
@@ -106,8 +100,7 @@ final class Level<T, A>
      * @param tier
      *            The tier to unlock.
      */
-    public void unlock_(Tier<?, A> tier)
-    {
+    public void unlock_(Tier<?, A> tier) {
         locker.getLock(tier.getReadWriteLock()).unlock();
     }
 
@@ -115,10 +108,8 @@ final class Level<T, A>
      * Unlock all the tiers in the set of tiers according to the locker
      * property.
      */
-    public void release()
-    {
-        for (Tier<?, A> tier : lockedTiers.values())
-        {
+    public void release() {
+        for (Tier<?, A> tier : lockedTiers.values()) {
             locker.getLock(tier.getReadWriteLock()).unlock();
         }
     }
@@ -129,32 +120,25 @@ final class Level<T, A>
      * keeps track of the tiers that need to be unlocked as well as holds onto a
      * hard reference to the tiers so that they are not garbage collected.
      */
-    public void releaseAndClear()
-    {
-        for (Tier<?, A> tier : lockedTiers.values())
-        {
+    public void releaseAndClear() {
+        for (Tier<?, A> tier : lockedTiers.values()) {
             locker.getLock(tier.getReadWriteLock()).unlock();
         }
         lockedTiers.clear();
     }
 
     // TODO Document.
-    private void exclusive()
-    {
-        for (Tier<?, A> tier : lockedTiers.values())
-        {
+    private void exclusive() {
+        for (Tier<?, A> tier : lockedTiers.values()) {
             tier.getReadWriteLock().writeLock().lock();
         }
         locker = new WriteLockExtractor();
     }
 
     // TODO Document.
-    public void downgrade()
-    {
-        if (locker.isWrite())
-        {
-            for (Tier<?, A> tier : lockedTiers.values())
-            {
+    public void downgrade() {
+        if (locker.isWrite()) {
+            for (Tier<?, A> tier : lockedTiers.values()) {
                 tier.getReadWriteLock().readLock().lock();
                 tier.getReadWriteLock().writeLock().unlock();
             }
@@ -163,10 +147,8 @@ final class Level<T, A>
     }
 
     // TODO Document.
-    public void upgrade()
-    {
-        if (locker.isWrite())
-        {
+    public void upgrade() {
+        if (locker.isWrite()) {
             throw new IllegalStateException();
         }
         release();
@@ -174,10 +156,8 @@ final class Level<T, A>
     }
 
     // TODO Document.
-    public boolean upgrade(Level<T, A> levelOfChild)
-    {
-        if (!locker.isWrite())
-        {
+    public boolean upgrade(Level<T, A> levelOfChild) {
+        if (!locker.isWrite()) {
             release();
             // TODO Use Release and Clear.
             levelOfChild.release();
@@ -185,9 +165,7 @@ final class Level<T, A>
             exclusive();
             levelOfChild.exclusive();
             return true;
-        }
-        else if (!levelOfChild.locker.isWrite())
-        {
+        } else if (!levelOfChild.locker.isWrite()) {
             levelOfChild.release();
             levelOfChild.lockedTiers.clear();
             levelOfChild.exclusive();

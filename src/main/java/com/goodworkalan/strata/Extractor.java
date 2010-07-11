@@ -14,8 +14,7 @@ import com.goodworkalan.stash.Stash;
  * @param <F>
  *            A comparable type derived from the b+tree value type.
  */
-public interface Extractor<T, F extends Comparable<? super F>>
-{
+public interface Extractor<T, F extends Comparable<? super F>> {
     /**
      * Extract a comparable value from the given b+tree value object.
      * 

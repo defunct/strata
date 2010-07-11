@@ -19,8 +19,7 @@ import java.util.ListIterator;
  *            The address type used to identify an inner or leaf tier.
  */
 final class InsertSorted<T, A>
-implements LeafOperation<T, A>
-{
+implements LeafOperation<T, A> {
     /**
      * The parent inner tier of the child leaf tier where the object value is to
      * be inserted.
@@ -34,8 +33,7 @@ implements LeafOperation<T, A>
      *            The parent inner tier of the child leaf tier where the object
      *            value is to be inserted.
      */
-    public InsertSorted(InnerTier<T, A> inner)
-    {
+    public InsertSorted(InnerTier<T, A> inner) {
         this.inner = inner;
     }
 
@@ -49,8 +47,7 @@ implements LeafOperation<T, A>
      *            The per level mutation state for the leaf level.
      * @return True of the operation succeeded.
      */
-    public boolean operate(Mutation<T, A> mutation, Level<T, A> leafLevel)
-    {
+    public boolean operate(Mutation<T, A> mutation, Level<T, A> leafLevel) {
         // Get the collection of the core services of the b+tree.
         Structure<T, A> structure = mutation.getStructure();
 
@@ -60,11 +57,9 @@ implements LeafOperation<T, A>
 
         // Insert the object value sorted.
         ListIterator<T> objects = leaf.listIterator();
-        while (objects.hasNext())
-        {
+        while (objects.hasNext()) {
             T before = objects.next();
-            if (mutation.getComparable().compareTo(before) <= 0)
-            {
+            if (mutation.getComparable().compareTo(before) <= 0) {
                 objects.previous();
                 objects.add(mutation.getObject());
                 break;
@@ -72,8 +67,7 @@ implements LeafOperation<T, A>
         }
 
         // If we got to the end, then we need to append the object value.
-        if (!objects.hasNext())
-        {
+        if (!objects.hasNext()) {
             objects.add(mutation.getObject());
         }
 

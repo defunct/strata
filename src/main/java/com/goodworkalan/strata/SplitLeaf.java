@@ -20,8 +20,7 @@ import static com.goodworkalan.strata.Leaves.link;
  *            The address type used to identify an inner or leaf tier.
  */
 final class SplitLeaf<T, A>
-implements Operation<T, A>
-{
+implements Operation<T, A> {
     /** The parent inner tier of the child leaf tier to split. */ 
     private final InnerTier<T, A> inner;
 
@@ -31,8 +30,7 @@ implements Operation<T, A>
      * @param inner
      *            The parent inner tier of the child leaf tier to split.
      */
-    public SplitLeaf(InnerTier<T, A> inner)
-    {
+    public SplitLeaf(InnerTier<T, A> inner) {
         this.inner = inner;
     }
 
@@ -42,8 +40,7 @@ implements Operation<T, A>
      * @param mutation
      *            The mutation state container.
      */
-    public void operate(Mutation<T, A> mutation)
-    {
+    public void operate(Mutation<T, A> mutation) {
         // Get the collection of the core services of the b+tree.
         Structure<T, A> structure = mutation.getStructure();
 
@@ -64,20 +61,16 @@ implements Operation<T, A>
 
         int partition = -1;
         Comparable<? super T> candidate = mutation.getStructure().getComparableFactory().newComparable(mutation.getStash(), leaf.get(middle));
-        for (int i = 0; partition == -1 && i < middle; i++)
-        {
+        for (int i = 0; partition == -1 && i < middle; i++) {
             // If we first fild an unequal value at a lesser index, then we
             // split after that index and the middle value becomes the first
             // value in a new leaf tier. If we first find an unequal value at a
             // greater index, then the value at the greater index becomes the
             // first value in a new leaf tier.
 
-            if (candidate.compareTo(leaf.get(lesser)) != 0)
-            {
+            if (candidate.compareTo(leaf.get(lesser)) != 0) {
                 partition = lesser + 1;
-            }
-            else if (candidate.compareTo(leaf.get(greater)) != 0)
-            {
+            } else if (candidate.compareTo(leaf.get(greater)) != 0) {
                 partition = greater;
             }
 
@@ -90,8 +83,7 @@ implements Operation<T, A>
         link(mutation, leaf, right);
 
         // Copy the values at and after the partition into the new right tier.
-        while (partition != leaf.size())
-        {
+        while (partition != leaf.size()) {
             right.add(leaf.remove(partition));
         }
 
@@ -111,8 +103,7 @@ implements Operation<T, A>
      * 
      * @return True indicating that this is a split operation.
      */
-    public boolean isSplitOrMerge()
-    {
+    public boolean isSplitOrMerge() {
         return true;
     }
 }

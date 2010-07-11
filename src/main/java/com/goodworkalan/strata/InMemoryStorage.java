@@ -11,8 +11,7 @@ import com.goodworkalan.ilk.Ilk;
  * @param <T>
  *            The value type of the b+tree objects.
  */
-final class InMemoryStorage<T> implements Storage<T, Ilk.Box>
-{
+final class InMemoryStorage<T> implements Storage<T, Ilk.Box> {
     /** The noop inner tier storage strategy. */
     private final InnerStore<T, Ilk.Box> innerStore;
 
@@ -25,20 +24,17 @@ final class InMemoryStorage<T> implements Storage<T, Ilk.Box>
      * @param key
      *            The super type token of the b-tree value type.
      */
-    public InMemoryStorage()
-    {
+    public InMemoryStorage() {
         this.innerStore = new InMemoryInnerStore<T>();
         this.leafStore = new InMemoryLeafStore<T>();
     }
-
 
     /**
      * Get the no-op inner tier storage strategy.
      * 
      * @return The no-op inner tier storage strategy.
      */
-    public InnerStore<T, Ilk.Box> getInnerStore()
-    {
+    public InnerStore<T, Ilk.Box> getInnerStore() {
         return innerStore;
     }
 
@@ -47,8 +43,7 @@ final class InMemoryStorage<T> implements Storage<T, Ilk.Box>
      * 
      * @return The no-op leaf tier storage strategy.
      */
-    public LeafStore<T, Ilk.Box> getLeafStore()
-    {
+    public LeafStore<T, Ilk.Box> getLeafStore() {
         return leafStore;
     }
 
@@ -58,8 +53,7 @@ final class InMemoryStorage<T> implements Storage<T, Ilk.Box>
      * 
      * @return The null address value.
      */
-    public Ilk.Box getNull()
-    {
+    public Ilk.Box getNull() {
         return null;
     }
 
@@ -71,8 +65,7 @@ final class InMemoryStorage<T> implements Storage<T, Ilk.Box>
      *            A storage address.
      * @return True if the address is null.
      */
-    public boolean isNull(Ilk.Box address)
-    {
+    public boolean isNull(Ilk.Box address) {
         return address == null;
     }
 }

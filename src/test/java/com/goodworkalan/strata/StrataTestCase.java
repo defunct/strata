@@ -10,13 +10,10 @@ import org.testng.annotations.Test;
 import com.goodworkalan.ilk.Ilk;
 import com.goodworkalan.stash.Stash;
 
-
 // TODO Document.
-public class StrataTestCase
-{
+public class StrataTestCase {
     // TODO Document.
-    private Query<Integer> newTransaction()
-    {
+    private Query<Integer> newTransaction() {
         Schema<Integer> schema = new Schema<Integer>();
         schema.setInnerCapacity(5);
         schema.setLeafCapacity(7);
@@ -25,12 +22,13 @@ public class StrataTestCase
     }
 
     // TODO Document.
-    @Test public void create()
-    {
+    @Test
+    public void create() {
         Schema<Integer> schema = new Schema<Integer>();
         schema.setInnerCapacity(5);
         schema.setLeafCapacity(7);
-        Query<Integer> query = schema.inMemory(new Stash(), new Ilk<Integer>() { }).query();
+        Query<Integer> query = schema.inMemory(new Stash(), new Ilk<Integer>() {
+        }).query();
         query.add(1);
         Cursor<Integer> cursor = query.find(1);
         assertTrue(cursor.hasNext());
@@ -39,8 +37,8 @@ public class StrataTestCase
     }
     
     // TODO Document.
-    @Test public void removeSingle()
-    {
+    @Test
+    public void removeSingle() {
         Query<Integer> transaction = newTransaction();
         transaction.add(1);
         assertEquals((int) transaction.remove(1), 1);

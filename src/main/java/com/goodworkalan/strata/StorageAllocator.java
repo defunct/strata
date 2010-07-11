@@ -3,8 +3,8 @@ package com.goodworkalan.strata;
 import com.goodworkalan.stash.Stash;
 
 /**
- * A strategy for allocating persistent storage for inner and leaf tiers
- * that delegates its calls to an implementation of {@link Storage}. 
+ * A strategy for allocating persistent storage for inner and leaf tiers that
+ * delegates its calls to an implementation of {@link Storage}.
  * 
  * @author Alan Gutierrez
  * 
@@ -13,8 +13,7 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-class StorageAllocator<T, A> implements Allocator<T, A>
-{
+class StorageAllocator<T, A> implements Allocator<T, A> {
     /** The strategy for persistent storage for inner and leaf tiers. */
     private final Storage<T, A> storage;
 
@@ -24,8 +23,7 @@ class StorageAllocator<T, A> implements Allocator<T, A>
      * @param storage
      *            The strategy for persistent storage for inner and leaf tiers.
      */
-    public StorageAllocator(Storage<T, A> storage)
-    {
+    public StorageAllocator(Storage<T, A> storage) {
         this.storage = storage;
     }
 
@@ -42,8 +40,7 @@ class StorageAllocator<T, A> implements Allocator<T, A>
      *            The number of branches in the inner tier.
      * @return The address of the persistent storage.
      */
-    public A allocate(Stash stash, InnerTier<T, A> inner, int capacity)
-    {
+    public A allocate(Stash stash, InnerTier<T, A> inner, int capacity) {
         return storage.getInnerStore().allocate(stash, capacity);
     }
 
@@ -60,8 +57,7 @@ class StorageAllocator<T, A> implements Allocator<T, A>
      *            The number of values in the leaf tier.
      * @return The address of the persistent storage.
      */
-    public A allocate(Stash stash, LeafTier<T, A> leaf, int capacity)
-    {
+    public A allocate(Stash stash, LeafTier<T, A> leaf, int capacity) {
         return storage.getLeafStore().allocate(stash, capacity);
     }
 }

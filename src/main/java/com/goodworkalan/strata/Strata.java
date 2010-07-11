@@ -6,12 +6,11 @@ import com.goodworkalan.stash.Stash;
  * A b+tree.
  * 
  * @author Alan Gutierrez
- *
+ * 
  * @param <T>
  *            The value type of the indexed objects.
  */
-public interface Strata<T>
-{
+public interface Strata<T> {
     /**
      * Create a query of the b+tree using the given stash to communicate any
      * additional participants in the storage strategy.

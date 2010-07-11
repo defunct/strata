@@ -13,8 +13,7 @@ package com.goodworkalan.strata;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-interface Decision<T, A>
-{
+interface Decision<T, A> {
     /**
      * Make a decision to lock the parent tier exclusively and adds the
      * operations necessary to perform a mutative operation on the parent or

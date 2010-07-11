@@ -4,8 +4,7 @@ import java.util.List;
 
 // TODO Document.
 public final class MergeInner<T, A>
-implements Operation<T, A>
-{
+implements Operation<T, A> {
     // TODO Document.
     private final InnerTier<T, A> parent;
 
@@ -13,15 +12,13 @@ implements Operation<T, A>
     private final List<InnerTier<T, A>> listToMerge;
 
     // TODO Document.
-    public MergeInner(InnerTier<T, A> parent, List<InnerTier<T, A>> listToMerge)
-    {
+    public MergeInner(InnerTier<T, A> parent, List<InnerTier<T, A>> listToMerge) {
         this.parent = parent;
         this.listToMerge = listToMerge;
     }
 
     // TODO Document.
-    public void operate(Mutation<T, A> mutation)
-    {
+    public void operate(Mutation<T, A> mutation) {
         InnerTier<T, A> left = listToMerge.get(0);
         InnerTier<T, A> right = listToMerge.get(1);
 
@@ -29,8 +26,7 @@ implements Operation<T, A>
         Branch<T, A> branch = parent.remove(index);
 
         right.get(0).setPivot(branch.getPivot());
-        while (right.size() != 0)
-        {
+        while (right.size() != 0) {
             left.add(right.remove(0));
         }
 
@@ -45,8 +41,7 @@ implements Operation<T, A>
      * 
      * @return True indicating that this is a merge operation.
      */
-    public boolean isSplitOrMerge()
-    {
+    public boolean isSplitOrMerge() {
         return true;
     }
 }

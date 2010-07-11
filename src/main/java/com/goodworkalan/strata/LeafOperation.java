@@ -10,8 +10,7 @@ package com.goodworkalan.strata;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-interface LeafOperation<T, A>
-{
+interface LeafOperation<T, A> {
     /**
      * Perform a mutation on leaf tiers. Returns true if the operation succeeded
      * indicating that the generalized mutation is a success. Returns false if

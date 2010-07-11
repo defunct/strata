@@ -15,8 +15,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *            The address type used to identify an inner or leaf tier.
  */
 abstract class Tier<T, A>
-extends ArrayList<T>
-{
+extends ArrayList<T> {
     /** The serial version id. */
     private static final long serialVersionUID = 1L;
 
@@ -25,12 +24,11 @@ extends ArrayList<T>
 
     /** The address of the tier in persistent storage. */
     private A address;
-    
+
     /**
      * Create a new tier.
      */
-    public Tier()
-    {
+    public Tier() {
         this.readWriteLock = new ReentrantReadWriteLock();
     }
 
@@ -39,8 +37,7 @@ extends ArrayList<T>
      * 
      * @return The read/write lock used to guard this tier.
      */
-    public ReadWriteLock getReadWriteLock()
-    {
+    public ReadWriteLock getReadWriteLock() {
         return readWriteLock;
     }
 
@@ -49,8 +46,7 @@ extends ArrayList<T>
      * 
      * @return The address of the tier in persistent storage.
      */
-    public A getAddress()
-    {
+    public A getAddress() {
         return address;
     }
 
@@ -60,8 +56,7 @@ extends ArrayList<T>
      * @param address
      *            The address of the tier in persistent storage.
      */
-    public void setAddress(A address)
-    {
+    public void setAddress(A address) {
         this.address = address;
     }
 
@@ -73,8 +68,7 @@ extends ArrayList<T>
      * @return True if the given object is this object.
      */
     @Override
-    public boolean equals(Object object)
-    {
+    public boolean equals(Object object) {
         return object == this;
     }
 
@@ -86,8 +80,7 @@ extends ArrayList<T>
      * @return True if the given object is this object.
      */
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         return System.identityHashCode(this);
     }
 }

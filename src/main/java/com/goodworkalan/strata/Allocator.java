@@ -17,15 +17,14 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-interface Allocator<T, A>
-{
+interface Allocator<T, A> {
     /**
      * Allocate persistent storage for the given inner tier that can hold the
      * given capacity of branches. The inner tier itself is given so that the in
      * memory strategy can return a reference to it as the address value.
      * 
      * @param stash
-     *          A type-safe container of out of band data.
+     *            A type-safe container of out of band data.
      * @param inner
      *            The inner tier.
      * @param capacity

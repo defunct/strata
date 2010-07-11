@@ -99,8 +99,7 @@ import java.util.List;
  * that would increase the size of the project.
  */
 final class ShouldMergeInner<T, A>
-implements Decision<T, A>
-{
+implements Decision<T, A> {
     /**
      * Determine if we are deleting a final leaf in a child and therefore need
      * to lock exclusive and retreive the leaf to the left.
@@ -113,10 +112,8 @@ implements Decision<T, A>
      *            The value of the last item that is about to be removed from a
      *            leaf tier.
      */
-    private boolean lockLeft(Mutation<T, A> mutation, Branch<T, A> branch)
-    {
-        if (mutation.isOnlyChild() && branch.getPivot() != null && mutation.getLeftLeaf() == null)
-        {
+    private boolean lockLeft(Mutation<T, A> mutation, Branch<T, A> branch) {
+        if (mutation.isOnlyChild() && branch.getPivot() != null && mutation.getLeftLeaf() == null) {
             return mutation.getComparable().compareTo(branch.getPivot()) == 0;
         }
         return false;
@@ -152,8 +149,7 @@ implements Decision<T, A>
      * @param parent
      *            The parent tier.
      */
-    public boolean test(Mutation<T, A> mutation, Level<T, A> levelOfParent, Level<T, A> levelOfChild, InnerTier<T, A> parent)
-    {
+    public boolean test(Mutation<T, A> mutation, Level<T, A> levelOfParent, Level<T, A> levelOfChild, InnerTier<T, A> parent) {
         Structure<T, A> structure = mutation.getStructure();
         Pool<T, A> pool = structure.getPool();
         
@@ -171,15 +167,13 @@ implements Decision<T, A>
         // left of the only child leaf. We then make note of it so we can link
         // it around the only child that is go be removed.
 
-        if (lockLeft(mutation, branch))
-        {
+        if (lockLeft(mutation, branch)) {
             // FIXME You need to hold these exclusive locks, so add an operation
             // that is uncancelable, but does nothing.
 
             int index = parent.getIndex(child.getAddress()) - 1;
             InnerTier<T, A> inner = parent;
-            while (inner.getChildType() == ChildType.INNER)
-            {
+            while (inner.getChildType() == ChildType.INNER) {
                 inner = pool.getInnerTier(mutation.getStash(), inner.get(index).getAddress());
                 levelOfParent.lockAndAdd(inner);
                 index = inner.size() - 1;
@@ -195,10 +189,8 @@ implements Decision<T, A>
         // only one child are deleted rather than merged. If we encounter a tier
         // with children with siblings, we are no longer deleting.
 
-        if (child.size() == 1)
-        {
-            if (!mutation.isDeleting())
-            {
+        if (child.size() == 1) {
+            if (!mutation.isDeleting()) {
                 mutation.setDeleting(true);
             }
             levelOfParent.operations.add(new RemoveInner<T, A>(parent, child));
@@ -210,29 +202,24 @@ implements Decision<T, A>
         List<InnerTier<T, A>> listToMerge = new ArrayList<InnerTier<T, A>>(2);
 
         int index = parent.getIndex(child.getAddress());
-        if (index != 0)
-        {
+        if (index != 0) {
             InnerTier<T, A> left = pool.getInnerTier(mutation.getStash(), parent.get(index - 1).getAddress());
             levelOfChild.lockAndAdd(left);
             levelOfChild.lockAndAdd(child);
-            if (left.size() + child.size() <= structure.getInnerSize())
-            {
+            if (left.size() + child.size() <= structure.getInnerSize()) {
                 listToMerge.add(left);
                 listToMerge.add(child);
             }
         }
 
-        if (index == 0)
-        {
+        if (index == 0) {
             levelOfChild.lockAndAdd(child);
         }
 
-        if (listToMerge.isEmpty() && index != parent.size() - 1)
-        {
+        if (listToMerge.isEmpty() && index != parent.size() - 1) {
             InnerTier<T, A> right = pool.getInnerTier(mutation.getStash(), parent.get(index + 1).getAddress());
             levelOfChild.lockAndAdd(right);
-            if ((child.size() + right.size() - 1) == structure.getInnerSize())
-            {
+            if ((child.size() + right.size() - 1) == structure.getInnerSize()) {
                 listToMerge.add(child);
                 listToMerge.add(right);
             }
@@ -240,8 +227,7 @@ implements Decision<T, A>
 
         // Add the merge operation.
 
-        if (listToMerge.size() != 0)
-        {
+        if (listToMerge.size() != 0) {
             // If the parent or ancestors have only children and we are creating
             // a chain of delete operations, we have to cancel those delete
             // operations. We cannot delete an inner tier as the result of a
@@ -254,8 +240,7 @@ implements Decision<T, A>
             // supposed to be left locked exclusive, but I don't see in rewind,
             // how the operations are removed.
 
-            if (mutation.isDeleting())
-            {
+            if (mutation.isDeleting()) {
                 mutation.rewind(2);
                 mutation.setDeleting(false);
             }

@@ -13,8 +13,7 @@ package com.goodworkalan.strata;
  *            The address type used to identify an inner or leaf tier.
  */
 public final class FillRoot<T, A>
-implements Operation<T, A>
-{
+implements Operation<T, A> {
     /** The root inner tier. */
     private final InnerTier<T, A> root;
 
@@ -24,8 +23,7 @@ implements Operation<T, A>
      * @param root
      *            The root inner tier.
      */
-    public FillRoot(InnerTier<T, A> root)
-    {
+    public FillRoot(InnerTier<T, A> root) {
         this.root = root;
     }
 
@@ -35,19 +33,16 @@ implements Operation<T, A>
      * @param mutation
      *            The mutation state container.
      */
-    public void operate(Mutation<T, A> mutation)
-    {
+    public void operate(Mutation<T, A> mutation) {
         // FIXME Size is off.
-        if (root.size() != 0)
-        {
+        if (root.size() != 0) {
             throw new IllegalStateException();
         }
-        
+
         Structure<T, A> structure = mutation.getStructure();
 
         InnerTier<T, A> child = structure.getPool().getInnerTier(mutation.getStash(), root.remove(0).getAddress());
-        while (child.size() != 0)
-        {
+        while (child.size() != 0) {
             root.add(child.remove(0));
         }
 
@@ -63,8 +58,7 @@ implements Operation<T, A>
      * 
      * @return True indicating that this is a merge operation.
      */
-    public boolean isSplitOrMerge()
-    {
+    public boolean isSplitOrMerge() {
         return true;
     }
 }

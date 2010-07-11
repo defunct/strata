@@ -6,8 +6,7 @@ package com.goodworkalan.strata;
  * 
  * @author Alan Gutierrez
  */
-interface Unmappable
-{
+interface Unmappable {
     /**
      * Removes this object from a map.
      */

@@ -19,9 +19,8 @@ import static com.goodworkalan.strata.Leaves.link;
  *            The address type used to identify an inner or leaf tier.
  */
 final class SplitLinkedListLeft<T, A>
-implements LeafOperation<T, A>
-{
-    /** The inner tier parent of the leaf tier to split left. */
+implements LeafOperation<T, A> {
+  /** The inner tier parent of the leaf tier to split left. */
     private final InnerTier<T, A> inner;
 
     /**
@@ -30,8 +29,7 @@ implements LeafOperation<T, A>
      * @param inner
      *            The inner tier parent of the leaf tier to split left.
      */
-    public SplitLinkedListLeft(InnerTier<T, A> inner)
-    {
+    public SplitLinkedListLeft(InnerTier<T, A> inner) {
         this.inner = inner;
     }
 
@@ -44,8 +42,7 @@ implements LeafOperation<T, A>
      *            The per level mutation state for the leaf level.
      * @return True of the operation succeeded.
      */
-    public boolean operate(Mutation<T, A> mutation, Level<T, A> leafLevel)
-    {
+    public boolean operate(Mutation<T, A> mutation, Level<T, A> leafLevel) {
         // Get the collection of the core services of the b+tree.
         Structure<T, A> structure = mutation.getStructure();
 
@@ -57,8 +54,7 @@ implements LeafOperation<T, A>
         // tier that is going to split left, so we copy the contents of the
         // splitting tier to the new tier. (We can only link to the right.)
         LeafTier<T, A> right = mutation.newLeafTier();
-        while (leaf.size() != 0)
-        {
+        while (leaf.size() != 0) {
             right.add(leaf.remove(0));
         }
 

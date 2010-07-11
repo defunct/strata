@@ -18,8 +18,7 @@ import com.goodworkalan.stash.Stash;
  */
 class InMemoryInnerStore<T>
 extends InMemoryStore
-implements InnerStore<T, Ilk.Box>
-{
+implements InnerStore<T, Ilk.Box> {
     /**
      * Throws an exception because the object reference pool will never call the
      * null store load method.
@@ -36,8 +35,7 @@ implements InnerStore<T, Ilk.Box>
      *              @exception UnsupportedOperationException
      *                Since this method should never be called.
      */
-    public ChildType load(Stash stash, Ilk.Box address, Collection<Branch<T, Ilk.Box>> objects)
-    {
+    public ChildType load(Stash stash, Ilk.Box address, Collection<Branch<T, Ilk.Box>> objects) {
         throw new UnsupportedOperationException();
     }
     
@@ -55,7 +53,6 @@ implements InnerStore<T, Ilk.Box>
      * @param childType
      *            The child type.
      */
-    public void write(Stash stash, Ilk.Box address, Collection<Branch<T, Ilk.Box>> objects, ChildType childType)
-    {
+    public void write(Stash stash, Ilk.Box address, Collection<Branch<T, Ilk.Box>> objects, ChildType childType) {
     }
 }

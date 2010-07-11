@@ -14,8 +14,7 @@ import com.goodworkalan.stash.Stash;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public interface InnerStore<T, A> extends Store<A>
-{
+public interface InnerStore<T, A> extends Store<A> {
     /**
      * Load a collection of inner tier branches from the persistent storage at
      * the given address.

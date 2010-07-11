@@ -12,8 +12,7 @@ package com.goodworkalan.strata;
  *            The address type used to identify an inner or leaf tier.
  */
 final class SplitRoot<T, A>
-implements Operation<T, A>
-{
+implements Operation<T, A> {
     /** The root tier. */
     private final InnerTier<T, A> root;
 
@@ -23,8 +22,7 @@ implements Operation<T, A>
      * @param root
      *            The root inner tier.
      */
-    public SplitRoot(InnerTier<T, A> root)
-    {
+    public SplitRoot(InnerTier<T, A> root) {
         this.root = root;
     }
 
@@ -34,24 +32,21 @@ implements Operation<T, A>
      * @param mutation
      *            The mutation state container.
      */
-    public void operate(Mutation<T, A> mutation)
-    {
+    public void operate(Mutation<T, A> mutation) {
         // Create new left and right inner tiers.
         InnerTier<T, A> left = mutation.newInnerTier(root.getChildType());
         InnerTier<T, A> right = mutation.newInnerTier(root.getChildType());
-        
+
         // Find the partition index and move the branches up to the partition
         // into the left inner tier. Move the branches at and after the partiion
         // into the right inner tier.
 
         int partition = root.size() / 2;
         int fullSize = root.size();
-        for (int i = 0; i < partition; i++)
-        {
+        for (int i = 0; i < partition; i++) {
             left.add(root.remove(0));
         }
-        for (int i = partition; i < fullSize; i++)
-        {
+        for (int i = partition; i < fullSize; i++) {
             right.add(root.remove(0));
         }
 
@@ -81,8 +76,7 @@ implements Operation<T, A>
      * 
      * @return True indicating that this is a split operation.
      */
-    public boolean isSplitOrMerge()
-    {
+    public boolean isSplitOrMerge() {
         return true;
     }
 }

@@ -13,18 +13,17 @@ import com.goodworkalan.stash.Stash;
  * of a transaction.
  * 
  * @author Alan Gutierrez
- *
+ * 
  * @param <T>
  *            The value type of the indexed objects.
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-public class Stage<T, A>
-{
+public class Stage<T, A> {
     // FIXME What does it mean when you do not try/catch?
     /** A read/write lock on insert and delete operations. */
     private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
-    
+
     /** The allocator to use to load pages from disk. */
     private final Storage<T, A> allocator;
 
@@ -42,7 +41,7 @@ public class Stage<T, A>
     
     /** The maximum number of dirty tiers to hold in memory. */
     private final int maxDirtyTiers;
-        
+
     /**
      * Create a new tier writer.
      * 
@@ -51,8 +50,7 @@ public class Stage<T, A>
      * @param maxDirtyTiers
      *            The maximum number of dirty tiers to hold in memory.
      */
-    public Stage(Storage<T, A> allocator, int maxDirtyTiers)
-    {
+    public Stage(Storage<T, A> allocator, int maxDirtyTiers) {
         this.allocator = allocator;
         this.maxDirtyTiers = maxDirtyTiers;
     }
@@ -62,8 +60,7 @@ public class Stage<T, A>
      * 
      * @return The count of staged dirty and free tiers.
      */
-    private int getDirtyTierCount()
-    {
+    private int getDirtyTierCount() {
         return dirtyInnerTiers.size() + dirtyLeafTiers.size() + freeInnerTiers.size() + freeLeafTiers.size();
     }
 
@@ -72,16 +69,14 @@ public class Stage<T, A>
      * 
      * @return The insert delete lock.
      */
-    public Lock getInsertDeleteLock()
-    {
+    public Lock getInsertDeleteLock() {
         return readWriteLock.writeLock();
     }
-    
+
     /**
-     * Lock the b+tree prior to an insert and delete operation. 
+     * Lock the b+tree prior to an insert and delete operation.
      */
-    public void begin()
-    {
+    public void begin() {
         getLock().lock();
     }
 
@@ -92,14 +87,11 @@ public class Stage<T, A>
      *            A reference to the count of times that begin locked that end
      *            did not unlock.
      */
-    public void end(int[] count)
-    {
+    public void end(int[] count) {
         count[0]++;
-        if (getDirtyTierCount() == 0)
-        {
+        if (getDirtyTierCount() == 0) {
             Lock lock = getLock();
-            while (count[0]-- != 0)
-            {
+            while (count[0]-- != 0) {
                 lock.unlock();
             }
         }
@@ -110,8 +102,7 @@ public class Stage<T, A>
      * 
      * @return The lock used to guard the writes.
      */
-    private Lock getLock()
-    {
+    private Lock getLock() {
         return maxDirtyTiers == 0 ? readWriteLock.readLock() : readWriteLock.writeLock();
     }
 
@@ -124,8 +115,7 @@ public class Stage<T, A>
      * @param leaf
      *            The leaf to free.
      */
-    public void dirty(Stash stash, InnerTier<T, A> inner) 
-    {
+    public void dirty(Stash stash, InnerTier<T, A> inner) {
         dirtyInnerTiers.add(inner);
     }
 
@@ -138,8 +128,7 @@ public class Stage<T, A>
      * @param leaf
      *            The leaf to free.
      */
-    public void dirty(Stash stash, LeafTier<T, A> leaf)
-    {
+    public void dirty(Stash stash, LeafTier<T, A> leaf) {
         dirtyLeafTiers.add(leaf);
     }
 
@@ -152,8 +141,7 @@ public class Stage<T, A>
      * @param leaf
      *            The leaf to free.
      */
-    public void free(Stash stash, InnerTier<T, A> inner)
-    {
+    public void free(Stash stash, InnerTier<T, A> inner) {
         dirtyInnerTiers.remove(inner);
         freeInnerTiers.add(inner);
     }
@@ -167,8 +155,7 @@ public class Stage<T, A>
      * @param leaf
      *            The leaf to free.
      */
-    public void free(Stash stash, LeafTier<T, A> leaf)
-    {
+    public void free(Stash stash, LeafTier<T, A> leaf) {
         dirtyLeafTiers.remove(leaf);
         freeLeafTiers.add(leaf);
     }
@@ -186,31 +173,23 @@ public class Stage<T, A>
      *            Flush the tier writer regardless of its max dirty tiers
      *            property.
      */
-    public void flush(Stash stash, int[] count, boolean force)
-    {
-        if (maxDirtyTiers != 0)
-        {
+    public void flush(Stash stash, int[] count, boolean force) {
+        if (maxDirtyTiers != 0) {
             readWriteLock.writeLock().lock();
-            if (force || maxDirtyTiers < getDirtyTierCount())
-            {
-                for (InnerTier<T, A> inner : dirtyInnerTiers)
-                {
+            if (force || maxDirtyTiers < getDirtyTierCount()) {
+                for (InnerTier<T, A> inner : dirtyInnerTiers) {
                     allocator.getInnerStore().write(stash, inner.getAddress(), inner, inner.getChildType());
                 }
-                for (InnerTier<T, A> inner : freeInnerTiers)
-                {
+                for (InnerTier<T, A> inner : freeInnerTiers) {
                     allocator.getInnerStore().free(stash, inner.getAddress());
                 }
-                for (LeafTier<T, A> leaf : dirtyLeafTiers)
-                {
+                for (LeafTier<T, A> leaf : dirtyLeafTiers) {
                     allocator.getLeafStore().write(stash, leaf.getAddress(), leaf, leaf.getNext());
                 }
-                for (LeafTier<T, A> leaf : freeLeafTiers)
-                {
+                for (LeafTier<T, A> leaf : freeLeafTiers) {
                     allocator.getLeafStore().free(stash, leaf.getAddress());
                 }
-                while (count[0]-- != 0)
-                {
+                while (count[0]-- != 0) {
                     readWriteLock.writeLock().unlock();
                 }
             }

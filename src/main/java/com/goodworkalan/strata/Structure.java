@@ -10,11 +10,10 @@ package com.goodworkalan.strata;
  * @param <A>
  *            The address type used to identify an inner or leaf tier.
  */
-class Structure<T, A>
-{
+class Structure<T, A> {
     /** The capacity of branches of an inner tier. */
     private final int innerCapacity;
-    
+
     /** The capacity of object values of a leaf tier. */
     private final int leafCapacity;
 
@@ -23,10 +22,10 @@ class Structure<T, A>
      * tiers.
      */
     private final Allocator<T, A> allocator;
-    
+
     /** The persistent storage strategy. */
     private final Storage<T, A> storage;
-    
+
     /** A pool of tiers currently in memory. */
     private final Pool<T, A> pool;
 
@@ -59,8 +58,7 @@ class Structure<T, A>
      *            The factory to use to create comparables for objects in the
      *            b+tree to compare against other object in the b+tree.
      */
-    public Structure(int innerCapacity, int leafCapacity, Allocator<T, A> allocator, Storage<T, A> storage, Pool<T, A> tierPool, Stage<T, A> tierWriter, ComparableFactory<T> comparableFactory)
-    {
+    public Structure(int innerCapacity, int leafCapacity, Allocator<T, A> allocator, Storage<T, A> storage, Pool<T, A> tierPool, Stage<T, A> tierWriter, ComparableFactory<T> comparableFactory) {
         this.innerCapacity = innerCapacity;
         this.leafCapacity = leafCapacity;
         this.allocator = allocator;
@@ -75,19 +73,16 @@ class Structure<T, A>
      * 
      * @return The capacity of branches of an inner tier.
      */
-    public int getInnerSize()
-    {
+    public int getInnerSize() {
         return innerCapacity;
     }
-    
 
     /**
      * Get the capacity of object values of a leaf tier.
      * 
      * @return The capacity of object values of a leaf tier.
      */
-    public int getLeafSize()
-    {
+    public int getLeafSize() {
         return leafCapacity;
     }
 
@@ -98,18 +93,16 @@ class Structure<T, A>
      * @return The allocator to use to allocate persistent storage of inner and
      *         leaf tiers.
      */
-    public Allocator<T, A> getAllocator()
-    {
+    public Allocator<T, A> getAllocator() {
         return allocator;
     }
-    
+
     /**
      * Get the persistent storage strategy.
      * 
      * @return The persistent storage strategy.
      */
-    public Storage<T, A> getStorage()
-    {
+    public Storage<T, A> getStorage() {
         return storage;
     }
 
@@ -118,8 +111,7 @@ class Structure<T, A>
      * 
      * @return The pool of tiers currently in memory.
      */
-    public Pool<T, A> getPool()
-    {
+    public Pool<T, A> getPool() {
         return pool;
     }
 
@@ -128,8 +120,7 @@ class Structure<T, A>
      * 
      * @return The writer used to stage dirty pages for writing.
      */
-    public Stage<T, A> getStage()
-    {
+    public Stage<T, A> getStage() {
         return stage;
     }
 
@@ -140,18 +131,16 @@ class Structure<T, A>
      * @return The factory to use to create comparables for objects in the
      *         b+tree to compare against other object in the b+tree.
      */
-    public ComparableFactory<T> getComparableFactory()
-    {
+    public ComparableFactory<T> getComparableFactory() {
         return comparableFactory;
     }
-    
+
     /**
      * Create a schema using the properties of this bouquet of services.
      * 
      * @return A new schema.
      */
-    public Schema<T> newSchema()
-    {
+    public Schema<T> newSchema() {
         Schema<T> schema = new Schema<T>();
         schema.setInnerCapacity(getInnerSize());
         schema.setLeafCapacity(getLeafSize());
