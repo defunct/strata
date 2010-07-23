@@ -3,17 +3,26 @@ package com.goodworkalan.strata;
 // TODO Document.
 public final class MergeLeaf<T, A>
 implements Operation<T, A> {
-    // TODO Document.
-    private final InnerTier<T, A> parent;
+    /** The parent inner tier. */
+    private final Tier<T, A> parent;
 
-    // TODO Document.
-    private final LeafTier<T, A> left;
+    /** The left leaf tier. */
+    private final Tier<T, A> left;
 
-    // TODO Document.
-    private final LeafTier<T, A> right;
+    /** The right leaf tier. */
+    private final Tier<T, A> right;
 
-    // TODO Document.
-    public MergeLeaf(InnerTier<T, A> parent, LeafTier<T, A> left, LeafTier<T, A> right) {
+    /**
+     * Create a new merge leaf operation.
+     * 
+     * @param parent
+     *            The parent inner tier.
+     * @param left
+     *            The left leaf tier.
+     * @param right
+     *            The right leaf tier.
+     */
+    public MergeLeaf(Tier<T, A> parent, Tier<T, A> left, Tier<T, A> right) {
         this.parent = parent;
         this.left = left;
         this.right = right;
@@ -21,11 +30,12 @@ implements Operation<T, A> {
 
     // TODO Document.
     public void operate(Mutation<T, A> mutation) {
-        parent.remove(parent.getIndex(right.getAddress()));
+        parent.clear(parent.getIndexOfChildAddress(right.getAddress()), 1);
 
-        while (right.size() != 0) {
-            left.add(right.remove(0));
+        for (int i = 0, stop = right.getSize(); i < stop; i++) {
+            left.addRecord(left.getSize(), right.getRecord(i));
         }
+        
         // FIXME Get last leaf. 
         left.setNext(right.getNext());
 

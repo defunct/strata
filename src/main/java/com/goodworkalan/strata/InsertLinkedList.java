@@ -20,7 +20,7 @@ implements LeafOperation<T, A> {
      * A leaf that is the head of a linked list of value objects with identical
      * index values.
      */            
-    private final LeafTier<T, A> leaf;
+    private final Tier<T, A> leaf;
 
     /**
      * Create an insert linked list operation.
@@ -29,7 +29,7 @@ implements LeafOperation<T, A> {
      *            A leaf that is the head of a linked list of value objects with
      *            identical index values.
      */
-    public InsertLinkedList(LeafTier<T, A> leaf) {
+    public InsertLinkedList(Tier<T, A> leaf) {
         this.leaf = leaf;
     }
 
@@ -62,17 +62,17 @@ implements LeafOperation<T, A> {
      * @param leafLevel
      *            The operations to perform on the leaf tier.
      */
-    private void append(Mutation<T, A> mutation, LeafTier<T, A> leaf, Level<T, A> leafLevel) {
+    private void append(Mutation<T, A> mutation, Tier<T, A> leaf, Level<T, A> leafLevel) {
         Structure<T, A> structure = mutation.getStructure();
-        if (leaf.size() == structure.getLeafSize()) {
-            LeafTier<T, A> nextLeaf = getNextAndLock(mutation, leaf, leafLevel);
-            if (null == nextLeaf || structure.getComparableFactory().newComparable(mutation.getStash(), mutation.getObject()).compareTo(nextLeaf.get(0)) != 0) {
+        if (leaf.getSize() == structure.getLeafSize()) {
+            Tier<T, A> nextLeaf = getNextAndLock(mutation, leaf, leafLevel);
+            if (null == nextLeaf || structure.getComparableFactory().newComparable(mutation.getStash(), mutation.getObject()).compareTo(nextLeaf.getRecord(0)) != 0) {
                 nextLeaf = mutation.newLeafTier();
                 link(mutation, leaf, nextLeaf);
             }
             append(mutation, nextLeaf, leafLevel);
         } else {
-            leaf.add(mutation.getObject());
+            leaf.addRecord(leaf.getSize(), mutation.getObject());
             structure.getStage().dirty(mutation.getStash(), leaf);
         }
     }

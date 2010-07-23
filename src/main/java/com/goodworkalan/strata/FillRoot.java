@@ -7,15 +7,15 @@ package com.goodworkalan.strata;
  *  
  * @author Alan Gutierrez
  *
- * @param <T>
+ * @param <Record>
  *            The value type of the b+tree objects.
- * @param <A>
+ * @param <Address>
  *            The address type used to identify an inner or leaf tier.
  */
-public final class FillRoot<T, A>
-implements Operation<T, A> {
+public final class FillRoot<Record, Address>
+implements Operation<Record, Address> {
     /** The root inner tier. */
-    private final InnerTier<T, A> root;
+    private final Tier<Record, Address> root;
 
     /**
      * Create a fill root operation with the given root inner tier.
@@ -23,7 +23,7 @@ implements Operation<T, A> {
      * @param root
      *            The root inner tier.
      */
-    public FillRoot(InnerTier<T, A> root) {
+    public FillRoot(Tier<Record, Address> root) {
         this.root = root;
     }
 
@@ -33,24 +33,26 @@ implements Operation<T, A> {
      * @param mutation
      *            The mutation state container.
      */
-    public void operate(Mutation<T, A> mutation) {
+    public void operate(Mutation<Record, Address> mutation) {
         // FIXME Size is off.
-        if (root.size() != 0) {
+        if (root.getSize() != 0) {
             throw new IllegalStateException();
         }
 
-        Structure<T, A> structure = mutation.getStructure();
+        Structure<Record, Address> structure = mutation.getStructure();
 
-        InnerTier<T, A> child = structure.getPool().getInnerTier(mutation.getStash(), root.remove(0).getAddress());
-        while (child.size() != 0) {
-            root.add(child.remove(0));
+        Tier<Record, Address> child = structure.getPool().get(mutation.getStash(), root.getChildAddress(0));
+        root.clear(0, 1);
+        for (int i = 0, stop = child.getSize(); i < stop; i++) {
+            root.addBranch(root.getSize(), child.getRecord(i), child.getChildAddress(i));
         }
+        child.clear(0, child.getSize());
 
-        root.setChildType(child.getChildType());
+        root.setChildLeaf(child.isChildLeaf());
 
-        Stage<T, A> allocator = structure.getStage();
-        allocator.free(mutation.getStash(), child);
-        allocator.dirty(mutation.getStash(), root);
+        Stage<Record, Address> stage = structure.getStage();
+        stage.free(mutation.getStash(), child);
+        stage.dirty(mutation.getStash(), root);
     }
 
     /**

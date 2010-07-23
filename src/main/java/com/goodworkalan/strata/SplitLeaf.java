@@ -22,7 +22,7 @@ import static com.goodworkalan.strata.Leaves.link;
 final class SplitLeaf<T, A>
 implements Operation<T, A> {
     /** The parent inner tier of the child leaf tier to split. */ 
-    private final InnerTier<T, A> inner;
+    private final Tier<T, A> inner;
 
     /**
      * Create a leaf split operation.
@@ -30,7 +30,7 @@ implements Operation<T, A> {
      * @param inner
      *            The parent inner tier of the child leaf tier to split.
      */
-    public SplitLeaf(InnerTier<T, A> inner) {
+    public SplitLeaf(Tier<T, A> inner) {
         this.inner = inner;
     }
 
@@ -45,8 +45,8 @@ implements Operation<T, A> {
         Structure<T, A> structure = mutation.getStructure();
 
         // Find the branch that navigates to the leaf child.
-        Branch<T, A> branch = inner.find(mutation.getComparable());
-        LeafTier<T, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), branch.getAddress());
+        int branch = inner.find(mutation.getComparable());
+        Tier<T, A> leaf = structure.getPool().get(mutation.getStash(), inner.getChildAddress(branch));
 
         // The leaf may contain duplicate index values. We need to make sure
         // that when we split the leaf we do not split a string of duplicate
@@ -54,13 +54,13 @@ implements Operation<T, A> {
         // search in increments backward and forward in the leaf tier to find an
         // index value that is not equal to the middle value.
 
-        int middle = leaf.size() >> 1;
-        boolean odd = (leaf.size() & 1) == 1;
+        int middle = leaf.getSize() >> 1;
+        boolean odd = (leaf.getSize() & 1) == 1;
         int lesser = middle - 1;
         int greater = odd ? middle + 1 : middle;
 
         int partition = -1;
-        Comparable<? super T> candidate = mutation.getStructure().getComparableFactory().newComparable(mutation.getStash(), leaf.get(middle));
+        Comparable<? super T> candidate = mutation.getStructure().getComparableFactory().newComparable(mutation.getStash(), leaf.getRecord(middle));
         for (int i = 0; partition == -1 && i < middle; i++) {
             // If we first fild an unequal value at a lesser index, then we
             // split after that index and the middle value becomes the first
@@ -68,9 +68,9 @@ implements Operation<T, A> {
             // greater index, then the value at the greater index becomes the
             // first value in a new leaf tier.
 
-            if (candidate.compareTo(leaf.get(lesser)) != 0) {
+            if (candidate.compareTo(leaf.getRecord(lesser)) != 0) {
                 partition = lesser + 1;
-            } else if (candidate.compareTo(leaf.get(greater)) != 0) {
+            } else if (candidate.compareTo(leaf.getRecord(greater)) != 0) {
                 partition = greater;
             }
 
@@ -79,17 +79,18 @@ implements Operation<T, A> {
         }
 
         // Create a new tier to the right of the leaf tier.
-        LeafTier<T, A> right = mutation.newLeafTier();
+        Tier<T, A> right = mutation.newLeafTier();
         link(mutation, leaf, right);
 
         // Copy the values at and after the partition into the new right tier.
-        while (partition != leaf.size()) {
-            right.add(leaf.remove(partition));
+        for (int i = partition, stop = leaf.getSize(); i < stop; i++) {
+            right.addRecord(leaf.getSize(), leaf.getRecord(i));
         }
+        leaf.clear(partition, leaf.getSize() - partition);
 
         // Add a branch for the the new leaf in the parent inner tier. 
-        int index = inner.getIndex(leaf.getAddress());
-        inner.add(index + 1, new Branch<T, A>(right.get(0), right.getAddress()));
+        int index = inner.getIndexOfChildAddress(leaf.getAddress());
+        inner.addBranch(index + 1, right.getRecord(0), right.getAddress());
 
         // Stage the dirty tiers for write.
         Stage<T, A> stage = structure.getStage();

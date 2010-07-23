@@ -27,17 +27,11 @@ public class Stage<T, A> {
     /** The allocator to use to load pages from disk. */
     private final Storage<T, A> allocator;
 
-    /** A set of dirty inner tiers. */
-    private final Set<InnerTier<T, A>> dirtyInnerTiers = new HashSet<InnerTier<T,A>>();
+    /** A set of dirty tiers. */
+    private final Set<Tier<T, A>> dirtyTiers = new HashSet<Tier<T,A>>();
     
-    /** A set of inner tiers to free. */
-    private final Set<InnerTier<T, A>> freeInnerTiers = new HashSet<InnerTier<T,A>>();
-    
-    /** A set of dirty leaf tiers. */
-    private final Set<LeafTier<T, A>> dirtyLeafTiers = new HashSet<LeafTier<T,A>>();
-    
-    /** A set of leaf tiers to free. */
-    private final Set<LeafTier<T, A>> freeLeafTiers = new HashSet<LeafTier<T,A>>();
+    /** A set of tiers to free. */
+    private final Set<Tier<T, A>> freeTiers = new HashSet<Tier<T,A>>();
     
     /** The maximum number of dirty tiers to hold in memory. */
     private final int maxDirtyTiers;
@@ -61,7 +55,7 @@ public class Stage<T, A> {
      * @return The count of staged dirty and free tiers.
      */
     private int getDirtyTierCount() {
-        return dirtyInnerTiers.size() + dirtyLeafTiers.size() + freeInnerTiers.size() + freeLeafTiers.size();
+        return dirtyTiers.size() + freeTiers.size();
     }
 
     /**
@@ -107,57 +101,30 @@ public class Stage<T, A> {
     }
 
     /**
-     * Mark a inner tier as dirty. The inner tier will be written by the next
-     * call to {@link #flush(Stash, int[], boolean) flush}.
+     * Mark a tier as dirty. The inner tier will be written by the next call to
+     * {@link #flush(Stash, int[], boolean) flush}.
      * 
      * @param stash
      *            A type-safe container of out of band data.
-     * @param leaf
-     *            The leaf to free.
+     * @param tier
+     *            The tier to mark dirty.
      */
-    public void dirty(Stash stash, InnerTier<T, A> inner) {
-        dirtyInnerTiers.add(inner);
+    public void dirty(Stash stash, Tier<T, A> tier) {
+        dirtyTiers.add(tier);
     }
 
     /**
-     * Mark a leaf tier as dirty. The leaf tier will be written by the next call
-     * to {@link #flush(Stash, int[], boolean) flush}.
-     * 
-     * @param stash
-     *            A type-safe container of out of band data.
-     * @param leaf
-     *            The leaf to free.
-     */
-    public void dirty(Stash stash, LeafTier<T, A> leaf) {
-        dirtyLeafTiers.add(leaf);
-    }
-
-    /**
-     * Free an inner tier. The inner tier will be freed by the next call to
+     * Free a tier. The inner tier will be freed by the next call to
      * {@link #flush(Stash, int[], boolean) flush}.
      * 
      * @param stash
      *            A type-safe container of out of band data.
      * @param leaf
-     *            The leaf to free.
+     *            The tier to free.
      */
-    public void free(Stash stash, InnerTier<T, A> inner) {
-        dirtyInnerTiers.remove(inner);
-        freeInnerTiers.add(inner);
-    }
-
-    /**
-     * Free an leaf tier. The leaf tier will be freed by the next call to
-     * {@link #flush(Stash, int[], boolean) flush}.
-     * 
-     * @param stash
-     *            A type-safe container of out of band data.
-     * @param leaf
-     *            The leaf to free.
-     */
-    public void free(Stash stash, LeafTier<T, A> leaf) {
-        dirtyLeafTiers.remove(leaf);
-        freeLeafTiers.add(leaf);
+    public void free(Stash stash, Tier<T, A> tier) {
+        dirtyTiers.remove(tier);
+        freeTiers.add(tier);
     }
 
     /**
@@ -177,17 +144,11 @@ public class Stage<T, A> {
         if (maxDirtyTiers != 0) {
             readWriteLock.writeLock().lock();
             if (force || maxDirtyTiers < getDirtyTierCount()) {
-                for (InnerTier<T, A> inner : dirtyInnerTiers) {
-                    allocator.getInnerStore().write(stash, inner.getAddress(), inner, inner.getChildType());
+                for (Tier<T, A> inner : dirtyTiers) {
+                    allocator.write(stash, inner);
                 }
-                for (InnerTier<T, A> inner : freeInnerTiers) {
-                    allocator.getInnerStore().free(stash, inner.getAddress());
-                }
-                for (LeafTier<T, A> leaf : dirtyLeafTiers) {
-                    allocator.getLeafStore().write(stash, leaf.getAddress(), leaf, leaf.getNext());
-                }
-                for (LeafTier<T, A> leaf : freeLeafTiers) {
-                    allocator.getLeafStore().free(stash, leaf.getAddress());
+                for (Tier<T, A> inner : freeTiers) {
+                    allocator.free(stash, inner.getAddress());
                 }
                 while (count[0]-- != 0) {
                     readWriteLock.writeLock().unlock();

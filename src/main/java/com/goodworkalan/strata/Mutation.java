@@ -59,7 +59,7 @@ final class Mutation<T, A> {
     private T replacement;
     
     // TODO Document.
-    private LeafTier<T, A> leftLeaf;
+    private Tier<T, A> leftLeaf;
     
     /** The leaf operation to perform. */
     public LeafOperation<T, A> leafOperation;
@@ -166,12 +166,12 @@ final class Mutation<T, A> {
     }
 
     // TODO Document.
-    public LeafTier<T, A> getLeftLeaf() {
+    public Tier<T, A> getLeftLeaf() {
         return leftLeaf;
     }
 
     // TODO Document.
-    public void setLeftLeaf(LeafTier<T, A> leftLeaf) {
+    public void setLeftLeaf(Tier<T, A> leftLeaf) {
         this.leftLeaf = leftLeaf;
     }
 
@@ -199,14 +199,13 @@ final class Mutation<T, A> {
      * Create a new inner tier that references child tiers of the given child
      * type.
      * 
-     * @param childType
-     *            The child tier type.
+     * @param leaf
+     *            Whether the child tiers are leaves.
      * @return A new inner tier.
      */
-    public InnerTier<T, A> newInnerTier(ChildType childType) {
-        InnerTier<T, A> inner = new InnerTier<T, A>();
-        inner.setAddress(getStructure().getAllocator().allocate(getStash(), inner, getStructure().getInnerSize()));
-        inner.setChildType(childType);
+    public Tier<T, A> newInnerTier(boolean leaf) {
+        Tier<T, A> inner = getStructure().getStorage().allocate(false, getStructure().getInnerSize());
+        inner.setChildLeaf(leaf);
         return inner;
     }
 
@@ -215,10 +214,8 @@ final class Mutation<T, A> {
      * 
      * @return A new leaf tier.
      */
-    public LeafTier<T, A> newLeafTier() {
-        LeafTier<T, A> leaf = new LeafTier<T, A>();
-        leaf.setAddress(getStructure().getAllocator().allocate(getStash(), leaf, getStructure().getInnerSize()));
-        return leaf;
+    public Tier<T, A> newLeafTier() {
+        return getStructure().getStorage().allocate(true, getStructure().getLeafSize());
     }
 
     // TODO Document.

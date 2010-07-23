@@ -25,8 +25,8 @@ implements RootDecision<T, A> {
      *            The root inner tier.
      * @return True if root inner tier is at capacity.
      */
-    public boolean test(Mutation<T, A> mutation, Level<T, A> rootLevel, InnerTier<T, A> root) {
-        return mutation.getStructure().getInnerSize() == root.size();
+    public boolean test(Mutation<T, A> mutation, Level<T, A> rootLevel, Tier<T, A> root) {
+        return mutation.getStructure().getInnerSize() == root.getSize();
     }
 
     /**
@@ -39,7 +39,7 @@ implements RootDecision<T, A> {
      * @param root
      *            The root inner tier.
      */
-    public void operation(Mutation<T, A> mutation, Level<T, A> rootLevel, InnerTier<T, A> root) {
+    public void operation(Mutation<T, A> mutation, Level<T, A> rootLevel, Tier<T, A> root) {
         rootLevel.operations.add(new SplitRoot<T, A>(root));
     }
 }

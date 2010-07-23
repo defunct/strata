@@ -7,24 +7,24 @@ import com.goodworkalan.stash.Stash;
  * 
  * @author Alan Gutierrez
  * 
- * @param <T>
+ * @param <Record>
  *            The value type of the b+tree objects.
- * @param <A>
+ * @param <Address>
  *            The address type used to identify an inner or leaf tier.
  */
-public final class CoreCursor<T, A>
-implements Cursor<T> {
+public final class CoreCursor<Record, Address>
+implements Cursor<Record> {
     /** The type-safe container of out of band data. */
     private final Stash stash;
 
     /** The collection of the core services of the b+tree. */
-    private final Structure<T, A> structure;
+    private final Structure<Record, Address> structure;
     
     /** The index of the next value returned by the cursor. */
     private int index;
 
     /** The leaf of the next value returned by the cursor. */
-    private LeafTier<T, A> leaf;
+    private Tier<Record, Address> leaf;
 
     /**
      * True if the cursor has been released and the read lock on the current
@@ -44,7 +44,7 @@ implements Cursor<T> {
      * @param index
      *            The index of the first value returned by the cursor.
      */
-    public CoreCursor(Stash stash, Structure<T, A> structure, LeafTier<T, A> leaf, int index) {
+    public CoreCursor(Stash stash, Structure<Record, Address> structure, Tier<Record, Address> leaf, int index) {
         this.stash = stash;
         this.structure = structure;
         this.leaf = leaf;
@@ -66,8 +66,8 @@ implements Cursor<T> {
      * 
      * @return A new cursor based on this cursor.
      */
-    public Cursor<T> newCursor() {
-        return new CoreCursor<T, A>(stash, structure, leaf, index);
+    public Cursor<Record> newCursor() {
+        return new CoreCursor<Record, Address>(stash, structure, leaf, index);
     }
 
   /**
@@ -76,7 +76,7 @@ implements Cursor<T> {
      * @return True if the cursor has more values.
      */
     public boolean hasNext() {
-        return index < leaf.size() || !structure.getStorage().isNull(leaf.getNext());
+        return index < leaf.getSize() || !structure.getStorage().isNull(leaf.getNext());
     }
 
     /**
@@ -84,21 +84,21 @@ implements Cursor<T> {
      * 
      * @return the next cursor value.
      */
-    public T next() {
+    public Record next() {
         if (released) {
             throw new IllegalStateException();
         }
-        if (index == leaf.size()) {
+        if (index == leaf.getSize()) {
             if (structure.getStorage().isNull(leaf.getNext())) {
                 throw new IllegalStateException();
             }
-            LeafTier<T, A> next = structure.getPool().getLeafTier(stash, leaf.getNext());
-            next.getReadWriteLock().readLock().lock();
-            leaf.getReadWriteLock().readLock().unlock();
+            Tier<Record, Address> next = structure.getPool().get(stash, leaf.getNext());
+            next.readWriteLock.readLock().lock();
+            next.readWriteLock.readLock().unlock();
             leaf = next;
             index = 0;
         }
-        T object = leaf.get(index++);
+        Record object = leaf.getRecord(index++);
         if (!hasNext()) {
             release();
         }
@@ -125,7 +125,7 @@ implements Cursor<T> {
      */
     public void release() {
         if (!released) {
-            leaf.getReadWriteLock().readLock().unlock();
+            leaf.readWriteLock.readLock().unlock();
             released = true;
         }
     }

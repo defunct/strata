@@ -4,12 +4,12 @@ package com.goodworkalan.strata;
 final class ShouldSplitInner<T, A>
 implements Decision<T, A> {
     // TODO Document.
-    public boolean test(Mutation<T, A> mutation, Level<T, A> levelOfParent, Level<T, A> levelOfChild, InnerTier<T, A> parent) {
+    public boolean test(Mutation<T, A> mutation, Level<T, A> levelOfParent, Level<T, A> levelOfChild, Tier<T, A> parent) {
         Structure<T, A> structure = mutation.getStructure();
-        Branch<T, A> branch = parent.find(mutation.getComparable());
-        InnerTier<T, A> child = structure.getPool().getInnerTier(mutation.getStash(), branch.getAddress());
+        int branch = parent.find(mutation.getComparable());
+        Tier<T, A> child = structure.getPool().get(mutation.getStash(), parent.getChildAddress(branch));
         levelOfChild.lockAndAdd(child);
-        if (child.size() == structure.getInnerSize()) {
+        if (child.getSize() == structure.getInnerSize()) {
             levelOfParent.operations.add(new SplitInner<T, A>(parent, child));
             return true;
         }

@@ -20,7 +20,7 @@ import com.goodworkalan.stash.Stash;
 final class SplitLinkedListRight<T, A>
 implements LeafOperation<T, A> {
  /** The inner tier parent that references the leaf to split. */
-    private final InnerTier<T, A> inner;
+    private final Tier<T, A> inner;
 
     /**
      * Create a split linked list right operation.
@@ -28,7 +28,7 @@ implements LeafOperation<T, A> {
      * @param inner
      *            The inner tier parent that references the leaf to split.
      */
-    public SplitLinkedListRight(InnerTier<T, A> inner) {
+    public SplitLinkedListRight(Tier<T, A> inner) {
         this.inner = inner;
     }
 
@@ -43,15 +43,15 @@ implements LeafOperation<T, A> {
      * @return True if the given leaf is the last leaf in a linked list of
      *         leaves.
      */
-    private boolean endOfList(Mutation<T, A> mutation, LeafTier<T, A> leaf) {
+    private boolean endOfList(Mutation<T, A> mutation, Tier<T, A> leaf) {
         Structure<T, A> structure = mutation.getStructure();
         Storage<T, A> alloator = mutation.getStructure().getStorage();
         if (alloator.isNull(leaf.getNext())) {
             return true;
         }
         Stash stash = mutation.getStash();
-        LeafTier<T, A> next = structure.getPool().getLeafTier(stash, leaf.getNext());
-        return structure.getComparableFactory().newComparable(stash, leaf.get(0)).compareTo(next.get(0)) != 0;
+        Tier<T, A> next = structure.getPool().get(stash, leaf.getNext());
+        return structure.getComparableFactory().newComparable(stash, leaf.getRecord(0)).compareTo(next.getRecord(0)) != 0;
     }
 
     /**
@@ -68,22 +68,22 @@ implements LeafOperation<T, A> {
         Structure<T, A> structure = mutation.getStructure();
 
         // Find the branch that navigates to the leaf child.
-        Branch<T, A> branch = inner.find(mutation.getComparable());
-        LeafTier<T, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), branch.getAddress());
+        int branch = inner.find(mutation.getComparable());
+        Tier<T, A> leaf = structure.getPool().get(mutation.getStash(), inner.getChildAddress(branch));
 
         // Navigate to the end of the linked list of a linked list of b+tree
         // leaves of duplicate index values.
-        LeafTier<T, A> last = leaf;
+        Tier<T, A> last = leaf;
         while (!endOfList(mutation, last)) {
             last = getNextAndLock(mutation, last, leafLevel);
         }
 
         // Create a new leaf and link it to the right of the leaf.
-        LeafTier<T, A> right = mutation.newLeafTier();
+        Tier<T, A> right = mutation.newLeafTier();
         link(mutation, last, right);
 
         // Add a branch for the the new leaf in the parent inner tier. 
-        inner.add(inner.getIndex(leaf.getAddress()) + 1, new Branch<T, A>(mutation.getObject(), right.getAddress()));
+        inner.addBranch(inner.getIndexOfChildAddress(leaf.getAddress()) + 1, mutation.getObject(), right.getAddress());
 
         // Stage the dirty tiers for write.
         Stage<T, A> writer = structure.getStage();

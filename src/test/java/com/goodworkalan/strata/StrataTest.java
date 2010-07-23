@@ -7,17 +7,22 @@ import static org.testng.Assert.assertTrue;
 
 import org.testng.annotations.Test;
 
-import com.goodworkalan.ilk.Ilk;
 import com.goodworkalan.stash.Stash;
 
 // TODO Document.
-public class StrataTestCase {
+public class StrataTest {
     // TODO Document.
     private Query<Integer> newTransaction() {
         Schema<Integer> schema = new Schema<Integer>();
         schema.setInnerCapacity(5);
         schema.setLeafCapacity(7);
-        Strata<Integer> strata = schema.inMemory(new Stash(), new Ilk<Integer>() { });
+        schema.setComparableFactory(new ComparableFactory<Integer>() {
+            public Comparable<? super Integer> newComparable(Stash stash, Integer object) {
+                return object;
+            }
+        });
+        IntegerTier address = schema.create(new Stash(), new IntegerTierStorage());
+        Strata<Integer> strata = schema.open(new Stash(), address, new IntegerTierStorage(), new IntegerTierPool());
         return strata.query();
     }
 
@@ -27,8 +32,14 @@ public class StrataTestCase {
         Schema<Integer> schema = new Schema<Integer>();
         schema.setInnerCapacity(5);
         schema.setLeafCapacity(7);
-        Query<Integer> query = schema.inMemory(new Stash(), new Ilk<Integer>() {
-        }).query();
+        schema.setComparableFactory(new ComparableFactory<Integer>() {
+            public Comparable<? super Integer> newComparable(Stash stash, Integer object) {
+                return object;
+            }
+        });
+        IntegerTier address = schema.create(new Stash(), new IntegerTierStorage());
+        Strata<Integer> strata = schema.open(new Stash(), address, new IntegerTierStorage(), new IntegerTierPool());
+        Query<Integer> query = strata.query();
         query.add(1);
         Cursor<Integer> cursor = query.find(1);
         assertTrue(cursor.hasNext());

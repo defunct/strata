@@ -4,24 +4,24 @@ package com.goodworkalan.strata;
 public final class RemoveInner<T, A>
 implements Operation<T, A> {
     // TODO Document.
-    private final InnerTier<T, A> parent;
+    private final Tier<T, A> parent;
 
     // TODO Document.
-    private final InnerTier<T, A> child;
+    private final Tier<T, A> child;
 
     // TODO Document.
-    public RemoveInner(InnerTier<T, A> parent, InnerTier<T, A> child) {
+    public RemoveInner(Tier<T, A> parent, Tier<T, A> child) {
         this.parent = parent;
         this.child = child;
     }
 
     // TODO Document.
     public void operate(Mutation<T, A> mutation) {
-        int index = parent.getIndex(child.getAddress());
+        int index = parent.getIndexOfChildAddress(child.getAddress());
+        parent.clear(index, 1);
 
-        parent.remove(index);
-        if (parent.size() != 0) {
-            parent.get(0).setPivot(null);
+        if (parent.getSize() != 0) {
+            parent.setRecord(0, null);
         }
 
         Stage<T, A> writer = mutation.getStructure().getStage();

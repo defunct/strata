@@ -17,12 +17,6 @@ class Structure<T, A> {
     /** The capacity of object values of a leaf tier. */
     private final int leafCapacity;
 
-    /**
-     * The allocator to use to allocate persistent storage of inner and leaf
-     * tiers.
-     */
-    private final Allocator<T, A> allocator;
-
     /** The persistent storage strategy. */
     private final Storage<T, A> storage;
 
@@ -45,9 +39,6 @@ class Structure<T, A> {
      *            The capacity of branches of an inner tier.
      * @param leafCapacity
      *            The capacity of object values of a leaf tier.
-     * @param allocator
-     *            The allocator to use to allocate persistent storage of inner
-     *            and leaf tiers.
      * @param storage
      *            The persistent storage strategy.
      * @param tierPool
@@ -58,10 +49,9 @@ class Structure<T, A> {
      *            The factory to use to create comparables for objects in the
      *            b+tree to compare against other object in the b+tree.
      */
-    public Structure(int innerCapacity, int leafCapacity, Allocator<T, A> allocator, Storage<T, A> storage, Pool<T, A> tierPool, Stage<T, A> tierWriter, ComparableFactory<T> comparableFactory) {
+    public Structure(int innerCapacity, int leafCapacity, Storage<T, A> storage, Pool<T, A> tierPool, Stage<T, A> tierWriter, ComparableFactory<T> comparableFactory) {
         this.innerCapacity = innerCapacity;
         this.leafCapacity = leafCapacity;
-        this.allocator = allocator;
         this.storage = storage;
         this.pool = tierPool;
         this.stage = tierWriter;
@@ -84,17 +74,6 @@ class Structure<T, A> {
      */
     public int getLeafSize() {
         return leafCapacity;
-    }
-
-    /**
-     * Get the allocator to use to allocate persistent storage of inner and leaf
-     * tiers.
-     * 
-     * @return The allocator to use to allocate persistent storage of inner and
-     *         leaf tiers.
-     */
-    public Allocator<T, A> getAllocator() {
-        return allocator;
     }
 
     /**

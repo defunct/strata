@@ -24,21 +24,21 @@ import com.goodworkalan.stash.Stash;
  * 
  * @author Alan Gutierrez
  * 
- * @param <T>
+ * @param <Record>
  *            The value type of the b+tree objects.
- * @param <A>
+ * @param <Address>
  *            The address type used to identify an inner or leaf tier.
  */
-public final class CoreQuery<T, A>
-implements Query<T> {
+public final class CoreQuery<Record, Address>
+implements Query<Record> {
     /** The type-safe container of out of band data. */
     private final Stash stash;
     
     /** The b+tree. */
-    private final CoreStrata<T, A> strata;
+    private final CoreStrata<Record, Address> strata;
 
     /** The collection of the core services of the b+tree. */
-    private final Structure<T, A> structure;
+    private final Structure<Record, Address> structure;
     
     /**
      * The count of times that the exclusive insert or delete lock was locked
@@ -57,7 +57,7 @@ implements Query<T> {
      * @param structure
      *            The collection of the core services of the b+tree
      */
-    public CoreQuery(Stash stash, CoreStrata<T, A> strata, Structure<T, A> structure) {
+    public CoreQuery(Stash stash, CoreStrata<Record, Address> strata, Structure<Record, Address> structure) {
         this.stash = stash;
         this.strata = strata;
         this.structure = structure;
@@ -88,7 +88,7 @@ implements Query<T> {
      * 
      * @return The b+tree.
      */
-    public Strata<T> getStrata() {
+    public Strata<Record> getStrata() {
         return strata;
     }
 
@@ -97,8 +97,8 @@ implements Query<T> {
      * 
      * @return The root inner tier of the b+tree.
      */
-    private InnerTier<T, A> getRoot() {
-        return structure.getPool().getInnerTier(stash, strata.getRootAddress());
+    private Tier<Record, Address> getRoot() {
+        return structure.getPool().get(stash, strata.getRootAddress());
     }
 
     /**
@@ -124,8 +124,7 @@ implements Query<T> {
      *            The number of levels above and including the parent level to
      *            leave exclusive when rewinding.
      */
-    private void testInnerTier(Mutation<T, A> mutation, Decision<T, A> subsequent, Decision<T, A> swap, Level<T, A> parentLevel,
-        Level<T, A> childLevel, InnerTier<T, A> parent, int leaveExclusive) {
+    private void testInnerTier(Mutation<Record, Address> mutation, Decision<Record, Address> subsequent, Decision<Record, Address> swap, Level<Record, Address> parentLevel, Level<Record, Address> childLevel, Tier<Record, Address> parent, int leaveExclusive) {
         // Test to see if the parent may be split or merged.
         boolean tiers = subsequent.test(mutation, parentLevel, childLevel, parent);
 
@@ -175,17 +174,17 @@ implements Query<T> {
      *            delete the leaf, the insert or delete action to take on the
      *            leaf, or whether to restart the descent.
      */
-    private T generalized(Mutation<T, A> mutation, RootDecision<T, A> initial, Decision<T, A> subsequent, Decision<T, A> swap, Decision<T, A> penultimate) {
-        Stage<T, A> stage = structure.getStage();
+    private Record generalized(Mutation<Record, Address> mutation, RootDecision<Record, Address> initial, Decision<Record, Address> subsequent, Decision<Record, Address> swap, Decision<Record, Address> penultimate) {
+        Stage<Record, Address> stage = structure.getStage();
 
-        mutation.levels.add(new Level<T, A>(false));
+        mutation.levels.add(new Level<Record, Address>(false));
 
-        InnerTier<T, A> parent = getRoot();
-        Level<T, A> parentLevel = new Level<T, A>(false);
+        Tier<Record, Address> parent = getRoot();
+        Level<Record, Address> parentLevel = new Level<Record, Address>(false);
         parentLevel.lockAndAdd(parent);
         mutation.levels.add(parentLevel);
 
-        Level<T, A> childLevel = new Level<T, A>(false);
+        Level<Record, Address> childLevel = new Level<Record, Address>(false);
         mutation.levels.add(childLevel);
 
         if (initial.test(mutation, parentLevel, parent)) {
@@ -198,36 +197,35 @@ implements Query<T> {
         }
 
         for (;;) {
-            if (parent.getChildType() == ChildType.INNER) {
-                testInnerTier(mutation, subsequent, swap, parentLevel, childLevel, parent, 0);
-                Branch<T, A> branch = parent.find(mutation.getComparable());
-                InnerTier<T, A> child = structure.getPool().getInnerTier(mutation.getStash(), branch.getAddress());
-                parent = child;
-            } else {
+            if (parent.isChildLeaf()) {
                 testInnerTier(mutation, penultimate, swap, parentLevel, childLevel, parent, 1);
                 break;
             }
+            testInnerTier(mutation, subsequent, swap, parentLevel, childLevel, parent, 0);
+            int branch = parent.find(mutation.getComparable());
+            Tier<Record, Address> child = structure.getPool().get(mutation.getStash(), parent.getChildAddress(branch));
+            parent = child;
             parentLevel = childLevel;
-            childLevel = new Level<T, A>(childLevel.locker.isWrite());
+            childLevel = new Level<Record, Address>(childLevel.locker.isWrite());
             mutation.levels.add(childLevel);
             mutation.shift();
         }
 
         if (mutation.leafOperation.operate(mutation, childLevel)) {
-            ListIterator<Level<T, A>> levels = mutation.levels.listIterator(mutation.levels.size());
+            ListIterator<Level<Record, Address>> levels = mutation.levels.listIterator(mutation.levels.size());
             while (levels.hasPrevious()) {
-                Level<T, A> level = levels.previous();
-                ListIterator<Operation<T, A>> operations = level.operations.listIterator(level.operations.size());
+                Level<Record, Address> level = levels.previous();
+                ListIterator<Operation<Record, Address>> operations = level.operations.listIterator(level.operations.size());
                 while (operations.hasPrevious()) {
-                    Operation<T, A> operation = operations.previous();
+                    Operation<Record, Address> operation = operations.previous();
                     operation.operate(mutation);
                 }
             }
         }
 
-        ListIterator<Level<T, A>> levels = mutation.levels.listIterator(mutation.levels.size());
+        ListIterator<Level<Record, Address>> levels = mutation.levels.listIterator(mutation.levels.size());
         while (levels.hasPrevious()) {
-            Level<T, A> level = levels.previous();
+            Level<Record, Address> level = levels.previous();
             level.releaseAndClear();
         }
         
@@ -243,10 +241,10 @@ implements Query<T> {
      * @param object
      *            The object to add.
      */
-    public void add(T object) {
-        Comparable<? super T> fields = structure.getComparableFactory().newComparable(stash, object);
-        Mutation<T, A> mutation = new Mutation<T,A>(stash, structure, fields, object, null);
-        generalized(mutation, new ShouldSplitRoot<T, A>(), new ShouldSplitInner<T, A>(), new InnerNever<T, A>(), new HowToInertLeaf<T, A>());
+    public void add(Record object) {
+        Comparable<? super Record> fields = structure.getComparableFactory().newComparable(stash, object);
+        Mutation<Record, Address> mutation = new Mutation<Record,Address>(stash, structure, fields, object, null);
+        generalized(mutation, new ShouldSplitRoot<Record, Address>(), new ShouldSplitInner<Record, Address>(), new InnerNever<Record, Address>(), new HowToInertLeaf<Record, Address>());
     }
 
     /**
@@ -256,7 +254,7 @@ implements Query<T> {
      * @return A comparable built from the given object according to the order
      *         of the b+tree.
      */
-    public Comparable<? super T> comparable(T object) {
+    public Comparable<? super Record> comparable(Record object) {
         return structure.getComparableFactory().newComparable(stash, object);
     }
 
@@ -269,23 +267,23 @@ implements Query<T> {
      * @return A forward cursor that references the first object value in the
      *         b+tree that is less than or equal to the given comparable.
      */
-    public Cursor<T> find(Comparable<? super T> fields) {
+    public Cursor<Record> find(Comparable<? super Record> fields) {
         Lock previous = new ReentrantLock();
         previous.lock();
-        InnerTier<T, A> inner = getRoot();
+        Tier<Record, Address> inner = getRoot();
     
         for (;;) {
-            inner.getReadWriteLock().readLock().lock();
+            inner.readWriteLock.readLock().lock();
             previous.unlock();
-            previous = inner.getReadWriteLock().readLock();
-            Branch<T, A> branch = inner.find(fields);
-            if (inner.getChildType() == ChildType.LEAF) {
-                LeafTier<T, A> leaf = structure.getPool().getLeafTier(stash, branch.getAddress());
-                leaf.getReadWriteLock().readLock().lock();
+            previous = inner.readWriteLock.readLock();
+            int branch = inner.find(fields);
+            if (inner.isChildLeaf()) {
+                Tier<Record, Address> leaf = structure.getPool().get(stash, inner.getChildAddress(branch));
+                leaf.readWriteLock.readLock().lock();
                 previous.unlock();
-                return new CoreCursor<T, A>(stash, structure, leaf, leaf.find(fields));
+                return new CoreCursor<Record, Address>(stash, structure, leaf, leaf.find(fields));
             }
-            inner = structure.getPool().getInnerTier(stash, branch.getAddress());
+            inner = structure.getPool().get(stash, inner.getChildAddress(branch));
         }
     }
 
@@ -296,9 +294,9 @@ implements Query<T> {
      * 
      * @return An instance of deletable that will always return true.
      */
-    private Deletable<T> deleteAny() {
-        return new Deletable<T>() {
-            public boolean deletable(T object) {
+    private Deletable<Record> deleteAny() {
+        return new Deletable<Record>() {
+            public boolean deletable(Record object) {
                 return true;
             }
         };
@@ -313,12 +311,12 @@ implements Query<T> {
      * @return The removed object or null if no object is both equal to the
      *         given comparable and deletable according to the given deletable.
      */
-    public T remove(Deletable<T> deletable, Comparable<? super T> comparable) {
-        Mutation<T, A> mutation = new Mutation<T, A>(stash, structure, comparable, null, deletable);
+    public Record remove(Deletable<Record> deletable, Comparable<? super Record> comparable) {
+        Mutation<Record, Address> mutation = new Mutation<Record, Address>(stash, structure, comparable, null, deletable);
         do {
             mutation.levels.clear();
             mutation.clear();
-            generalized(mutation, new ShouldFillRoot<T, A>(), new ShouldMergeInner<T, A>(), new ShouldSwapKey<T, A>(), new HowToRemoveLeaf<T, A>());
+            generalized(mutation, new ShouldFillRoot<Record, Address>(), new ShouldMergeInner<Record, Address>(), new ShouldSwapKey<Record, Address>(), new HowToRemoveLeaf<Record, Address>());
         } while (mutation.isOnlyChild());
 
         return mutation.getResult();
@@ -333,7 +331,7 @@ implements Query<T> {
      * @return A forward cursor that references the first object value in the
      *         b+tree that is less than or equal to the given comparable.
      */
-    public T remove(Comparable<? super T> comparable) {
+    public Record remove(Comparable<? super Record> comparable) {
         return remove(deleteAny(), comparable);
     }
 
@@ -342,7 +340,7 @@ implements Query<T> {
      * 
      * @return A cursor that references the first object in the b-tree.
      */
-    public Cursor<T> first() {
+    public Cursor<Record> first() {
         return null;
     }
 

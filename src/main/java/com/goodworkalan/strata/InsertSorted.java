@@ -1,6 +1,5 @@
 package com.goodworkalan.strata;
 
-import java.util.ListIterator;
 
 /**
  * An insert operation to insert an object value into a leaf. This insert will
@@ -24,7 +23,7 @@ implements LeafOperation<T, A> {
      * The parent inner tier of the child leaf tier where the object value is to
      * be inserted.
      */
-    private final InnerTier<T, A> inner;
+    private final Tier<T, A> inner;
 
     /**
      * Create an insert sorted operation.
@@ -33,7 +32,7 @@ implements LeafOperation<T, A> {
      *            The parent inner tier of the child leaf tier where the object
      *            value is to be inserted.
      */
-    public InsertSorted(InnerTier<T, A> inner) {
+    public InsertSorted(Tier<T, A> inner) {
         this.inner = inner;
     }
 
@@ -52,23 +51,22 @@ implements LeafOperation<T, A> {
         Structure<T, A> structure = mutation.getStructure();
 
         // Find the branch that navigates to the leaf child.
-        Branch<T, A> branch = inner.find(mutation.getComparable());
-        LeafTier<T, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), branch.getAddress());
+        int branch = inner.find(mutation.getComparable());
+        Tier<T, A> leaf = structure.getPool().get(mutation.getStash(), inner.getChildAddress(branch));
 
+        int i = 0, stop = leaf.getSize();
         // Insert the object value sorted.
-        ListIterator<T> objects = leaf.listIterator();
-        while (objects.hasNext()) {
-            T before = objects.next();
+        for (; i < stop; i++) {
+            T before = leaf.getRecord(i);
             if (mutation.getComparable().compareTo(before) <= 0) {
-                objects.previous();
-                objects.add(mutation.getObject());
+                leaf.addRecord(i, mutation.getObject());
                 break;
             }
         }
 
         // If we got to the end, then we need to append the object value.
-        if (!objects.hasNext()) {
-            objects.add(mutation.getObject());
+        if (i == stop) {
+            leaf.addRecord(stop, mutation.getObject());
         }
 
         // Stage the dirty leaf for write.

@@ -6,8 +6,8 @@ package com.goodworkalan.strata;
  * @author Alan Gutierrez
  */
 public enum ChildType {
-    // TODO Document.
+    /** The child is an inner tier. */
     INNER,
-    // TODO Document.
+    /** The child is a leaf tier. */
     LEAF
 }

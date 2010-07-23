@@ -112,9 +112,9 @@ implements Decision<T, A> {
      *            The value of the last item that is about to be removed from a
      *            leaf tier.
      */
-    private boolean lockLeft(Mutation<T, A> mutation, Branch<T, A> branch) {
-        if (mutation.isOnlyChild() && branch.getPivot() != null && mutation.getLeftLeaf() == null) {
-            return mutation.getComparable().compareTo(branch.getPivot()) == 0;
+    private boolean lockLeft(Mutation<T, A> mutation, T pivot) {
+        if (mutation.isOnlyChild() && pivot != null && mutation.getLeftLeaf() == null) {
+            return mutation.getComparable().compareTo(pivot) == 0;
         }
         return false;
     }
@@ -149,14 +149,14 @@ implements Decision<T, A> {
      * @param parent
      *            The parent tier.
      */
-    public boolean test(Mutation<T, A> mutation, Level<T, A> levelOfParent, Level<T, A> levelOfChild, InnerTier<T, A> parent) {
+    public boolean test(Mutation<T, A> mutation, Level<T, A> levelOfParent, Level<T, A> levelOfChild, Tier<T, A> parent) {
         Structure<T, A> structure = mutation.getStructure();
         Pool<T, A> pool = structure.getPool();
         
         // Find the child tier.
 
-        Branch<T, A> branch = parent.find(mutation.getComparable());
-        InnerTier<T, A> child = pool.getInnerTier(mutation.getStash(), branch.getAddress());
+        int branch = parent.find(mutation.getComparable());
+        Tier<T, A> child = pool.get(mutation.getStash(), parent.getChildAddress(branch));
 
         // If we are on our way down to remove the last item of a leaf tier that
         // is an only child, then we need to find the leaf to the left of the
@@ -167,18 +167,18 @@ implements Decision<T, A> {
         // left of the only child leaf. We then make note of it so we can link
         // it around the only child that is go be removed.
 
-        if (lockLeft(mutation, branch)) {
+        if (lockLeft(mutation, parent.getRecord(branch))) {
             // FIXME You need to hold these exclusive locks, so add an operation
             // that is uncancelable, but does nothing.
 
-            int index = parent.getIndex(child.getAddress()) - 1;
-            InnerTier<T, A> inner = parent;
-            while (inner.getChildType() == ChildType.INNER) {
-                inner = pool.getInnerTier(mutation.getStash(), inner.get(index).getAddress());
+            int index = parent.getIndexOfChildAddress(child.getAddress()) - 1;
+            Tier<T, A> inner = parent;
+            while (!inner.isChildLeaf()) {
+                inner = pool.get(mutation.getStash(), inner.getChildAddress(index));
                 levelOfParent.lockAndAdd(inner);
-                index = inner.size() - 1;
+                index = inner.getSize() - 1;
             }
-            LeafTier<T, A> leaf = pool.getLeafTier(mutation.getStash(), inner.get(index).getAddress());
+            Tier<T, A> leaf = pool.get(mutation.getStash(), inner.getChildAddress(index));
             levelOfParent.lockAndAdd(leaf);
             mutation.setLeftLeaf(leaf);
         }
@@ -189,7 +189,7 @@ implements Decision<T, A> {
         // only one child are deleted rather than merged. If we encounter a tier
         // with children with siblings, we are no longer deleting.
 
-        if (child.size() == 1) {
+        if (child.getSize() == 1) {
             if (!mutation.isDeleting()) {
                 mutation.setDeleting(true);
             }
@@ -199,14 +199,14 @@ implements Decision<T, A> {
 
         // Determine if we can merge with either sibling.
 
-        List<InnerTier<T, A>> listToMerge = new ArrayList<InnerTier<T, A>>(2);
+        List<Tier<T, A>> listToMerge = new ArrayList<Tier<T, A>>(2);
 
-        int index = parent.getIndex(child.getAddress());
+        int index = parent.getIndexOfChildAddress(child.getAddress());
         if (index != 0) {
-            InnerTier<T, A> left = pool.getInnerTier(mutation.getStash(), parent.get(index - 1).getAddress());
+            Tier<T, A> left = pool.get(mutation.getStash(), parent.getChildAddress(index - 1));
             levelOfChild.lockAndAdd(left);
             levelOfChild.lockAndAdd(child);
-            if (left.size() + child.size() <= structure.getInnerSize()) {
+            if (left.getSize() + child.getSize() <= structure.getInnerSize()) {
                 listToMerge.add(left);
                 listToMerge.add(child);
             }
@@ -216,10 +216,10 @@ implements Decision<T, A> {
             levelOfChild.lockAndAdd(child);
         }
 
-        if (listToMerge.isEmpty() && index != parent.size() - 1) {
-            InnerTier<T, A> right = pool.getInnerTier(mutation.getStash(), parent.get(index + 1).getAddress());
+        if (listToMerge.isEmpty() && index != parent.getSize() - 1) {
+            Tier<T, A> right = pool.get(mutation.getStash(), parent.getChildAddress(index + 1));
             levelOfChild.lockAndAdd(right);
-            if ((child.size() + right.size() - 1) == structure.getInnerSize()) {
+            if ((child.getSize() + right.getSize() - 1) == structure.getInnerSize()) {
                 listToMerge.add(child);
                 listToMerge.add(right);
             }
@@ -245,7 +245,7 @@ implements Decision<T, A> {
                 mutation.setDeleting(false);
             }
 
-            levelOfParent.operations.add(new MergeInner<T, A>(parent, listToMerge));
+            levelOfParent.operations.add(new MergeInner<T, A>(parent, listToMerge.get(0), listToMerge.get(1)));
 
             return true;
         }

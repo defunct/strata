@@ -4,16 +4,16 @@ package com.goodworkalan.strata;
 public final class RemoveLeaf<T, A>
 implements Operation<T, A> {
     // TODO Document.
-    private final InnerTier<T, A> parent;
+    private final Tier<T, A> parent;
 
     // TODO Document.
-    private final LeafTier<T, A> leaf;
+    private final Tier<T, A> leaf;
 
     // TODO Document.
-    private final LeafTier<T, A> left;
+    private final Tier<T, A> left;
 
     // TODO Document.
-    public RemoveLeaf(InnerTier<T, A> parent, LeafTier<T, A> leaf, LeafTier<T, A> left) {
+    public RemoveLeaf(Tier<T, A> parent, Tier<T, A> leaf, Tier<T, A> left) {
         this.parent = parent;
         this.leaf = leaf;
         this.left = left;
@@ -21,7 +21,7 @@ implements Operation<T, A> {
 
     // TODO Document.
     public void operate(Mutation<T, A> mutation) {
-        parent.remove(parent.getIndex(leaf.getAddress()));
+        parent.clear(parent.getIndexOfChildAddress(leaf.getAddress()), 1);
 
         left.setNext(leaf.getNext());
 

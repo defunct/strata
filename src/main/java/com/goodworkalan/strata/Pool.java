@@ -13,31 +13,20 @@ import com.goodworkalan.stash.Stash;
  * 
  * @author Alan Gutierrez
  * 
- * @param <T>
+ * @param <Record>
  *            The value type of the indexed objects.
- * @param <A>
+ * @param <Address>
  *            The address type used to identify an inner or leaf tier.
  */
-interface Pool<T, A> {
+public interface Pool<Record, Address> {
     /**
-     * Get the inner tier for the given address.
+     * Get the tier for the given address.
      * 
      * @param stash
      *            A type-safe container of out of band data.
      * @param address
-     *            The address of the inner tier storage.
-     * @return The inner tier.
+     *            The address of the tier cassette.
+     * @return The tier.
      */
-    public InnerTier<T, A> getInnerTier(Stash stash, A address);
-
-    /**
-     * Get the leaf tier for the given address.
-     * 
-     * @param stash
-     *            A type-safe container of out of band data.
-     * @param address
-     *            The address of the leaf tier storage.
-     * @return The leaf tier.
-     */
-    public LeafTier<T, A> getLeafTier(Stash stash, A address);
+    public Tier<Record, Address> get(Stash stash, Address address);
 }

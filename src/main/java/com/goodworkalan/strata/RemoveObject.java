@@ -2,16 +2,14 @@ package com.goodworkalan.strata;
 
 import static com.goodworkalan.strata.Leaves.getNextAndLock;
 
-import java.util.Iterator;
-
 // TODO Document.
 public final class RemoveObject<T, A>
 implements LeafOperation<T, A> {
     // TODO Document.
-    private final LeafTier<T, A> leaf;
+    private final Tier<T, A> leaf;
 
     // TODO Document.
-    public RemoveObject(LeafTier<T, A> leaf) {
+    public RemoveObject(Tier<T, A> leaf) {
         this.leaf = leaf;
     }
 
@@ -25,27 +23,26 @@ implements LeafOperation<T, A> {
         // TODO Remove single very right most.
         int count = 0;
         int found = 0;
-        LeafTier<T, A> current = leaf;
+        Tier<T, A> current = leaf;
         SEARCH: do {
-            Iterator<T> objects = leaf.iterator();
-            while (objects.hasNext()) {
+            for (int i = 0, stop = leaf.getSize(); i < stop; i++) {
                 count++;
-                T candidate = objects.next();
+                T candidate = leaf.getRecord(i);
                 int compare = mutation.getComparable().compareTo(candidate);
                 if (compare < 0) {
                     break SEARCH;
                 } else if (compare == 0) {
                     found++;
                     if (mutation.deletable.deletable(candidate)) {
-                        objects.remove();
+                        leaf.clear(i, 1);
                         if (count == 1) {
-                            if (objects.hasNext()) {
-                                mutation.setReplacement(objects.next());
+                            if (leaf.getSize() != 0) {
+                                mutation.setReplacement(leaf.getRecord(0));
                             } else {
-                                LeafTier<T, A> following = getNextAndLock(
-                                        mutation, current, levelOfLeaf);
+                                // When would this ever happen?
+                                Tier<T, A> following = getNextAndLock(mutation, current, levelOfLeaf);
                                 if (following != null) {
-                                    mutation.setReplacement(following.get(0));
+                                    mutation.setReplacement(following.getRecord(0));
                                 }
                             }
                         }
@@ -57,20 +54,21 @@ implements LeafOperation<T, A> {
             }
             current = getNextAndLock(mutation, current, levelOfLeaf);
         }
-        while (current != null && mutation.getComparable().compareTo(current.get(0)) == 0);
+        while (current != null && mutation.getComparable().compareTo(current.getRecord(0)) == 0);
 
         if (mutation.getResult() != null
             && count == found
-            && current.size() == structure.getLeafSize() - 1
-            && mutation.getComparable().compareTo(current.get(current.size() - 1)) == 0)
+            && current.getSize() == structure.getLeafSize() - 1
+            && mutation.getComparable().compareTo(current.getRecord(current.getSize() - 1)) == 0)
         {
             for (;;) {
-                LeafTier<T, A> subsequent = getNextAndLock(mutation, current, levelOfLeaf);
-                if (subsequent == null || mutation.getComparable().compareTo(subsequent.get(0)) != 0) {
+                Tier<T, A> subsequent = getNextAndLock(mutation, current, levelOfLeaf);
+                if (subsequent == null || mutation.getComparable().compareTo(subsequent.getRecord(0)) != 0) {
                     break;
                 }
-                current.add(subsequent.remove(0));
-                if (subsequent.size() == 0) {
+                current.addRecord(current.getSize(), subsequent.getRecord(0));
+                subsequent.clear(0, 1);
+                if (subsequent.getSize() == 0) {
                     current.setNext(subsequent.getNext());
                     writer.free(mutation.getStash(), subsequent);
                 } else {

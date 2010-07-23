@@ -31,5 +31,5 @@ interface Decision<T, A> {
      *         tier and requires that tiers be locked exclusively as the tree is
      *         decended.
      */
-    public boolean test(Mutation<T, A> mutation, Level<T, A> parentLevel, Level<T, A> childLevel, InnerTier<T, A> parent);
+    public boolean test(Mutation<T, A> mutation, Level<T, A> parentLevel, Level<T, A> childLevel, Tier<T, A> parent);
 }

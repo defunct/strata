@@ -26,7 +26,7 @@ implements Decision<T, A> {
      * @return False indicating that there are no operations at that no
      *         exclusive locks are required.
      */
-    public boolean test(Mutation<T, A> mutation, Level<T, A> parentLevel, Level<T, A> childLevel, InnerTier<T, A> parent) {
+    public boolean test(Mutation<T, A> mutation, Level<T, A> parentLevel, Level<T, A> childLevel, Tier<T, A> parent) {
         return false;
     }
 }

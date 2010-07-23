@@ -91,7 +91,7 @@ final class Level<T, A> {
      *            The tier to lock.
      */
     public void lock_(Tier<?, A> tier) {
-        locker.getLock(tier.getReadWriteLock()).lock();
+        locker.getLock(tier.readWriteLock).lock();
     }
 
     /**
@@ -101,7 +101,7 @@ final class Level<T, A> {
      *            The tier to unlock.
      */
     public void unlock_(Tier<?, A> tier) {
-        locker.getLock(tier.getReadWriteLock()).unlock();
+        locker.getLock(tier.readWriteLock).unlock();
     }
 
     /**
@@ -110,7 +110,7 @@ final class Level<T, A> {
      */
     public void release() {
         for (Tier<?, A> tier : lockedTiers.values()) {
-            locker.getLock(tier.getReadWriteLock()).unlock();
+            locker.getLock(tier.readWriteLock).unlock();
         }
     }
 
@@ -122,7 +122,7 @@ final class Level<T, A> {
      */
     public void releaseAndClear() {
         for (Tier<?, A> tier : lockedTiers.values()) {
-            locker.getLock(tier.getReadWriteLock()).unlock();
+            locker.getLock(tier.readWriteLock).unlock();
         }
         lockedTiers.clear();
     }
@@ -130,7 +130,7 @@ final class Level<T, A> {
     // TODO Document.
     private void exclusive() {
         for (Tier<?, A> tier : lockedTiers.values()) {
-            tier.getReadWriteLock().writeLock().lock();
+            tier.readWriteLock.writeLock().lock();
         }
         locker = new WriteLockExtractor();
     }
@@ -139,8 +139,8 @@ final class Level<T, A> {
     public void downgrade() {
         if (locker.isWrite()) {
             for (Tier<?, A> tier : lockedTiers.values()) {
-                tier.getReadWriteLock().readLock().lock();
-                tier.getReadWriteLock().writeLock().unlock();
+                tier.readWriteLock.readLock().lock();
+                tier.readWriteLock.writeLock().unlock();
             }
             locker = new ReadLockExtractor();
         }

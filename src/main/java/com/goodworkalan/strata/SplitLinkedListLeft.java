@@ -21,7 +21,7 @@ import static com.goodworkalan.strata.Leaves.link;
 final class SplitLinkedListLeft<T, A>
 implements LeafOperation<T, A> {
   /** The inner tier parent of the leaf tier to split left. */
-    private final InnerTier<T, A> inner;
+    private final Tier<T, A> inner;
 
     /**
      * Create a split left operation with the given inner tier parent.
@@ -29,7 +29,7 @@ implements LeafOperation<T, A> {
      * @param inner
      *            The inner tier parent of the leaf tier to split left.
      */
-    public SplitLinkedListLeft(InnerTier<T, A> inner) {
+    public SplitLinkedListLeft(Tier<T, A> inner) {
         this.inner = inner;
     }
 
@@ -47,25 +47,26 @@ implements LeafOperation<T, A> {
         Structure<T, A> structure = mutation.getStructure();
 
         // Find the branch that navigates to the leaf child.
-        Branch<T, A> branch = inner.find(mutation.getComparable());
-        LeafTier<T, A> leaf = structure.getPool().getLeafTier(mutation.getStash(), branch.getAddress());
+        int branch = inner.find(mutation.getComparable());
+        Tier<T, A> leaf = structure.getPool().get(mutation.getStash(), inner.getChildAddress(branch));
 
         // Create a new leaf tier. It goes to the right of the current leaf
         // tier that is going to split left, so we copy the contents of the
         // splitting tier to the new tier. (We can only link to the right.)
-        LeafTier<T, A> right = mutation.newLeafTier();
-        while (leaf.size() != 0) {
-            right.add(leaf.remove(0));
+        Tier<T, A> right = mutation.newLeafTier();
+        for (int i = 0, stop = leaf.getSize(); i < stop; i++) {
+            right.addRecord(right.getSize(), leaf.getRecord(i));
         }
+        leaf.clear(0, leaf.getSize());
 
         // Link the new right tier with the copied content to the right.
         link(mutation, leaf, right);
 
         // Replace the pivot for the leaf tier in the parent tier and add a
         // pivot for the new leaf tier to the right.
-        int index = inner.getIndex(leaf.getAddress());
-        inner.get(index).setPivot(mutation.getObject());
-        inner.add(index + 1, new Branch<T, A>(right.get(0), right.getAddress()));
+        int index = inner.getIndexOfChildAddress(leaf.getAddress());
+        inner.setRecord(index, mutation.getObject());
+        inner.addBranch(index + 1, right.getRecord(0), right.getAddress());
 
         // Stage the dirty tiers for write.
         Stage<T, A> stage = structure.getStage();

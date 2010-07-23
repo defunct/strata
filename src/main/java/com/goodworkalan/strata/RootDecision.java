@@ -26,7 +26,7 @@ interface RootDecision<T, A> {
      * @return True if the operations performed by this root decision are
      *         applicable.
      */
-    public boolean test(Mutation<T, A> mutation, Level<T, A> rootLevel, InnerTier<T, A> root);
+    public boolean test(Mutation<T, A> mutation, Level<T, A> rootLevel, Tier<T, A> root);
 
     /**
      * Add the operations for this root decision to the per level mutation state
@@ -39,5 +39,5 @@ interface RootDecision<T, A> {
      * @param root
      *            The root inner tier.
      */
-    public void operation(Mutation<T, A> mutation, Level<T, A> rootLevel, InnerTier<T, A> root);
+    public void operation(Mutation<T, A> mutation, Level<T, A> rootLevel, Tier<T, A> root);
 }

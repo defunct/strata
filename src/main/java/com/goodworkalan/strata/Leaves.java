@@ -24,10 +24,10 @@ public class Leaves {
      * @return The next leaf or null if the given leaf is the last leaf in the
      *         b-tree.
      */
-    public static <T, A> LeafTier<T, A> getNextAndLock(Mutation<T, A> mutation, LeafTier<T, A> leaf, Level<T, A> leafLevel) {
+    public static <T, A> Tier<T, A> getNextAndLock(Mutation<T, A> mutation, Tier<T, A> leaf, Level<T, A> leafLevel) {
         Structure<T, A> structure = mutation.getStructure();
         if (!structure.getStorage().isNull(leaf.getNext())) {
-            LeafTier<T, A> next = structure.getPool().getLeafTier(mutation.getStash(), leaf.getNext());
+            Tier<T, A> next = structure.getPool().get(mutation.getStash(), leaf.getNext());
             leafLevel.lockAndAdd(next);
             return next;
         }
@@ -48,7 +48,7 @@ public class Leaves {
      * @param nextLeaf
      *            The next leaf.
      */
-    public static <T, A> void link(Mutation<T, A> mutation, LeafTier<T, A> leaf, LeafTier<T, A> nextLeaf) {
+    public static <T, A> void link(Mutation<T, A> mutation, Tier<T, A> leaf, Tier<T, A> nextLeaf) {
         Structure<T, A> structure = mutation.getStructure();
         Stage<T, A> writer = structure.getStage();
         writer.dirty(mutation.getStash(), leaf);
