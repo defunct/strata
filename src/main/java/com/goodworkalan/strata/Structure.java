@@ -20,9 +20,6 @@ class Structure<T, A> {
     /** The persistent storage strategy. */
     private final Storage<T, A> storage;
 
-    /** A pool of tiers currently in memory. */
-    private final Pool<T, A> pool;
-
     /** The writer used to stage dirty pages for writing. */
     private final Stage<T, A> stage;
     
@@ -49,11 +46,10 @@ class Structure<T, A> {
      *            The factory to use to create comparables for objects in the
      *            b+tree to compare against other object in the b+tree.
      */
-    public Structure(int innerCapacity, int leafCapacity, Storage<T, A> storage, Pool<T, A> tierPool, Stage<T, A> tierWriter, ComparableFactory<T> comparableFactory) {
+    public Structure(int innerCapacity, int leafCapacity, Storage<T, A> storage, Stage<T, A> tierWriter, ComparableFactory<T> comparableFactory) {
         this.innerCapacity = innerCapacity;
         this.leafCapacity = leafCapacity;
         this.storage = storage;
-        this.pool = tierPool;
         this.stage = tierWriter;
         this.comparableFactory = comparableFactory;
     }
@@ -83,15 +79,6 @@ class Structure<T, A> {
      */
     public Storage<T, A> getStorage() {
         return storage;
-    }
-
-    /**
-     * Get the pool of tiers currently in memory.
-     * 
-     * @return The pool of tiers currently in memory.
-     */
-    public Pool<T, A> getPool() {
-        return pool;
     }
 
     /**

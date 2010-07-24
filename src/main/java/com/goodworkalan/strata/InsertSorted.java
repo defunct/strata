@@ -52,7 +52,7 @@ implements LeafOperation<T, A> {
 
         // Find the branch that navigates to the leaf child.
         int branch = inner.find(mutation.getComparable());
-        Tier<T, A> leaf = structure.getPool().get(mutation.getStash(), inner.getChildAddress(branch));
+        Tier<T, A> leaf = structure.getStorage().load(mutation.getStash(), inner.getChildAddress(branch));
 
         int i = 0, stop = leaf.getSize();
         // Insert the object value sorted.

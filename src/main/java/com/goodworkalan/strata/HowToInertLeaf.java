@@ -44,7 +44,7 @@ implements Decision<T, A> {
 
         // Find the branch that navigates to the leaf child.
         int branch = parent.find(mutation.getComparable());
-        Tier<T, A> leaf = structure.getPool().get(mutation.getStash(), parent.getChildAddress(branch));
+        Tier<T, A> leaf = structure.getStorage().load(mutation.getStash(), parent.getChildAddress(branch));
 
         // Lock the child level exclusively.
         childLevel.locker = new WriteLockExtractor();

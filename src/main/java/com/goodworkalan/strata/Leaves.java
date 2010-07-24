@@ -27,7 +27,7 @@ public class Leaves {
     public static <T, A> Tier<T, A> getNextAndLock(Mutation<T, A> mutation, Tier<T, A> leaf, Level<T, A> leafLevel) {
         Structure<T, A> structure = mutation.getStructure();
         if (!structure.getStorage().isNull(leaf.getNext())) {
-            Tier<T, A> next = structure.getPool().get(mutation.getStash(), leaf.getNext());
+            Tier<T, A> next = structure.getStorage().load(mutation.getStash(), leaf.getNext());
             leafLevel.lockAndAdd(next);
             return next;
         }

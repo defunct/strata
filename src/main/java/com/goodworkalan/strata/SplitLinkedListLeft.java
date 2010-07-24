@@ -48,7 +48,7 @@ implements LeafOperation<T, A> {
 
         // Find the branch that navigates to the leaf child.
         int branch = inner.find(mutation.getComparable());
-        Tier<T, A> leaf = structure.getPool().get(mutation.getStash(), inner.getChildAddress(branch));
+        Tier<T, A> leaf = structure.getStorage().load(mutation.getStash(), inner.getChildAddress(branch));
 
         // Create a new leaf tier. It goes to the right of the current leaf
         // tier that is going to split left, so we copy the contents of the

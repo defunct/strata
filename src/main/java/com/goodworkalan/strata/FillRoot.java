@@ -41,7 +41,7 @@ implements Operation<Record, Address> {
 
         Structure<Record, Address> structure = mutation.getStructure();
 
-        Tier<Record, Address> child = structure.getPool().get(mutation.getStash(), root.getChildAddress(0));
+        Tier<Record, Address> child = structure.getStorage().load(mutation.getStash(), root.getChildAddress(0));
         root.clear(0, 1);
         for (int i = 0, stop = child.getSize(); i < stop; i++) {
             root.addBranch(root.getSize(), child.getRecord(i), child.getChildAddress(i));

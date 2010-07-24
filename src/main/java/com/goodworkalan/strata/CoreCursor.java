@@ -92,7 +92,7 @@ implements Cursor<Record> {
             if (structure.getStorage().isNull(leaf.getNext())) {
                 throw new IllegalStateException();
             }
-            Tier<Record, Address> next = structure.getPool().get(stash, leaf.getNext());
+            Tier<Record, Address> next = structure.getStorage().load(stash, leaf.getNext());
             next.readWriteLock.readLock().lock();
             next.readWriteLock.readLock().unlock();
             leaf = next;

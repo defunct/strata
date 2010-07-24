@@ -148,9 +148,9 @@ public final class Schema<T> {
      *            The persistent storage strategy.
      * @return The opened b+tree.
      */
-    public <A> Strata<T> open(Stash stash, A rootAddress, Storage<T, A> storage, Pool<T, A> pool) {
+    public <A> Strata<T> open(Stash stash, A rootAddress, Storage<T, A> storage) {
         Stage<T, A> writer = new Stage<T, A>(storage, maxDirtyTiers);
-        return open(stash, rootAddress, storage, pool, writer);
+        return open(stash, rootAddress, storage, writer);
     }
 
     /**
@@ -173,8 +173,8 @@ public final class Schema<T> {
      *            The writer used to stage dirty pages for writing.
      * @return The opened b+tree.
      */
-    private <A> Strata<T> open(Stash stash, A rootAddress, Storage<T, A> storage, Pool<T, A> pool, Stage<T, A> writer) {
-        Structure<T, A> structure = new Structure<T, A>(innerCapacity, leafCapacity, storage, pool, writer, comparableFactory);
+    private <A> Strata<T> open(Stash stash, A rootAddress, Storage<T, A> storage, Stage<T, A> writer) {
+        Structure<T, A> structure = new Structure<T, A>(innerCapacity, leafCapacity, storage, writer, comparableFactory);
         return new CoreStrata<T, A>(rootAddress, structure);
     }
 }

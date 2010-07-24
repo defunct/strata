@@ -46,7 +46,7 @@ implements Operation<T, A> {
 
         // Find the branch that navigates to the leaf child.
         int branch = inner.find(mutation.getComparable());
-        Tier<T, A> leaf = structure.getPool().get(mutation.getStash(), inner.getChildAddress(branch));
+        Tier<T, A> leaf = structure.getStorage().load(mutation.getStash(), inner.getChildAddress(branch));
 
         // The leaf may contain duplicate index values. We need to make sure
         // that when we split the leaf we do not split a string of duplicate

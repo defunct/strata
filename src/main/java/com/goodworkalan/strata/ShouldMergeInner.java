@@ -151,12 +151,12 @@ implements Decision<T, A> {
      */
     public boolean test(Mutation<T, A> mutation, Level<T, A> levelOfParent, Level<T, A> levelOfChild, Tier<T, A> parent) {
         Structure<T, A> structure = mutation.getStructure();
-        Pool<T, A> pool = structure.getPool();
+        Storage<T, A> pool = structure.getStorage();
         
         // Find the child tier.
 
         int branch = parent.find(mutation.getComparable());
-        Tier<T, A> child = pool.get(mutation.getStash(), parent.getChildAddress(branch));
+        Tier<T, A> child = pool.load(mutation.getStash(), parent.getChildAddress(branch));
 
         // If we are on our way down to remove the last item of a leaf tier that
         // is an only child, then we need to find the leaf to the left of the
@@ -174,11 +174,11 @@ implements Decision<T, A> {
             int index = parent.getIndexOfChildAddress(child.getAddress()) - 1;
             Tier<T, A> inner = parent;
             while (!inner.isChildLeaf()) {
-                inner = pool.get(mutation.getStash(), inner.getChildAddress(index));
+                inner = pool.load(mutation.getStash(), inner.getChildAddress(index));
                 levelOfParent.lockAndAdd(inner);
                 index = inner.getSize() - 1;
             }
-            Tier<T, A> leaf = pool.get(mutation.getStash(), inner.getChildAddress(index));
+            Tier<T, A> leaf = pool.load(mutation.getStash(), inner.getChildAddress(index));
             levelOfParent.lockAndAdd(leaf);
             mutation.setLeftLeaf(leaf);
         }
@@ -203,7 +203,7 @@ implements Decision<T, A> {
 
         int index = parent.getIndexOfChildAddress(child.getAddress());
         if (index != 0) {
-            Tier<T, A> left = pool.get(mutation.getStash(), parent.getChildAddress(index - 1));
+            Tier<T, A> left = pool.load(mutation.getStash(), parent.getChildAddress(index - 1));
             levelOfChild.lockAndAdd(left);
             levelOfChild.lockAndAdd(child);
             if (left.getSize() + child.getSize() <= structure.getInnerSize()) {
@@ -217,7 +217,7 @@ implements Decision<T, A> {
         }
 
         if (listToMerge.isEmpty() && index != parent.getSize() - 1) {
-            Tier<T, A> right = pool.get(mutation.getStash(), parent.getChildAddress(index + 1));
+            Tier<T, A> right = pool.load(mutation.getStash(), parent.getChildAddress(index + 1));
             levelOfChild.lockAndAdd(right);
             if ((child.getSize() + right.getSize() - 1) == structure.getInnerSize()) {
                 listToMerge.add(child);

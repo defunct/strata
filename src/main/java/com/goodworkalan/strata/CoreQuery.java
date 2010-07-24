@@ -98,7 +98,7 @@ implements Query<Record> {
      * @return The root inner tier of the b+tree.
      */
     private Tier<Record, Address> getRoot() {
-        return structure.getPool().get(stash, strata.getRootAddress());
+        return structure.getStorage().load(stash, strata.getRootAddress());
     }
 
     /**
@@ -203,7 +203,7 @@ implements Query<Record> {
             }
             testInnerTier(mutation, subsequent, swap, parentLevel, childLevel, parent, 0);
             int branch = parent.find(mutation.getComparable());
-            Tier<Record, Address> child = structure.getPool().get(mutation.getStash(), parent.getChildAddress(branch));
+            Tier<Record, Address> child = structure.getStorage().load(mutation.getStash(), parent.getChildAddress(branch));
             parent = child;
             parentLevel = childLevel;
             childLevel = new Level<Record, Address>(childLevel.locker.isWrite());
@@ -278,12 +278,12 @@ implements Query<Record> {
             previous = inner.readWriteLock.readLock();
             int branch = inner.find(fields);
             if (inner.isChildLeaf()) {
-                Tier<Record, Address> leaf = structure.getPool().get(stash, inner.getChildAddress(branch));
+                Tier<Record, Address> leaf = structure.getStorage().load(stash, inner.getChildAddress(branch));
                 leaf.readWriteLock.readLock().lock();
                 previous.unlock();
                 return new CoreCursor<Record, Address>(stash, structure, leaf, leaf.find(fields));
             }
-            inner = structure.getPool().get(stash, inner.getChildAddress(branch));
+            inner = structure.getStorage().load(stash, inner.getChildAddress(branch));
         }
     }
 

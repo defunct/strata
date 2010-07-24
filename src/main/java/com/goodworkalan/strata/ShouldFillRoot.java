@@ -32,8 +32,8 @@ implements RootDecision<T, A> {
     public boolean test(Mutation<T, A> mutation, Level<T, A> rootLevel, Tier<T, A> root) {
         if (!root.isChildLeaf() && root.getSize() == 2) {
             Structure<T, A> structure = mutation.getStructure();
-            Tier<T, A> first = structure.getPool().get(mutation.getStash(), root.getChildAddress(0));
-            Tier<T, A> second = structure.getPool().get(mutation.getStash(), root.getChildAddress(1));
+            Tier<T, A> first = structure.getStorage().load(mutation.getStash(), root.getChildAddress(0));
+            Tier<T, A> second = structure.getStorage().load(mutation.getStash(), root.getChildAddress(1));
             // FIXME These numbers are off.
             return first.getSize() + second.getSize() == structure.getInnerSize();
         }

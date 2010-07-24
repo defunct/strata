@@ -50,7 +50,7 @@ implements LeafOperation<T, A> {
             return true;
         }
         Stash stash = mutation.getStash();
-        Tier<T, A> next = structure.getPool().get(stash, leaf.getNext());
+        Tier<T, A> next = structure.getStorage().load(stash, leaf.getNext());
         return structure.getComparableFactory().newComparable(stash, leaf.getRecord(0)).compareTo(next.getRecord(0)) != 0;
     }
 
@@ -69,7 +69,7 @@ implements LeafOperation<T, A> {
 
         // Find the branch that navigates to the leaf child.
         int branch = inner.find(mutation.getComparable());
-        Tier<T, A> leaf = structure.getPool().get(mutation.getStash(), inner.getChildAddress(branch));
+        Tier<T, A> leaf = structure.getStorage().load(mutation.getStash(), inner.getChildAddress(branch));
 
         // Navigate to the end of the linked list of a linked list of b+tree
         // leaves of duplicate index values.

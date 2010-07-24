@@ -22,7 +22,7 @@ public class StrataTest {
             }
         });
         IntegerTier address = schema.create(new Stash(), new IntegerTierStorage());
-        Strata<Integer> strata = schema.open(new Stash(), address, new IntegerTierStorage(), new IntegerTierPool());
+        Strata<Integer> strata = schema.open(new Stash(), address, new IntegerTierStorage());
         return strata.query();
     }
 
@@ -38,7 +38,7 @@ public class StrataTest {
             }
         });
         IntegerTier address = schema.create(new Stash(), new IntegerTierStorage());
-        Strata<Integer> strata = schema.open(new Stash(), address, new IntegerTierStorage(), new IntegerTierPool());
+        Strata<Integer> strata = schema.open(new Stash(), address, new IntegerTierStorage());
         Query<Integer> query = strata.query();
         query.add(1);
         Cursor<Integer> cursor = query.find(1);

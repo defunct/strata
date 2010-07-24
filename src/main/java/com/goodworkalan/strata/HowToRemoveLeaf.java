@@ -9,7 +9,7 @@ implements Decision<T, A> {
     // TODO Document.
     public boolean test(Mutation<T, A> mutation, Level<T, A> parentLevel, Level<T, A> childLevel, Tier<T, A> parent) {
         Structure<T, A> structure = mutation.getStructure();
-        Pool<T, A> pool = structure.getPool();
+        Storage<T, A> pool = structure.getStorage();
         
         childLevel.locker = new WriteLockExtractor();
         int branch = parent.find(mutation.getComparable());
@@ -18,9 +18,9 @@ implements Decision<T, A> {
         Tier<T, A> leaf = null;
         List<Tier<T, A>> listToMerge = new ArrayList<Tier<T, A>>();
         if (index != 0) {
-            previous = pool.get(mutation.getStash(), parent.getChildAddress(index - 1));
+            previous = pool.load(mutation.getStash(), parent.getChildAddress(index - 1));
             childLevel.lockAndAdd(previous);
-            leaf = pool.get(mutation.getStash(), parent.getChildAddress(branch));
+            leaf = pool.load(mutation.getStash(), parent.getChildAddress(branch));
             childLevel.lockAndAdd(leaf);
             int capacity = previous.getSize() + leaf.getSize();
             if (capacity <= structure.getLeafSize() + 1) {
@@ -32,7 +32,7 @@ implements Decision<T, A> {
         }
 
         if (leaf == null) {
-            leaf = pool.get(mutation.getStash(), parent.getChildAddress(branch));
+            leaf = pool.load(mutation.getStash(), parent.getChildAddress(branch));
             childLevel.lockAndAdd(leaf);
         }
 
@@ -49,7 +49,7 @@ implements Decision<T, A> {
             mutation.leafOperation = new RemoveObject<T, A>(leaf);
             return true;
         } else if (listToMerge.isEmpty() && index != parent.getSize() - 1) {
-            Tier<T, A> next = pool.get(mutation.getStash(), parent.getChildAddress(index + 1));
+            Tier<T, A> next = pool.load(mutation.getStash(), parent.getChildAddress(index + 1));
             childLevel.lockAndAdd(next);
             int capacity = next.getSize() + leaf.getSize();
             if (capacity <= structure.getLeafSize() + 1) {
