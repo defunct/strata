@@ -84,7 +84,7 @@ implements Operation<T, A> {
 
         // Copy the values at and after the partition into the new right tier.
         for (int i = partition, stop = leaf.getSize(); i < stop; i++) {
-            right.addRecord(leaf.getSize(), leaf.getRecord(i));
+            right.addRecord(right.getSize(), leaf.getRecord(i));
         }
         leaf.clear(partition, leaf.getSize() - partition);
 

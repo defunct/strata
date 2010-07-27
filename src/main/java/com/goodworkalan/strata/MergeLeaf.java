@@ -36,7 +36,8 @@ implements Operation<T, A> {
             left.addRecord(left.getSize(), right.getRecord(i));
         }
         
-        // FIXME Get last leaf. 
+        // FIXME Get last leaf. Ah, yes. Make sure you grab all leaves, but
+        // wait? Isn't it the case that this leaf will always be almost empty?
         left.setNext(right.getNext());
 
         Stage<T, A> writer = mutation.getStructure().getStage();

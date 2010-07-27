@@ -7,12 +7,19 @@ import java.util.Iterator;
  * 
  * @author Alan Gutierrez
  * 
- * @param <T>
+ * @param <Record>
  *            The value type of the b+tree objects.
  */
-public interface Cursor<T> extends Iterator<T> {
+public interface Cursor<Record> extends Iterator<Record> {
     /**
      * Release the cursor by releasing the read lock on the current leaf tier.
      */
     public void release();
+    
+    /**
+     * Create a new cursor that starts from the current location of this cursor.
+     * 
+     * @return A new cursor based on this cursor.
+     */
+    public Cursor<Record> newCursor();
 }

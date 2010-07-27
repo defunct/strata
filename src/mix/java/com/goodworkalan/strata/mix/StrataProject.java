@@ -26,6 +26,8 @@ public class StrataProject implements ProjectModule {
                     .development("org.testng/testng-jdk15/5.10")
                     .development("args4j/args4j/2.0.8")
                     .development("org.mockito/mockito-core/1.6")
+                    .development("net.sf.jung/jung-visualization/2.0.1")
+                    .development("net.sf.jung/jung-graph-impl/2.0.1")
                     .end()
                 .end()
             .end();

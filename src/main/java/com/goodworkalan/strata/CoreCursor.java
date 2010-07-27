@@ -52,16 +52,6 @@ implements Cursor<Record> {
     }
 
     /**
-     * Return true indicating that this is a cursor that iterators forward over
-     * the leaves of a b+tree.
-     * 
-     * @return True to indicate that this is a forward cursor.
-     */
-    public boolean isForward() {
-        return true;
-    }
-
-    /**
      * Create a new cursor that starts from the current location of this cursor.
      * 
      * @return A new cursor based on this cursor.
