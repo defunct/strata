@@ -3,26 +3,26 @@ package com.goodworkalan.strata;
 import java.util.ArrayList;
 import java.util.List;
 
-public class IntegerTier extends Tier<Integer, IntegerTier> {
-    private final List<Integer> records = new ArrayList<Integer>();
+public class CharacterTier extends Tier<Character, CharacterTier> {
+    private final List<Character> records = new ArrayList<Character>();
     
-    private final List<IntegerTier> children = new ArrayList<IntegerTier>();
+    private final List<CharacterTier> children = new ArrayList<CharacterTier>();
     
-    private IntegerTier next;
+    private CharacterTier next;
     
     private boolean childLeaf;
 
-    public IntegerTier() {
+    public CharacterTier() {
     }
     
     @Override
-    public void addBranch(int index, Integer record, IntegerTier address) {
+    public void addBranch(int index, Character record, CharacterTier address) {
         records.add(index, record);
         children.add(index, address);
     }
     
     @Override
-    public void addRecord(int index, Integer record) {
+    public void addRecord(int index, Character record) {
         records.add(index, record);
     }
     
@@ -36,21 +36,21 @@ public class IntegerTier extends Tier<Integer, IntegerTier> {
     }
     
     @Override
-    public IntegerTier getAddress() {
+    public CharacterTier getAddress() {
         return this;
     }
     
-    public IntegerTier getChildAddress(int index) {
+    public CharacterTier getChildAddress(int index) {
         return children.get(index);
     }
     
     @Override
-    public IntegerTier getNext() {
+    public CharacterTier getNext() {
         return next;
     }
     
     @Override
-    public Integer getRecord(int index) {
+    public Character getRecord(int index) {
         return records.get(index);
     }
     
@@ -68,12 +68,12 @@ public class IntegerTier extends Tier<Integer, IntegerTier> {
         this.childLeaf = leaf;
     }
     
-    public void setNext(IntegerTier next) {
+    public void setNext(CharacterTier next) {
         this.next = next;
     }
     
     @Override
-    public void setRecord(int index, Integer record) {
+    public void setRecord(int index, Character record) {
         records.set(index, record);
     }
 }

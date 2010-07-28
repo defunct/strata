@@ -16,71 +16,67 @@ import com.goodworkalan.stash.Stash;
  */
 public class StrataTest {
     /** Create a new strata. */
-    private Strata<Integer> newTransaction(int inner, int leaf) {
-        Schema<Integer> schema = new Schema<Integer>();
+    private Strata<Character> newTransaction(int inner, int leaf) {
+        Schema<Character> schema = new Schema<Character>();
         schema.setInnerCapacity(inner);
         schema.setLeafCapacity(leaf);
-        schema.setComparableFactory(new CastComparableFactory<Integer>());
-        IntegerTier address = schema.create(new Stash(), new IntegerTierStorage());
-        return schema.open(new Stash(), address, new IntegerTierStorage());
+        schema.setComparableFactory(new CastComparableFactory<Character>());
+        CharacterTier address = schema.create(new Stash(), new CharacterTierStorage());
+        return schema.open(new Stash(), address, new CharacterTierStorage());
     }
 
     /** Create a new strata. */
-    private Strata<Integer> newTransaction() {
+    private Strata<Character> newTransaction() {
         return newTransaction(4, 4);
     }
 
-    /** Test creation of a strata. */
+    /** Create a Strata. */
     @Test
     public void create() {
-        Schema<Integer> schema = new Schema<Integer>();
+        Schema<Character> schema = new Schema<Character>();
         schema.setInnerCapacity(5);
         schema.setLeafCapacity(7);
-        schema.setComparableFactory(new CastComparableFactory<Integer>());
-        IntegerTier address = schema.create(new Stash(), new IntegerTierStorage());
-        Strata<Integer> strata = schema.open(new Stash(), address, new IntegerTierStorage());
-        Query<Integer> query = strata.query();
-        query.add(1);
-        Cursor<Integer> cursor = query.find(1);
+        schema.setComparableFactory(new CastComparableFactory<Character>());
+        CharacterTier address = schema.create(new Stash(), new CharacterTierStorage());
+        Strata<Character> strata = schema.open(new Stash(), address, new CharacterTierStorage());
+        Query<Character> query = strata.query();
+        query.add('a');
+        Cursor<Character> cursor = query.find('a');
         assertTrue(cursor.hasNext());
         assertTrue(cursor.newCursor().hasNext());
-        assertEquals((int) cursor.next(), 1);
+        assertEquals((char) cursor.next(), 'a');
         assertFalse(cursor.hasNext());
         assertFalse(cursor.newCursor().hasNext());
     }
     
-    /** Test add. */
+    /** Add an item. */
     @Test
     public void add() {
-        Query<Integer> transaction = newTransaction().query();
-        transaction.add(1);
-        assertEquals((int) transaction.remove(1), 1);
-        assertFalse(transaction.find(1).hasNext());
+        Query<Character> transaction = newTransaction().query();
+        transaction.add('a');
+        assertEquals((char) transaction.remove('a'), 'a');
+        assertFalse(transaction.find('a').hasNext());
     }
     
-    /** Test double release of cursor. */
+    /** Subsequent release of cursor is a no-op. */
     @Test
     public void cursorRelease() {
-        Query<Integer> query = newTransaction().query();
-        query.add(1);
-        Cursor<Integer> cursor = query.find(1);
+        Query<Character> query = newTransaction().query();
+        query.add('a');
+        Cursor<Character> cursor = query.find('a');
         cursor.release();
         cursor.release();
     }
     
-    /** Test cursor remove. */
+    /** Remove is an unsupported operation. */
     @Test(expectedExceptions = UnsupportedOperationException.class)
     public void cursorRemove() {
-        newTransaction().query().find(1).remove();
+        newTransaction().query().find('a').remove();
     }
     
-    /** Create a second tier. */
+    /** Split leaf tier. */
     @Test
-    public void splitRoot() {
-        Query<Integer> query = newTransaction().query();
-        for (int i = 0; i < 5; i++) {
-            query.add(i);   
-        }
+    public void splitLeaf() {
     }
 }
 
