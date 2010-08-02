@@ -116,4 +116,10 @@ public interface Query<T> {
      * storage including the root page.
      */
     public void destroy();
+    
+    
+    /**
+     * Determine if the B+tree has the correct structure.
+     */
+    public boolean copacetic();
 }

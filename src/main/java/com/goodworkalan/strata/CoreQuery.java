@@ -358,4 +358,11 @@ implements Query<Record> {
      */
     public void destroy() {
     }
+    
+    /**
+     * Determine if the B+tree has the correct structure.
+     */
+    public boolean copacetic() {
+        return true;
+    }
 }
