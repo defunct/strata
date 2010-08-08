@@ -2,33 +2,21 @@
 package com.goodworkalan.strata;
 
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.JTree;
-import javax.swing.SpinnerNumberModel;
 import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -52,42 +40,94 @@ public class Viewer {
      * @author Alan Gutierrez
      */
     private final static class TreeNode {
+        /** The tier. */
         public final CharacterTier tier;
 
-        public final Character text;
+        /** The character. */
+        public final Character ch;
         
+        /** Whether or not the tier is a leaf tier. */
         public final boolean leaf;
 
-        public TreeNode(CharacterTier tier, Character text, boolean leaf) {
+        /**
+         * Create a new tree node. 
+         * @param tier The tier. 
+         * @param ch The character. 
+         * @param leaf Whether or not the tier is a leaf tier.
+         */
+        public TreeNode(CharacterTier tier, Character ch, boolean leaf) {
             this.tier = tier;
-            this.text = text;
+            this.ch = ch;
             this.leaf = leaf;
         }
 
         public String toString() {
-            return text.toString();
+            return ch.toString();
         }
     }
 
-    private final static class StrataTreeModel implements TreeModel {
+    /**
+     * A JTree tree model to display a tree composed of
+     * <code>CharacterTier</code> instances. This tree model navigates the tree
+     * of <code>CharacterTier</code> instances separately from the
+     * <code>Strata</code> that creates them. This is possible since
+     * <code>Strata</code> maintains the same root tier for the life of the
+     * <code>Strata</code> tree and because character tier uses a Java reference
+     * as the addressing model, that is no real addressing model, just holding
+     * references to the next tier instead of file positions or the like.
+     * 
+     * @author Alan Gutierrez
+     */
+    private final static class CharacterTierTreeModel implements TreeModel {
+        /** The serial version id. */
         private final static long serialVersionUID = 20070613L;
 
+        /** The root tier. */
         private CharacterTier root;
 
+        /** The list of tree mdoel event listeners. */
         private final EventListenerList listeners = new EventListenerList();
 
-        public StrataTreeModel(CharacterTier root) {
+        /**
+         * Create a character tier tree with the given root character tier.
+         * 
+         * @param root
+         *            The root character tier.
+         */
+        public CharacterTierTreeModel(CharacterTier root) {
             this.root = root;
         }
 
+        /**
+         * Add an event listener. The JTree will add itself and listen for
+         * change events.
+         * 
+         * @param listener
+         *            The listener to add.
+         */
         public void addTreeModelListener(TreeModelListener listener) {
             listeners.add(TreeModelListener.class, listener);
         }
 
+        /**
+         * Remove an event listener.
+         * 
+         * @param listner
+         *            The listener to remove.
+         */
         public void removeTreeModelListener(TreeModelListener listener) {
             listeners.remove(TreeModelListener.class, listener);
         }
 
+        /**
+         * Get the child object at the given index from the the given parent
+         * object.
+         * 
+         * @param parent
+         *            The parent object.
+         * @param index
+         *            The index.
+         */
         public Object getChild(Object parent, int index) {
             TreeNode node = (TreeNode) parent;
 
@@ -192,216 +232,6 @@ public class Viewer {
         }
     }
 
-    private interface Operation {
-        public void operate(Character ch);
-    }
-
-    private final static class Insert implements Operation {
-        private final StrataCozy strataCozy;
-
-        private final StringBuffer actions;
-
-        public Insert(StrataCozy strataCozy, StringBuffer actions) {
-            this.strataCozy = strataCozy;
-            this.actions = actions;
-        }
-
-        public void operate(Character ch) {
-            actions.append(ch);
-            strataCozy.getStrata().query(null).add(ch);
-            strataCozy.getStrata().query(null).copacetic();
-        }
-    }
-
-    private final static class Remove
-    implements Operation {
-        private final StrataCozy strataCozy;
-
-        private final StringBuffer actions;
-
-        private final StringBuffer tests;
-
-        public Remove(StrataCozy strataCozy, StringBuffer actions, StringBuffer tests) {
-            this.strataCozy = strataCozy;
-            this.actions = actions;
-            this.tests = tests;
-        }
-
-        public void operate(Character ch) {
-            actions.append("D" + ch + "\n");
-            tests.append("query.remove(new Integer(" + ch + "));\n");
-
-            strataCozy.getStrata().query(null).remove(ch);
-            strataCozy.getStrata().query(null).copacetic();
-        }
-    }
-
-    private final static class SaveFile
-    extends AbstractAction {
-        private static final long serialVersionUID = 20070620L;
-
-        private final Component parent;
-
-        private final StringBuffer buffer;
-
-        public SaveFile(Component parent, StringBuffer buffer) {
-            this.parent = parent;
-            this.buffer = buffer;
-            putValue(Action.NAME, "Save");
-        }
-
-        public void actionPerformed(ActionEvent event) {
-            JFileChooser chooser = new JFileChooser();
-            int choice = chooser.showSaveDialog(null);
-            if (choice == JFileChooser.APPROVE_OPTION) {
-                File file = chooser.getSelectedFile();
-                FileWriter writer;
-                try {
-                    writer = new FileWriter(file);
-                    writer.write(buffer.toString());
-                    writer.close();
-                } catch (IOException e) {
-                    JOptionPane.showMessageDialog(parent, "Cannot write file.");
-                }
-            }
-        }
-    }
-
-    private final static class SetSize
-    extends AbstractAction {
-        private static final long serialVersionUID = 20070729L;
-
-        private final StrataCozy strataCozy;
-
-        private final JTree tree;
-
-        public SetSize(StrataCozy strataCozy, JTree tree) {
-            this.strataCozy = strataCozy;
-            this.tree = tree;
-            putValue(Action.NAME, "Set Tier Size...");
-        }
-
-        public void actionPerformed(ActionEvent arg0) {
-            SpinnerNumberModel number = new SpinnerNumberModel();
-            number.setMinimum(new Integer(2));
-            number.setValue(new Integer(strataCozy.getSize()));
-            String[] options = new String[] { "OK", "Cancel" };
-            int result = JOptionPane.showOptionDialog(null, new Object[] { "Set size of Strata tiers.", new JSpinner(number) }, "Set Tier Size", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
-            if (result == 0) {
-                strataCozy.setSize(((Integer) number.getValue()).intValue());
-            }
-
-            StrataTreeModel model = (StrataTreeModel) tree.getModel();
-            model.fire();
-
-            int i = 0;
-            while (i < tree.getRowCount()) {
-                tree.expandRow(i);
-                i++;
-            }
-        }
-    }
-
-    private final static class StrataCozy {
-        private Strata<Character> strata;
-
-        private int size;
-
-        public StrataCozy(JTree tree, int size) {
-            setSize(size);
-        }
-
-        public void setSize(int size) {
-            Schema<Character> schema = new Schema<Character>();
-            schema.setInnerCapacity(size);
-            schema.setLeafCapacity(size);
-            schema.setComparableFactory(new CastComparableFactory<Character>());
-            CharacterTier address = schema.create(new Stash(), new CharacterTierStorage());
-            this.strata = schema.open(new Stash(), address, new CharacterTierStorage());
-
-            this.size = size;
-        }
-
-        public void reset() {
-            setSize(getSize());
-        }
-
-        public int getSize() {
-            return size;
-        }
-
-        public Strata<Character> getStrata() {
-            return strata;
-        }
-    }
-
-    private final static class OpenFile
-    extends AbstractAction {
-        private static final long serialVersionUID = 20070620L;
-
-        private final Component parent;
-
-        private final StrataCozy strataCozy;
-
-        private final JTree tree;
-
-        private final Operation insert;
-
-        private final Operation remove;
-
-        public OpenFile(Component parent, StrataCozy strataCozy, JTree tree, Operation insert, Operation remove) {
-            this.parent = parent;
-            this.strataCozy = strataCozy;
-            this.tree = tree;
-            this.insert = insert;
-            this.remove = remove;
-            putValue(Action.NAME, "Open");
-        }
-
-        public void actionPerformed(ActionEvent event) {
-            JFileChooser chooser = new JFileChooser();
-            int choice = chooser.showOpenDialog(null);
-            if (choice == JFileChooser.APPROVE_OPTION) {
-                strataCozy.reset();
-                File file = chooser.getSelectedFile();
-                try {
-                    BufferedReader reader = new BufferedReader(new FileReader(
-                            file));
-                    int lineNumber = 1;
-                    String line = null;
-                    while ((line = reader.readLine()) != null) {
-                        char action = line.charAt(0);
-                        String value = line.substring(1);
-                        char number = value.charAt(0);
-                        switch (action) {
-                            case 'A':
-                                insert.operate(number);
-                                break;
-                            case 'D':
-                                remove.operate(number);
-                                break;
-                            default:
-                                throw new IOException("Unknown action <" + action + "> at line " + lineNumber + ".");
-                        }
-                        strataCozy.getStrata().query(null).copacetic();
-                        lineNumber++;
-                    }
-                } catch (IOException e) {
-                    JOptionPane.showMessageDialog(parent, "Cannot Open File", e.getMessage(), JOptionPane.ERROR_MESSAGE);
-                }
-            }
-
-            StrataTreeModel model = (StrataTreeModel) tree.getModel();
-            model.fire();
-
-            int i = 0;
-            while (i < tree.getRowCount()) {
-                tree.expandRow(i);
-                i++;
-            }
-        }
-    }
-
     private final static class CopyTest
     extends AbstractAction {
         private static final long serialVersionUID = 20070620L;
@@ -435,46 +265,6 @@ public class Viewer {
         return string;
     }
 
-    private final static class RemoveNumber
-    extends MouseAdapter {
-        private final JTree tree;
-
-        private final Operation remove;
-
-        public RemoveNumber(JTree tree, Operation remove) {
-            this.tree = tree;
-            this.remove = remove;
-        }
-
-        public void mousePressed(MouseEvent event) {
-            int selRow = tree.getRowForLocation(event.getX(), event.getY());
-            TreePath selPath = tree.getPathForLocation(event.getX(), event.getY());
-            if (selRow != -1 && event.getClickCount() == 2) {
-                StrataTreeModel model = (StrataTreeModel) tree.getModel();
-                Object object = selPath.getLastPathComponent();
-                if (model.isLeaf(object) && !"<".equals(object)) {
-                    String value = object.toString();
-                    int space = value.indexOf(' ');
-                    if (space != -1) {
-                        value = value.substring(0, space);
-                    }
-
-                    char number = value.charAt(0);
-
-                    remove.operate(number);
-
-                    model.fire();
-
-                    int i = 0;
-                    while (i < tree.getRowCount()) {
-                        tree.expandRow(i);
-                        i++;
-                    }
-                }
-            }
-        }
-    }
-
     public final static void main(String[] args) {
         JFrame frame = new JFrame("Hello, World");
 
@@ -482,9 +272,6 @@ public class Viewer {
 
 
         JPanel panel = new JPanel();
-
-        StringBuffer actions = new StringBuffer();
-        StringBuffer tests = new StringBuffer();
 
         frame.add(panel, BorderLayout.NORTH);
 
@@ -495,23 +282,13 @@ public class Viewer {
         CharacterTier address = schema.create(new Stash(), new CharacterTierStorage());
         final Strata<Character> strata =  schema.open(new Stash(), address, new CharacterTierStorage());
 
-        final StrataTreeModel model = new StrataTreeModel(address);
+        final CharacterTierTreeModel model = new CharacterTierTreeModel(address);
         final JTree tree = new JTree(model);
-        StrataCozy strataCozy = new StrataCozy(tree, 2);
-        Operation remove = new Remove(strataCozy, actions, tests);
-        tree.addMouseListener(new RemoveNumber(tree, remove));
         tree.setRootVisible(false);
         frame.add(new JScrollPane(tree), BorderLayout.CENTER);
-
-        Operation insert = new Insert(strataCozy, actions);
-//        AddNumber addNumber = new AddNumber(entry, tree, insert);
-//        entry.getActionMap().put("addNumber", addNumber);
-//        entry.getInputMap().put(KeyStroke.getKeyStroke("ENTER"), "addNumber");
-//        add.addActionListener(addNumber);
         final JTextField editor = new JTextField(20);
         editor.getDocument().addDocumentListener(new DocumentListener() {
             public void removeUpdate(DocumentEvent e) {
-                System.out.println("Called");
             }
             
             public void insertUpdate(DocumentEvent e) {
@@ -530,6 +307,7 @@ public class Viewer {
                             }
                             query.destroy();
                         }
+                        operations.append(ch);
                     } 
                 } else {
                     // FIXME Clear Strata and start over.
@@ -556,16 +334,6 @@ public class Viewer {
         JMenuBar menuBar = new JMenuBar();
         JMenu menu = new JMenu("File");
         menuBar.add(menu);
-
-        JMenuItem save = new JMenuItem(new SaveFile(frame, actions));
-        menu.add(save);
-        JMenuItem open = new JMenuItem(new OpenFile(frame, strataCozy, tree, insert, remove));
-        menu.add(open);
-
-        menu.addSeparator();
-
-        JMenuItem size = new JMenuItem(new SetSize(strataCozy, tree));
-        menu.add(size);
 
         menu.addSeparator();
 
