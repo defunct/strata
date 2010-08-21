@@ -257,7 +257,8 @@ public class Viewer {
             for (int j = 0; j < (depth * 2); j++) {
                 string.append(' ');
             }
-            string.append(root.getRecord(i)).append('\n');
+            Character ch = root.getRecord(i);
+            string.append(ch == null ? '<' : ch).append('\n');
             if (!leaf) {
                 controlValue(root.getChildAddress(i), root.isChildLeaf(), depth + 1, string);
             }
